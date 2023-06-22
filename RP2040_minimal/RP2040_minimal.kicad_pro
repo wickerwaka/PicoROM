@@ -134,12 +134,12 @@
         "min_microvia_drill": 0.09999999999999999,
         "min_resolved_spokes": 2,
         "min_silk_clearance": 0.0,
-        "min_text_height": 0.7999999999999999,
+        "min_text_height": 0.5,
         "min_text_thickness": 0.08,
         "min_through_hole_diameter": 0.19999999999999998,
         "min_track_width": 0.15,
         "min_via_annular_width": 0.049999999999999996,
-        "min_via_diameter": 0.6,
+        "min_via_diameter": 0.5,
         "solder_mask_to_copper_clearance": 0.0,
         "use_height_for_length_calcs": true
       },
@@ -186,6 +186,7 @@
       "track_widths": [
         0.0,
         0.15,
+        0.1756,
         0.2,
         0.3,
         0.4,
@@ -200,7 +201,7 @@
         },
         {
           "diameter": 0.5,
-          "drill": 0.25
+          "drill": 0.3
         },
         {
           "diameter": 0.6,
@@ -451,8 +452,8 @@
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.15,
-        "via_diameter": 0.6,
-        "via_drill": 0.35,
+        "via_diameter": 0.5,
+        "via_drill": 0.3,
         "wire_width": 6
       },
       {
@@ -468,8 +469,8 @@
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "schematic_color": "rgba(0, 0, 0, 0.000)",
         "track_width": 0.1765,
-        "via_diameter": 0.6,
-        "via_drill": 0.35,
+        "via_diameter": 0.5,
+        "via_drill": 0.3,
         "wire_width": 6
       }
     ],
