@@ -290,6 +290,59 @@
         )
       )
     )
+    (symbol "Connector_Generic:Conn_01x03" (pin_names (offset 1.016) hide) (in_bom yes) (on_board yes)
+      (property "Reference" "J" (at 0 5.08 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Value" "Conn_01x03" (at 0 -5.08 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Footprint" "" (at 0 0 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "Datasheet" "~" (at 0 0 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "ki_keywords" "connector" (at 0 0 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "ki_description" "Generic connector, single row, 01x03, script generated (kicad-library-utils/schlib/autogen/connector/)" (at 0 0 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "ki_fp_filters" "Connector*:*_1x??_*" (at 0 0 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (symbol "Conn_01x03_1_1"
+        (rectangle (start -1.27 -2.413) (end 0 -2.667)
+          (stroke (width 0.1524) (type default))
+          (fill (type none))
+        )
+        (rectangle (start -1.27 0.127) (end 0 -0.127)
+          (stroke (width 0.1524) (type default))
+          (fill (type none))
+        )
+        (rectangle (start -1.27 2.667) (end 0 2.413)
+          (stroke (width 0.1524) (type default))
+          (fill (type none))
+        )
+        (rectangle (start -1.27 3.81) (end 1.27 -3.81)
+          (stroke (width 0.254) (type default))
+          (fill (type background))
+        )
+        (pin passive line (at -5.08 2.54 0) (length 3.81)
+          (name "Pin_1" (effects (font (size 1.27 1.27))))
+          (number "1" (effects (font (size 1.27 1.27))))
+        )
+        (pin passive line (at -5.08 0 0) (length 3.81)
+          (name "Pin_2" (effects (font (size 1.27 1.27))))
+          (number "2" (effects (font (size 1.27 1.27))))
+        )
+        (pin passive line (at -5.08 -2.54 0) (length 3.81)
+          (name "Pin_3" (effects (font (size 1.27 1.27))))
+          (number "3" (effects (font (size 1.27 1.27))))
+        )
+      )
+    )
     (symbol "Connector_Generic:Conn_01x16" (pin_names (offset 1.016) hide) (in_bom yes) (on_board yes)
       (property "Reference" "J" (at 0 20.32 0)
         (effects (font (size 1.27 1.27)))
@@ -605,6 +658,46 @@
         (pin passive line (at 0 -3.81 90) (length 1.27)
           (name "~" (effects (font (size 1.27 1.27))))
           (number "2" (effects (font (size 1.27 1.27))))
+        )
+      )
+    )
+    (symbol "GND_1" (power) (pin_names (offset 0)) (in_bom yes) (on_board yes)
+      (property "Reference" "#PWR" (at 0 -6.35 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "Value" "GND_1" (at 0 -3.81 0)
+        (effects (font (size 1.27 1.27)))
+      )
+      (property "Footprint" "" (at 0 0 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "Datasheet" "" (at 0 0 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "ki_keywords" "global power" (at 0 0 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (property "ki_description" "Power symbol creates a global label with name \"GND\" , ground" (at 0 0 0)
+        (effects (font (size 1.27 1.27)) hide)
+      )
+      (symbol "GND_1_0_1"
+        (polyline
+          (pts
+            (xy 0 0)
+            (xy 0 -1.27)
+            (xy 1.27 -1.27)
+            (xy 0 -2.54)
+            (xy -1.27 -1.27)
+            (xy 0 -1.27)
+          )
+          (stroke (width 0) (type default))
+          (fill (type none))
+        )
+      )
+      (symbol "GND_1_1_1"
+        (pin power_in line (at 0 0 270) (length 0) hide
+          (name "GND" (effects (font (size 1.27 1.27))))
+          (number "1" (effects (font (size 1.27 1.27))))
         )
       )
     )
@@ -1360,6 +1453,10 @@
     (stroke (width 0) (type default))
     (uuid 107a0da7-66c7-4680-9e7a-c514b488f3ae)
   )
+  (wire (pts (xy 323.85 187.96) (xy 332.74 187.96))
+    (stroke (width 0) (type default))
+    (uuid 13d39c30-0e8b-4644-b539-8f67147e0225)
+  )
   (wire (pts (xy 40.64 52.07) (xy 52.07 52.07))
     (stroke (width 0) (type default))
     (uuid 150dd1b9-fec5-4e8f-b683-551ebbe6979a)
@@ -1536,6 +1633,10 @@
     (stroke (width 0) (type default))
     (uuid 44a7ebf0-de8d-4aec-a2b6-6ba6a6b9880d)
   )
+  (wire (pts (xy 323.85 182.88) (xy 332.74 182.88))
+    (stroke (width 0) (type default))
+    (uuid 4b81499b-3c53-4576-b1f8-edf90bf5aa8f)
+  )
   (wire (pts (xy 292.1 72.39) (xy 303.53 72.39))
     (stroke (width 0) (type default))
     (uuid 4c778acc-9492-4f86-b317-07b7e32593fa)
@@ -1611,6 +1712,10 @@
   (wire (pts (xy 339.09 157.48) (xy 326.39 157.48))
     (stroke (width 0) (type default))
     (uuid 6b19c1fe-de5a-4ac4-ac8f-c7a7452752b0)
+  )
+  (wire (pts (xy 318.77 185.42) (xy 318.77 186.69))
+    (stroke (width 0) (type default))
+    (uuid 6d539867-f4ce-47f6-93bf-0de3d66e7f83)
   )
   (wire (pts (xy 52.07 125.73) (xy 66.04 125.73))
     (stroke (width 0) (type default))
@@ -1711,6 +1816,10 @@
   (wire (pts (xy 353.06 129.54) (xy 365.76 129.54))
     (stroke (width 0) (type default))
     (uuid 8710f666-f378-46d8-909b-3e03e7efc71b)
+  )
+  (wire (pts (xy 332.74 185.42) (xy 318.77 185.42))
+    (stroke (width 0) (type default))
+    (uuid 87c78cd7-ed28-4b40-964c-4207c9c0373f)
   )
   (wire (pts (xy 353.06 162.56) (xy 365.76 162.56))
     (stroke (width 0) (type default))
@@ -2314,6 +2423,10 @@
     (effects (font (size 1.27 1.27)) (justify right bottom))
     (uuid 622b0cd8-0c82-4da4-86da-80241b972e80)
   )
+  (label "SWD" (at 323.85 187.96 0) (fields_autoplaced)
+    (effects (font (size 1.27 1.27)) (justify left bottom))
+    (uuid 655630d2-1ad3-400d-a479-2ba8beb24b7a)
+  )
   (label "~{CE}" (at 245.11 165.1 180) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify right bottom))
     (uuid 683b1baa-5a4e-43bb-a31f-cf6beb294dae)
@@ -2494,6 +2607,10 @@
     (effects (font (size 1.27 1.27)) (justify right bottom))
     (uuid ed812717-8a9e-4539-90a5-a9848600098c)
   )
+  (label "SWCLK" (at 323.85 182.88 0) (fields_autoplaced)
+    (effects (font (size 1.27 1.27)) (justify left bottom))
+    (uuid efc8bfa1-d045-4c43-9b60-4b22a3b7e46a)
+  )
   (label "QSPI_SCLK" (at 152.4 128.27 0) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify left bottom))
     (uuid f2fa2cfd-bcd4-40fe-a689-8d516e9870a9)
@@ -2588,7 +2705,7 @@
     (pin "8" (uuid b41bc666-ce82-41e2-a33c-2a3383855897))
     (pin "9" (uuid ebe6e2df-7cd2-4924-9708-a9ffb9b6c9fe))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "U3") (unit 1)
         )
@@ -2614,7 +2731,7 @@
     (pin "1" (uuid 245e7ed6-2000-4589-ba54-e8664a01f509))
     (pin "2" (uuid 4d736ce7-221a-4cfe-809c-5f15627ec93e))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C2") (unit 1)
         )
@@ -2640,7 +2757,7 @@
     (pin "1" (uuid 126bd4dc-90c4-425b-94c5-58b68393cd7d))
     (pin "2" (uuid 58669c98-3e39-4463-81ff-e68611ffa5ce))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C3") (unit 1)
         )
@@ -2665,7 +2782,7 @@
     )
     (pin "1" (uuid 71a2d9ec-e53f-477d-bf57-b48b3a821fd8))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR06") (unit 1)
         )
@@ -2697,7 +2814,7 @@
     (pin "7" (uuid b450a517-4876-4c52-b7fb-42711ba03f1c))
     (pin "8" (uuid b14b102a-7cb0-47ef-9d20-6e02658b6a87))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "U2") (unit 1)
         )
@@ -2722,7 +2839,7 @@
     )
     (pin "1" (uuid 64490f90-8be3-4e2c-9e6a-e2f001fc8f4d))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR07") (unit 1)
         )
@@ -2747,7 +2864,7 @@
     )
     (pin "1" (uuid 673f4ca7-5ce6-4c10-a9e1-014c4d4dbdc1))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR08") (unit 1)
         )
@@ -2773,7 +2890,7 @@
     (pin "1" (uuid d9708ce5-5ee5-44fc-84a5-43e8f6c93fc9))
     (pin "2" (uuid 6ba144e1-286c-456a-9f2b-fe7e07dd5113))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "R1") (unit 1)
         )
@@ -2799,7 +2916,7 @@
     (pin "1" (uuid c3d6c41b-a727-4949-9800-238dbe1e3b27))
     (pin "2" (uuid 30df0b1b-12bb-45be-8616-41e741da5181))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C5") (unit 1)
         )
@@ -2824,7 +2941,7 @@
     )
     (pin "1" (uuid daae6f4a-bd59-4146-8c07-0dc1171808a2))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR011") (unit 1)
         )
@@ -2849,7 +2966,7 @@
     )
     (pin "1" (uuid b520ef4f-4f83-48dd-a215-bea1c41d5da4))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR016") (unit 1)
         )
@@ -2874,7 +2991,7 @@
     )
     (pin "1" (uuid aa356a90-f009-47a0-ba5d-0622eaeeb68c))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR015") (unit 1)
         )
@@ -2900,7 +3017,7 @@
     (pin "1" (uuid 576644a4-73a9-4b74-90b3-78e02f21220c))
     (pin "2" (uuid a8320df2-eafb-477d-8ace-f482ad684409))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "R3") (unit 1)
         )
@@ -2926,7 +3043,7 @@
     (pin "1" (uuid f3aae399-749f-4f36-a085-1e9fab4d7c6d))
     (pin "2" (uuid fdc8d06f-7fb8-4b13-bccf-4adce1f58f4e))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "R4") (unit 1)
         )
@@ -2951,7 +3068,7 @@
     )
     (pin "1" (uuid 016dc3d8-c21a-4d3b-8617-b60a3af9a60c))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR01") (unit 1)
         )
@@ -2976,7 +3093,7 @@
     )
     (pin "1" (uuid 46d45df0-63d9-4815-8b66-5d20452b7cda))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR017") (unit 1)
         )
@@ -3001,7 +3118,7 @@
     )
     (pin "1" (uuid 6174f898-17da-40f4-a0d8-14b8caa12b26))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR014") (unit 1)
         )
@@ -3027,7 +3144,7 @@
     (pin "1" (uuid 7deefaef-1361-4774-8339-167f8f9d375a))
     (pin "2" (uuid 1d6405c5-abb3-4723-8749-b26f36baad81))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C9") (unit 1)
         )
@@ -3053,7 +3170,7 @@
     (pin "1" (uuid f84dc107-94ff-46b3-8940-79b31bc4ed01))
     (pin "2" (uuid ca24d767-7d1f-41ea-9876-f4773128a6b9))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C11") (unit 1)
         )
@@ -3079,7 +3196,7 @@
     (pin "1" (uuid 1ebcafc3-471b-47fb-9ee7-5b5935411ee4))
     (pin "2" (uuid 709b66af-fa18-48b9-8e35-95f4ce6fb56f))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C12") (unit 1)
         )
@@ -3105,7 +3222,7 @@
     (pin "1" (uuid 0968ba13-c1a6-40fa-990a-b97cbc1b250b))
     (pin "2" (uuid e8866f7b-9958-4d4d-a007-bef916b59827))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C13") (unit 1)
         )
@@ -3131,7 +3248,7 @@
     (pin "1" (uuid 88e1b47c-6242-41b8-a5d6-af58838fc5c5))
     (pin "2" (uuid e26b38df-8ce8-4027-9215-127b90359b36))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C14") (unit 1)
         )
@@ -3157,7 +3274,7 @@
     (pin "1" (uuid ea0dc9f3-4b4a-432e-b0ec-51c4b4716efc))
     (pin "2" (uuid a0ea3f50-98fa-41f6-810f-d932fba93224))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C15") (unit 1)
         )
@@ -3183,7 +3300,7 @@
     (pin "1" (uuid 3d27af48-a33e-41a5-897b-135b0eea850a))
     (pin "2" (uuid e23f4ff4-d25c-4a65-b558-cb932e340382))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C16") (unit 1)
         )
@@ -3209,7 +3326,7 @@
     (pin "1" (uuid fdd2fb2d-afcb-45ab-a5ce-01fec4f3348b))
     (pin "2" (uuid 399b3c4b-1155-4620-8940-d802b259fce8))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C6") (unit 1)
         )
@@ -3235,7 +3352,7 @@
     (pin "1" (uuid 4eb88592-da1e-413a-b0dc-9f03ff50430a))
     (pin "2" (uuid 28ec925b-d5fd-4242-a903-d948224b7cf9))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C7") (unit 1)
         )
@@ -3261,7 +3378,7 @@
     (pin "1" (uuid 3dfd1de2-1f5e-44d1-a7a7-72e187dc7f13))
     (pin "2" (uuid dbdd01fc-6027-4e38-911e-e025c7d40f4b))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C8") (unit 1)
         )
@@ -3287,7 +3404,7 @@
     (pin "1" (uuid 8fdc2532-3604-4582-9303-9f22036dea39))
     (pin "2" (uuid 1e72a6de-a3b5-477d-9af1-ba4663576733))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C10") (unit 1)
         )
@@ -3312,7 +3429,7 @@
     )
     (pin "1" (uuid 257338bc-6767-4073-92f2-48ff65060993))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR023") (unit 1)
         )
@@ -3337,7 +3454,7 @@
     )
     (pin "1" (uuid efa40d88-e320-45e7-b546-2de23eac6b8a))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR012") (unit 1)
         )
@@ -3362,7 +3479,7 @@
     )
     (pin "1" (uuid 6be20d1b-98d1-4add-b890-646a4bee1ce7))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR013") (unit 1)
         )
@@ -3387,7 +3504,7 @@
     )
     (pin "1" (uuid 83f5d2d1-45e9-4720-8e22-93ed155d9379))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR018") (unit 1)
         )
@@ -3412,7 +3529,7 @@
     )
     (pin "1" (uuid 4eea58ec-157d-4825-829a-a8d802e4c18c))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR03") (unit 1)
         )
@@ -3437,7 +3554,7 @@
     )
     (pin "1" (uuid 6f488022-069a-4e81-a9f4-6782cd42e495))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR05") (unit 1)
         )
@@ -3462,7 +3579,7 @@
     )
     (pin "1" (uuid cdccb29f-5b63-464f-836a-ee37884da38b))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR09") (unit 1)
         )
@@ -3488,7 +3605,7 @@
     (pin "1" (uuid 8a85868e-c63a-47f1-b952-2fc47c4bcd12))
     (pin "2" (uuid 4f6cda60-9c65-46a1-b20f-a57cabed05d4))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C1") (unit 1)
         )
@@ -3514,7 +3631,7 @@
     (pin "1" (uuid f169adfc-7e3b-4280-8d55-b8b9181cde59))
     (pin "2" (uuid 72471c54-fd16-4e28-bd3b-3ea7e9abb4d3))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C4") (unit 1)
         )
@@ -3539,7 +3656,7 @@
     )
     (pin "1" (uuid 005a2367-a427-4918-8256-6c3a4f1fcd8b))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR04") (unit 1)
         )
@@ -3564,7 +3681,7 @@
     )
     (pin "1" (uuid a993016d-134a-4bf0-bf17-325e485288fc))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR010") (unit 1)
         )
@@ -3590,7 +3707,7 @@
     (pin "1" (uuid 4e3727fc-e3a6-4cc0-b7d5-2050952dddad))
     (pin "2" (uuid 52524100-9381-4ad7-9f48-6c928ea79b9c))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "R5") (unit 1)
         )
@@ -3616,7 +3733,7 @@
     (pin "1" (uuid 55b8f614-a6e4-401e-bc93-93d8a5bed3f9))
     (pin "2" (uuid edeb29c5-94d0-4fae-a9b8-eb25d578f9f1))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "Y1") (unit 1)
         )
@@ -3642,7 +3759,7 @@
     (pin "1" (uuid b74b9c3e-a389-4be1-a184-b1e20362126a))
     (pin "2" (uuid ca048e59-6e8b-41ee-9cce-4ea6191d68b0))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "J2") (unit 1)
         )
@@ -3667,7 +3784,7 @@
     )
     (pin "1" (uuid 4bf49e61-7614-4bd4-92af-dd1e8e1fdc7d))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR02") (unit 1)
         )
@@ -3696,7 +3813,7 @@
     (pin "4" (uuid 89dba160-3c76-4523-a399-f4463b9292cd))
     (pin "5" (uuid 03fce74b-c55a-4d01-a331-43b9d00989f4))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "U1") (unit 1)
         )
@@ -3736,7 +3853,7 @@
     (pin "8" (uuid d43147e6-d06b-417d-97a6-37d4509e28d8))
     (pin "9" (uuid a774127e-a6e8-428c-9c45-62b30a420b00))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "J4") (unit 1)
         )
@@ -3762,9 +3879,61 @@
     (pin "1" (uuid f6920226-f4ee-48c6-9e0c-3d1113f5ee28))
     (pin "2" (uuid 5602f2fb-d184-40c7-9137-c60ad8789f5a))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "C17") (unit 1)
+        )
+      )
+    )
+  )
+
+  (symbol (lib_id "Connector_Generic:Conn_01x03") (at 337.82 185.42 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid 370977f6-f172-4869-8f21-42f3af455a8a)
+    (property "Reference" "J5" (at 340.36 184.15 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Value" "Conn_01x03" (at 340.36 186.69 0)
+      (effects (font (size 1.27 1.27)) (justify left))
+    )
+    (property "Footprint" "Connector_PinHeader_1.27mm:PinHeader_1x03_P1.27mm_Vertical" (at 337.82 185.42 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "~" (at 337.82 185.42 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid d1f832b3-baa0-44b0-88fc-950653af5137))
+    (pin "2" (uuid 6e84c81f-c39a-42ac-8f47-9235f5370744))
+    (pin "3" (uuid 821094fd-8d7d-4960-b525-5744784f2a09))
+    (instances
+      (project "PicoROM"
+        (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
+          (reference "J5") (unit 1)
+        )
+      )
+    )
+  )
+
+  (symbol (lib_name "GND_1") (lib_id "power:GND") (at 318.77 186.69 0) (unit 1)
+    (in_bom yes) (on_board yes) (dnp no) (fields_autoplaced)
+    (uuid 5152f595-35a8-4bd1-b83d-30d6070e0a09)
+    (property "Reference" "#PWR020" (at 318.77 193.04 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Value" "GND" (at 318.77 191.77 0)
+      (effects (font (size 1.27 1.27)))
+    )
+    (property "Footprint" "" (at 318.77 186.69 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (property "Datasheet" "" (at 318.77 186.69 0)
+      (effects (font (size 1.27 1.27)) hide)
+    )
+    (pin "1" (uuid a511966b-97e1-4a8d-a2c8-f77f6dd2c72c))
+    (instances
+      (project "PicoROM"
+        (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
+          (reference "#PWR020") (unit 1)
         )
       )
     )
@@ -3787,7 +3956,7 @@
     )
     (pin "1" (uuid 58999a18-bcc7-4ebb-85e1-4f85efd78977))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "#PWR019") (unit 1)
         )
@@ -3827,7 +3996,7 @@
     (pin "8" (uuid ab3a7382-19ed-4155-8594-6fc6ee3759be))
     (pin "9" (uuid 9370bc80-e4bd-474f-ba13-cb677b64d2da))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "J3") (unit 1)
         )
@@ -3853,7 +4022,7 @@
     (pin "1" (uuid 139de59c-44bb-4626-b3a4-b71e08d948b2))
     (pin "2" (uuid a2b07313-13c4-47e8-9307-75ebf962331e))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "R6") (unit 1)
         )
@@ -3894,7 +4063,7 @@
     (pin "B9" (uuid ceb68a93-d14c-4505-8ec4-cc6d3c87a105))
     (pin "S1" (uuid 8f4b771f-4593-4b9b-a59a-320f16671c8c))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "J1") (unit 1)
         )
@@ -3920,7 +4089,7 @@
     (pin "1" (uuid 1f533ff2-eff2-474f-bee8-cf45caafa06d))
     (pin "2" (uuid e715b98c-d9a2-4c27-9392-3a9fcc04a18f))
     (instances
-      (project "RP2040_minimal"
+      (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "R7") (unit 1)
         )
