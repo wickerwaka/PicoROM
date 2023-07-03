@@ -6,6 +6,7 @@ set(CMAKE_CXX_STANDARD 17)
 pico_sdk_init()
 add_executable(firmware
     firmware.cpp
+    pico_link.cpp
     read_handler.S
 )
 

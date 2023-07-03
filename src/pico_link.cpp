@@ -1,0 +1,134 @@
+#include "pico_link.h"
+
+#include "pico/stdlib.h"
+#include <string.h>
+#include <unistd.h>
+#include <tusb.h>
+
+
+static uint8_t incoming_buffer[sizeof(Packet)];
+static uint8_t incoming_count;
+
+void usb_send(const void *data, size_t len)
+{
+    write(1, data, len);
+
+#if 0
+    const uint8_t *ptr = (const uint8_t *)data;
+    uint32_t remaining = len;
+
+    while (remaining > 0)
+    {
+        uint32_t sent = tud_cdc_write(ptr, remaining);
+        ptr += sent;
+        remaining -= sent;
+    }
+
+    tud_cdc_write_flush();
+#endif
+}
+
+
+void pl_send_null(PacketType type)
+{
+    uint8_t buf[2];
+    buf[0] = (uint8_t)type;
+    buf[1] = 0;
+    usb_send(buf, 2);
+}
+
+void pl_send_string(PacketType type, const char *s)
+{
+    Packet pkt;
+    pkt.type = (uint8_t)type;
+    pkt.size = MIN(MAX_PKT_PAYLOAD, strlen(s));
+    strncpy((char *)pkt.payload, s, pkt.size);
+    usb_send(&pkt, pkt.size + 2);
+}
+
+void pl_send_payload(PacketType type, const void *data, size_t len)
+{
+    Packet pkt;
+    pkt.type = (uint8_t)type;
+    pkt.size = MIN(len, MAX_PKT_PAYLOAD);
+    memcpy(pkt.payload, data, len);
+    usb_send(&pkt, pkt.size + 2);
+}
+
+void pl_send_debug(const char *s, uint32_t v0, uint32_t v1)
+{
+    Packet pkt;
+    pkt.type = (uint8_t)PacketType::Debug;
+    pkt.size = MIN(MAX_PKT_PAYLOAD, strlen(s) + 8);
+    memcpy(pkt.payload, &v0, sizeof(v0));
+    memcpy(pkt.payload + 4, &v1, sizeof(v1));
+    strncpy((char *)pkt.payload + 8, s, pkt.size - 8);
+    usb_send(&pkt, pkt.size + 2);
+}
+
+void pl_send_error(const char *s, uint32_t v0, uint32_t v1)
+{
+    Packet pkt;
+    pkt.type = (uint8_t)PacketType::Error;
+    pkt.size = MIN(MAX_PKT_PAYLOAD, strlen(s) + 8);
+    memcpy(pkt.payload, &v0, sizeof(v0));
+    memcpy(pkt.payload + 4, &v1, sizeof(v1));
+    strncpy((char *)pkt.payload + 8, s, pkt.size - 8);
+    usb_send(&pkt, pkt.size + 2);
+}
+
+void pl_wait_for_connection()
+{
+    // Wait for connection
+    while(!tud_cdc_connected())
+    {
+        sleep_ms(1);
+    }
+
+    // Flush input
+    tud_cdc_read_flush();
+
+    // Write preamble
+    usb_send("PicoROM Hello", 13);
+}
+
+bool pl_is_connected()
+{
+    return tud_cdc_connected();
+}
+
+const Packet *pl_poll()
+{
+    uint32_t space = sizeof(incoming_buffer) - incoming_count;
+    uint32_t rx_avail = tud_cdc_available();
+
+    uint32_t read_size = MIN(rx_avail, space);
+    if (read_size > 0)
+    {
+        incoming_count += tud_cdc_read(incoming_buffer + incoming_count, read_size);
+    }
+
+    if (incoming_count >= 2)
+    {
+        Packet *pkt = (Packet *)incoming_buffer;
+        if ((pkt->size + 2) <= incoming_count)
+        {
+            return pkt;
+        }
+    }
+    
+    return nullptr;
+}
+
+void pl_consume_packet(const Packet *pkt)
+{
+    uint32_t used = pkt->size + 2;
+    uint32_t remaining = incoming_count - used;
+
+    if (remaining > 0)
+    {
+        memmove(incoming_buffer, incoming_buffer + used, remaining);
+    }
+
+    incoming_count = remaining;
+}

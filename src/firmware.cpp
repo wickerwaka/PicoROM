@@ -10,6 +10,8 @@
 
 #include <tusb.h>
 
+#include "pico_link.h"
+
 #include "data_bus.pio.h"
 
 static constexpr uint N_DATA_PINS = 8;
@@ -19,27 +21,25 @@ static constexpr uint BASE_DATA_PIN = 22;
 static constexpr uint BASE_OE_PIN = 20;
 static constexpr uint BASE_ADDR_PIN = 0;
 
-static constexpr uint MAX_ROM_SIZE = 0x40000;
+static constexpr uint ROM_SIZE = 0x40000;
+static constexpr uint ADDR_MASK = ROM_SIZE - 1;
 static constexpr uint FLASH_SIZE = 2 * 1024 * 1024;
 
-static constexpr uint FLASH_ROM_OFFSET = FLASH_SIZE - MAX_ROM_SIZE;
+static constexpr uint FLASH_ROM_OFFSET = FLASH_SIZE - ROM_SIZE;
 static constexpr uint FLASH_CFG_OFFSET = FLASH_ROM_OFFSET - FLASH_SECTOR_SIZE;
 
-static constexpr uint CONFIG_VERSION = 0x00010005;
+static constexpr uint CONFIG_VERSION = 0x00010006;
 
 uint32_t rom_offset = 0;
 uint8_t *rom_data = (uint8_t *)0x21000000; // Start of 4 64kb sram banks
 const uint8_t *flash_rom_data = (uint8_t *)(XIP_BASE + FLASH_ROM_OFFSET);
-uint32_t rom_size = MAX_ROM_SIZE;
 
 struct Config
 {
-    uint version;
+    uint32_t version;
     char name[32];
 
-    uint32_t rom_size;
-
-    uint8_t _padding[256-40];
+    uint8_t _padding[256-36];
 };
 
 const Config *config = (Config *)(XIP_BASE + FLASH_CFG_OFFSET);
@@ -85,7 +85,7 @@ uint32_t core1_stack[8];
 
 void __attribute__((noreturn)) core1_entry()
 {
-    read_handler(rom_data, config->rom_size - 1, &pio0->txf[0]);
+    read_handler(rom_data, ADDR_MASK, &pio0->txf[0]);
 }
 
 void init_config()
@@ -96,7 +96,6 @@ void init_config()
     memset(&cfg, 0, sizeof(cfg));
 
     cfg.version = CONFIG_VERSION;
-    cfg.rom_size = MAX_ROM_SIZE;
 
     pico_get_unique_board_id_string(cfg.name, sizeof(cfg.name));
 
@@ -106,7 +105,7 @@ void init_config()
     restore_interrupts(ints);
 }
 
-void save_config(const char *name, int len, uint32_t rom_size)
+void save_config(const char *name, int len)
 {
     Config cfg;
     memcpy(&cfg, config, sizeof(Config));
@@ -116,8 +115,6 @@ void save_config(const char *name, int len, uint32_t rom_size)
     //if (len >= sizeof(cfg.name)) len = sizeof(cfg.name) - 1;
     memcpy(cfg.name, name, len);
     cfg.name[len] = 0;
-
-    cfg.rom_size = rom_size;
 
     if( !memcmp(&cfg, config, sizeof(Config))) return;
 
@@ -131,118 +128,15 @@ void save_config(const char *name, int len, uint32_t rom_size)
 
 void save_rom()
 {
-    save_config(config->name, strlen(config->name), rom_size);
-
     multicore_reset_core1();
     uint32_t ints = save_and_disable_interrupts();
-    flash_range_erase(FLASH_ROM_OFFSET, MAX_ROM_SIZE);
-    flash_range_program(FLASH_ROM_OFFSET, rom_data, MAX_ROM_SIZE);
+    flash_range_erase(FLASH_ROM_OFFSET, ROM_SIZE);
+    flash_range_program(FLASH_ROM_OFFSET, rom_data, ROM_SIZE);
     restore_interrupts(ints);
     multicore_launch_core1_with_stack(core1_entry, core1_stack, sizeof(core1_stack));
 }
 
 
-enum class PacketType : uint8_t
-{
-    IdentReq = 0,
-    IdentResp = 1,
-    IdentSet = 2,
-
-    SetPointer = 3,
-    GetPointer = 4,
-    CurPointer = 5,
-    Write = 6,
-    Read = 7,
-    ReadData = 8,
-
-    SetSize = 9,
-    GetSize = 10,
-    CurSize = 11,
-
-    CommitFlash = 12,
-
-    Debug = 0xff
-};
-
-static constexpr size_t MAX_PKT_PAYLOAD = 30;
-
-struct Packet
-{
-    uint8_t type;
-    uint8_t size;
-
-    uint8_t payload[MAX_PKT_PAYLOAD];
-};
-
-void send_packet_null(PacketType type)
-{
-    uint8_t buf[2];
-    buf[0] = (uint8_t)type;
-    buf[1] = 0;
-    write(1, buf, 2);
-}
-
-void send_packet_string(PacketType type, const char *s)
-{
-    Packet pkt;
-    pkt.type = (uint8_t)type;
-    pkt.size = MIN(MAX_PKT_PAYLOAD, strlen(s));
-    strncpy((char *)pkt.payload, s, pkt.size);
-    write(1, &pkt, pkt.size + 2);
-}
-
-void send_packet(PacketType type, const void *data, size_t len)
-{
-    Packet pkt;
-    pkt.type = (uint8_t)type;
-    pkt.size = MIN(len, MAX_PKT_PAYLOAD);
-    memcpy(pkt.payload, data, len);
-    write(1, &pkt, pkt.size + 2);
-}
-
-void send_packet_debug(uint8_t a, uint8_t b, const char *s)
-{
-    Packet pkt;
-    pkt.type = (uint8_t)PacketType::Debug;
-    pkt.size = MIN(MAX_PKT_PAYLOAD, strlen(s) + 2);
-    pkt.payload[0] = a;
-    pkt.payload[1] = b;
-    strncpy((char *)&pkt.payload[2], s, pkt.size - 2);
-    write(1, &pkt, pkt.size + 2);
-}
-
-uint8_t incoming_buffer[sizeof(Packet)];
-uint8_t incoming_count;
-
-Packet *check_incoming()
-{
-    while (incoming_count < 2)
-    {
-        int ch = getchar_timeout_us(0);
-        if (ch == PICO_ERROR_TIMEOUT) return nullptr;
-        incoming_buffer[incoming_count] = (uint8_t)ch;
-        incoming_count++;
-    }
-
-    uint8_t size = incoming_buffer[1];
-    if (size > MAX_PKT_PAYLOAD)
-    {
-        incoming_count = 0;
-        return nullptr;
-    }
-
-    while (incoming_count < (size + 2))
-    {
-        int ch = getchar_timeout_us(0);
-        if (ch == PICO_ERROR_TIMEOUT) return nullptr;
-        incoming_buffer[incoming_count] = (uint8_t)ch;
-        incoming_count++;
-    }
-
-    incoming_count = 0;
-
-    return (Packet *)incoming_buffer;
-}
 
 
 int main()
@@ -263,13 +157,10 @@ int main()
         syscfg_hw->proc_in_sync_bypass |= 1 << gpio;
     }
 
-    
-    for( uint i = 0; i < MAX_ROM_SIZE; i++ )
+    for( uint i = 0; i < ROM_SIZE; i++ )
     {
         rom_data[i] = flash_rom_data[i];
     }
-
-    rom_size = config->rom_size;
 
     uint sm_data = pio_claim_unused_sm(pio0, true);
     uint sm_oe = pio_claim_unused_sm(pio0, true);
@@ -280,60 +171,52 @@ int main()
     while (true)
     {
         // Reset state
-        incoming_count = 0;
         rom_offset = 0;
 
-        // Wait for connection
-        while(!tud_cdc_connected())
-        {
-            sleep_ms(1);
-        }
+        pl_wait_for_connection();
 
-        // Flush input
-        while( getchar_timeout_us(0) != PICO_ERROR_TIMEOUT ) {};
-
-        // Write preamble
-        write(1, "PicoROM Hello", 13);
+        pl_send_debug("Connected", 1, 2);
 
         // Loop while connected
-        while (tud_cdc_connected())
+        while (pl_is_connected())
         {
-            const Packet *req = check_incoming();
+            const Packet *req = pl_poll();
             if (req)
             {
                 switch((PacketType)req->type)
                 {
                     case PacketType::IdentReq:
                     {
-                        send_packet_string(PacketType::IdentResp, config->name);
-                        //send_packet_debug(req->type, req->size, "PKT");
+                        pl_send_string(PacketType::IdentResp, config->name);
                         break;
                     }
 
                     case PacketType::IdentSet:
                     {
-                        save_config((const char *)req->payload, req->size, config->rom_size);
+                        save_config((const char *)req->payload, req->size);
                         break;
                     }
 
                     case PacketType::SetPointer:
                     {
                         memcpy(&rom_offset, req->payload, sizeof(uint32_t));
-                        //send_packet(PacketType::Debug, &rom_offset, 4);
                         break;
                     }
 
                     case PacketType::GetPointer:
                     {
-                        send_packet(PacketType::CurPointer, &rom_offset, sizeof(rom_offset));
+                        pl_send_payload(PacketType::CurPointer, &rom_offset, sizeof(rom_offset));
                         break;
                     }
 
                     case PacketType::Write:
                     {
-                        uint32_t mask = rom_size - 1;
-                        uint32_t offset = rom_offset & mask;
-                        if ((offset + req->size) > rom_size) break; // TODO error reporting
+                        uint32_t offset = rom_offset;
+                        if ((offset + req->size) > ROM_SIZE)
+                        {
+                            pl_send_error("Write out of range", offset, req->size);
+                            break;
+                        }
                         memcpy(rom_data + offset, req->payload, req->size);
                         rom_offset += req->size;
                         break;
@@ -341,27 +224,10 @@ int main()
 
                     case PacketType::Read:
                     {
-                        uint32_t mask = rom_size - 1;
-                        uint32_t offset = rom_offset & mask;
-                        uint32_t size = MIN(MAX_PKT_PAYLOAD, rom_size - offset);
-                        send_packet(PacketType::ReadData, rom_data + offset, size);
+                        uint32_t offset = rom_offset;
+                        uint32_t size = MIN(MAX_PKT_PAYLOAD, ROM_SIZE - offset);
+                        pl_send_payload(PacketType::ReadData, rom_data + offset, size);
                         rom_offset += size;
-                        break;
-                    }
-
-                    case PacketType::SetSize:
-                    {
-                        memcpy(&rom_size, req->payload, sizeof(uint32_t));
-
-                        // restart with new size
-                        multicore_reset_core1();
-                        multicore_launch_core1_with_stack(core1_entry, core1_stack, sizeof(core1_stack));
-                        break;
-                    }
-
-                    case PacketType::GetSize:
-                    {
-                        send_packet(PacketType::CurSize, &rom_size, sizeof(rom_size));
                         break;
                     }
 
@@ -373,10 +239,11 @@ int main()
 
                     default:
                     {
-                        //send_packet_string(PacketType::Debug, "hello");
+                        pl_send_error("Unrecognized packet", req->type, req->size);
                         break;
                     }
                 }
+                pl_consume_packet(req);
             }
         }
     }
