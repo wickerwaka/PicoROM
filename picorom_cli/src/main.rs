@@ -1,8 +1,12 @@
 use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
+use indicatif;
+use indicatif::ProgressBar;
+use indicatif::ProgressStyle;
 use std::fs;
 use std::iter;
 use std::path::{Path, PathBuf};
+use std::time::Duration;
 
 mod enumerate;
 mod pico_link;
@@ -25,7 +29,7 @@ fn read_file(name: &Path, size: RomSize) -> Result<Vec<u8>> {
     let diff = size.bytes() - data.len();
     data.extend(iter::repeat(0u8).take(diff));
 
-    Ok(data)
+    Ok(data.repeat(size.bytes() / RomSize::MBit(2).bytes()))
 }
 
 #[derive(Debug, Parser)] // requires `derive` feature
@@ -38,18 +42,29 @@ struct Cli {
 
 #[derive(Debug, Subcommand)]
 enum Commands {
+    /// Return a list of currently connected PicoROM devices.
     List,
+
+    /// Change the name of a PicoROM device.
     Rename {
-        #[arg(value_name = "CURRENT_NAME")]
-        original: String,
-        #[arg(value_name = "NEW_NAME")]
+        /// Current name.
+        current: String,
+        /// New name to rename it to.
         new: String,
     },
+
+    /// Upload a ROM image to a PicoROM
     Upload {
-        #[arg(value_name = "NAME")]
+        /// PicoROM device name.
         name: String,
-        #[arg(value_name = "FILE")]
+        /// Path of file to upload.
         source: PathBuf,
+        /// Emulate a specific ROM size.
+        #[arg(value_enum, ignore_case=true, default_value_t=RomSize::MBit(2))]
+        size: RomSize,
+        /// Store the uploaded image in flash memory also.
+        #[arg(short, long, default_value_t = false)]
+        store: bool,
     },
 }
 
@@ -60,17 +75,42 @@ fn main() -> Result<()> {
         Commands::List => {
             let found = enumerate_picos()?;
             for k in found.keys() {
-                println!("* {}", k);
+                println!("  {}", k);
             }
         }
-        Commands::Rename { original, new } => {
-            let mut pico = find_pico(&original)?;
+        Commands::Rename { current, new } => {
+            let mut pico = find_pico(&current)?;
             pico.set_ident(&new)?;
         }
-        Commands::Upload { name, source } => {
+        Commands::Upload {
+            name,
+            source,
+            size,
+            store,
+        } => {
             let mut pico = find_pico(&name)?;
-            let data = read_file(source.as_path(), RomSize::MBit(2))?;
-            pico.upload(&data)?;
+            let data = read_file(source.as_path(), size)?;
+            let progress = ProgressBar::new(data.len() as u64)
+                .with_prefix("Uploading ROM")
+                .with_style(
+                    ProgressStyle::with_template("{prefix:.bold} [{wide_bar:.cyan/blue}] {msg:10}")
+                        .unwrap()
+                        .progress_chars("#>-"),
+                );
+            pico.upload(&data, |x| progress.inc(x as u64))?;
+            progress.finish_with_message("Done.");
+            if store {
+                let spinner = ProgressBar::new_spinner()
+                    .with_prefix("Storing to Flash")
+                    .with_style(
+                        ProgressStyle::with_template("{prefix:.bold} {spinner} {msg}")
+                            .unwrap()
+                            .tick_chars(r"\|/--"),
+                    );
+                spinner.enable_steady_tick(Duration::from_millis(250));
+                pico.commit_rom()?;
+                spinner.finish_with_message("Done.");
+            }
         }
     }
 

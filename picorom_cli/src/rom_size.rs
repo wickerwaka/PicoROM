@@ -1,8 +1,9 @@
+use clap::{builder::PossibleValue, ValueEnum};
+
+#[derive(Clone, Debug)]
 pub enum RomSize {
     MBit(usize),
     KBit(usize),
-    Bits(usize),
-    Bytes(usize),
 }
 
 impl RomSize {
@@ -10,12 +11,29 @@ impl RomSize {
         match *self {
             RomSize::MBit(x) => x * 128 * 1024,
             RomSize::KBit(x) => x * 128,
-            RomSize::Bits(x) => 1 << x,
-            RomSize::Bytes(x) => x.next_power_of_two(),
         }
     }
+}
 
-    pub fn mask(&self) -> u32 {
-        (self.bytes() - 1) as u32
+impl ValueEnum for RomSize {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[
+            RomSize::MBit(2),
+            RomSize::MBit(1),
+            RomSize::KBit(512),
+            RomSize::KBit(256),
+            RomSize::KBit(128),
+            RomSize::KBit(64),
+            RomSize::KBit(32),
+            RomSize::KBit(16),
+            RomSize::KBit(8),
+        ]
+    }
+
+    fn to_possible_value(&self) -> Option<clap::builder::PossibleValue> {
+        match self {
+            RomSize::MBit(x) => Some(PossibleValue::new(format!("{}MBit", x))),
+            RomSize::KBit(x) => Some(PossibleValue::new(format!("{}KBit", x))),
+        }
     }
 }

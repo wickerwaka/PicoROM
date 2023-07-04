@@ -19,11 +19,8 @@ enum PacketKind {
     Read = 7,
     ReadData = 8,
 
-    SizeSet = 9,
-    SizeGet = 10,
-    SizeCur = 11,
-
     CommitFlash = 12,
+    CommitDone = 13,
 
     Error = 0xfe,
     Debug = 0xff,
@@ -37,8 +34,6 @@ pub enum ReqPacket {
     PointerGet,
     Write(Vec<u8>),
     Read,
-    SizeSet(u32),
-    SizeGet,
     CommitFlash,
 }
 
@@ -53,8 +48,6 @@ impl ReqPacket {
             ReqPacket::PointerGet => (PacketKind::PointerGet, vec![]),
             ReqPacket::Write(data) => (PacketKind::Write, data),
             ReqPacket::Read => (PacketKind::Read, vec![]),
-            ReqPacket::SizeSet(size) => (PacketKind::SizeSet, size.to_le_bytes().to_vec()),
-            ReqPacket::SizeGet => (PacketKind::SizeGet, vec![]),
             ReqPacket::CommitFlash => (PacketKind::CommitFlash, vec![]),
         };
 
@@ -75,7 +68,7 @@ pub enum RespPacket {
     Ident(String),
     PointerCur(u32),
     ReadData(Vec<u8>),
-    SizeCur(u32),
+    CommitDone,
 
     Error(String, u32, u32),
     Debug(String, u32, u32),
@@ -83,6 +76,12 @@ pub enum RespPacket {
 
 pub struct PicoLink {
     port: Box<dyn SerialPort>,
+}
+
+struct RawPacket {
+    kind: PacketKind,
+    size: usize,
+    payload: [u8; 30],
 }
 
 impl PicoLink {
@@ -117,7 +116,7 @@ impl PicoLink {
     /// Receive a raw packet
     /// Err on port error or packet formatting
     /// None if data not received before deadline
-    fn recv_raw(&mut self, deadline: Instant) -> Result<Option<Vec<u8>>> {
+    fn recv_raw(&mut self, deadline: Instant) -> Result<Option<RawPacket>> {
         let port = &mut self.port;
 
         while port.bytes_to_read()? < 2 {
@@ -127,7 +126,7 @@ impl PicoLink {
             sleep(Duration::from_micros(10));
         }
 
-        let mut data = vec![0u8; 32];
+        let mut data = [0u8; 32];
         port.read_exact(&mut data[0..2])?;
         let size = data[1] as usize;
 
@@ -135,46 +134,41 @@ impl PicoLink {
             return Err(anyhow!("Packet payload too large: {}", size));
         }
 
-        data.truncate(size + 2);
-
         while port.bytes_to_read()? < size as u32 {
             sleep(Duration::from_micros(10));
         }
 
-        port.read_exact(&mut data[2..])?;
+        port.read_exact(&mut data[2..2 + size])?;
 
-        Ok(Some(data))
+        let kind: Option<PacketKind> = FromPrimitive::from_u8(data[0]);
+        if let Some(kind) = kind {
+            Ok(Some(RawPacket {
+                kind,
+                size,
+                payload: data[2..].try_into().unwrap(),
+            }))
+        } else {
+            Err(anyhow!("Unknown packet kind: 0x{:x}", data[0]))
+        }
     }
 
     fn recv(&mut self, deadline: Instant) -> Result<Option<RespPacket>> {
-        let port = &mut self.port;
+        let pkt = self.recv_raw(deadline)?;
 
-        while port.bytes_to_read()? < 2 {
-            if Instant::now() > deadline {
-                return Ok(None);
-            }
-            sleep(Duration::from_micros(10));
+        if pkt.is_none() {
+            return Ok(None);
         }
 
-        let mut kind_and_size = [0u8, 0u8];
-        port.read_exact(&mut kind_and_size)?;
-        let size = kind_and_size[1] as usize;
-        let kind = kind_and_size[0];
-        let mut payload = vec![0u8; size];
-
-        while port.bytes_to_read()? < size as u32 {
-            sleep(Duration::from_micros(10));
-        }
-
-        port.read_exact(&mut payload)?;
+        let pkt = pkt.unwrap();
+        let payload = &pkt.payload[0..pkt.size];
 
         //println!("<<< {} {} {:?}", kind, size, payload);
 
-        match FromPrimitive::from_u8(kind) {
-            Some(PacketKind::IdentResp) => Ok(Some(RespPacket::Ident(
+        match pkt.kind {
+            PacketKind::IdentResp => Ok(Some(RespPacket::Ident(
                 String::from_utf8_lossy(&payload).to_string(),
             ))),
-            Some(PacketKind::Debug) => {
+            PacketKind::Debug => {
                 if payload.len() >= 8 {
                     let v0 = u32::from_le_bytes(payload[0..4].try_into()?);
                     let v1 = u32::from_le_bytes(payload[4..8].try_into()?);
@@ -184,7 +178,7 @@ impl PicoLink {
                     Err(anyhow!("Debug payload is too small: {}", payload.len()))
                 }
             }
-            Some(PacketKind::Error) => {
+            PacketKind::Error => {
                 if payload.len() >= 8 {
                     let v0 = u32::from_le_bytes(payload[0..4].try_into()?);
                     let v1 = u32::from_le_bytes(payload[4..8].try_into()?);
@@ -194,17 +188,13 @@ impl PicoLink {
                     Err(anyhow!("Error payload is too small: {}", payload.len()))
                 }
             }
-            Some(PacketKind::PointerCur) => {
+            PacketKind::PointerCur => {
                 let arr = payload.try_into().unwrap_or_default();
                 Ok(Some(RespPacket::PointerCur(u32::from_le_bytes(arr))))
             }
-            Some(PacketKind::ReadData) => Ok(Some(RespPacket::ReadData(payload))),
-            Some(PacketKind::SizeCur) => {
-                let arr = payload.try_into().unwrap_or_default();
-                Ok(Some(RespPacket::SizeCur(u32::from_le_bytes(arr))))
-            }
-            Some(x) => Err(anyhow::format_err!("Unexpected packet kind: {:?}", x)),
-            None => Err(anyhow::format_err!("Unknown packet kind: {}", kind)),
+            PacketKind::ReadData => Ok(Some(RespPacket::ReadData(payload.to_vec()))),
+            PacketKind::CommitDone => Ok(Some(RespPacket::CommitDone)),
+            x => Err(anyhow::format_err!("Unexpected packet kind: {:?}", x)),
         }
     }
 
@@ -281,10 +271,12 @@ impl PicoLink {
         }
     }
 
-    pub fn upload(&mut self, data: &[u8]) -> Result<()> {
+    pub fn upload<F>(&mut self, data: &[u8], f: F) -> Result<()> 
+    where F: Fn(usize) {
         self.send(ReqPacket::PointerSet(0))?;
 
         for chunk in data.chunks(30) {
+            f(chunk.len());
             self.send(ReqPacket::Write(chunk.to_vec()))?;
         }
 
@@ -300,5 +292,17 @@ impl PicoLink {
         }
 
         Ok(())
+    }
+
+    pub fn commit_rom(&mut self) -> Result<()> {
+        self.send(ReqPacket::CommitFlash)?;
+
+        self.recv_until_with_timeout(
+            |x| match x {
+                RespPacket::CommitDone => Some(()),
+                _ => None,
+            },
+            Duration::from_secs(5),
+        )
     }
 }

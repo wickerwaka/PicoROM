@@ -111,8 +111,8 @@ void save_config(const char *name, int len)
     memcpy(&cfg, config, sizeof(Config));
 
     cfg.version = CONFIG_VERSION;
-    //if (len == -1) len = strlen(name);
-    //if (len >= sizeof(cfg.name)) len = sizeof(cfg.name) - 1;
+    if (len == -1) len = strlen(name);
+    if (len >= sizeof(cfg.name)) len = sizeof(cfg.name) - 1;
     memcpy(cfg.name, name, len);
     cfg.name[len] = 0;
 
@@ -234,6 +234,7 @@ int main()
                     case PacketType::CommitFlash:
                     {
                         save_rom();
+                        pl_send_null(PacketType::CommitDone);
                         break;
                     }
 

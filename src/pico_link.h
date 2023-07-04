@@ -18,6 +18,7 @@ enum class PacketType : uint8_t
     ReadData = 8,
 
     CommitFlash = 12,
+    CommitDone = 13,
 
     Error = 0xfe,
     Debug = 0xff
@@ -33,7 +34,7 @@ struct Packet
     uint8_t payload[MAX_PKT_PAYLOAD];
 };
 
-void pl_send_packet(PacketType type);
+void pl_send_null(PacketType type);
 void pl_send_string(PacketType type, const char *s);
 void pl_send_payload(PacketType type, const void *data, size_t len);
 void pl_send_debug(const char *s, uint32_t v0, uint32_t v1);
