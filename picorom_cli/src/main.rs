@@ -7,6 +7,7 @@ use std::fs;
 use std::iter;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
+use clap_num::maybe_hex;
 
 mod enumerate;
 mod pico_link;
@@ -66,6 +67,12 @@ enum Commands {
         #[arg(short, long, default_value_t = false)]
         store: bool,
     },
+
+    Comms {
+        name: String,
+        #[arg(value_parser=maybe_hex::<u32>)]
+        addr: u32
+    }
 }
 
 fn main() -> Result<()> {
@@ -111,6 +118,11 @@ fn main() -> Result<()> {
                 pico.commit_rom()?;
                 spinner.finish_with_message("Done.");
             }
+        },
+        Commands::Comms { name, addr } => {
+            let mut pico = find_pico(&name)?;
+            pico.send(pico_link::ReqPacket::CommsStart(addr))?;
+            pico.recv_forever()?;
         }
     }
 

@@ -7,7 +7,6 @@ pico_sdk_init()
 add_executable(firmware
     firmware.cpp
     pico_link.cpp
-    read_handler.S
 )
 
 pico_set_float_implementation(firmware none)

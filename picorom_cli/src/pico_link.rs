@@ -22,6 +22,9 @@ enum PacketKind {
     CommitFlash = 12,
     CommitDone = 13,
 
+    CommsStart = 80,
+    CommsEnd = 81,
+
     Error = 0xfe,
     Debug = 0xff,
 }
@@ -35,6 +38,8 @@ pub enum ReqPacket {
     Write(Vec<u8>),
     Read,
     CommitFlash,
+    CommsStart(u32),
+    CommsEnd
 }
 
 impl ReqPacket {
@@ -49,6 +54,8 @@ impl ReqPacket {
             ReqPacket::Write(data) => (PacketKind::Write, data),
             ReqPacket::Read => (PacketKind::Read, vec![]),
             ReqPacket::CommitFlash => (PacketKind::CommitFlash, vec![]),
+            ReqPacket::CommsStart(addr) => {(PacketKind::CommsStart, addr.to_le_bytes().to_vec())},
+            ReqPacket::CommsEnd => (PacketKind::CommsEnd, vec![])
         };
 
         if payload.len() > 30 {
@@ -214,6 +221,13 @@ impl PicoLink {
         }
 
         Ok(())
+    }
+
+    pub fn recv_forever(&mut self) -> Result<()> {
+        loop {
+            self.recv_flush()?;
+            sleep(Duration::from_millis(1));
+        }
     }
 
     pub fn recv_until_with_timeout<T, F>(&mut self, f: F, timeout: Duration) -> Result<T>

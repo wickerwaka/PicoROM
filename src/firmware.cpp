@@ -4,6 +4,7 @@
 #include "hardware/gpio.h"
 #include "hardware/flash.h"
 #include "hardware/structs/syscfg.h"
+#include "hardware/structs/bus_ctrl.h"
 #include "pico/binary_info.h"
 #include "pico/multicore.h"
 #include "pico/unique_id.h"
@@ -51,11 +52,13 @@ void init_data_bus_programs(PIO pio, uint sm_data, uint sm_oe)
     for( uint ofs = 0; ofs < N_DATA_PINS; ofs++ )
     {
         pio_gpio_init(pio, BASE_DATA_PIN + ofs);
+        gpio_set_input_enabled(BASE_DATA_PIN + ofs, false);
     }
 
     for( uint ofs = 0; ofs < N_OE_PINS; ofs++ )
     {
         pio_gpio_init(pio, BASE_OE_PIN + ofs);
+        gpio_pull_down(BASE_OE_PIN + ofs);
     }
 
     // set oe pin directions, data pin direction will be set by the sm
@@ -76,16 +79,51 @@ void init_data_bus_programs(PIO pio, uint sm_data, uint sm_oe)
     sm_config_set_out_pins(&c_oe, BASE_DATA_PIN, N_DATA_PINS);
 
     pio_sm_init(pio, sm_oe, offset_oe, &c_oe);
-
     pio_sm_set_enabled(pio, sm_oe, true);
 }
 
-extern "C" void __attribute__((noreturn)) read_handler(void *rom_base, uint32_t addr_mask, io_wo_32 *tx_fifo);
+void init_comms_programs(PIO pio, uint sm_write, uint32_t *offset_write)
+{
+    *offset_write = pio_add_program(pio, &detect_write_program);
+}
+
+void start_comms_programs(PIO pio, uint32_t sm_write, uint32_t offset_write, uint32_t addr)
+{
+    pio_sm_config c_write = detect_write_program_get_default_config(offset_write);
+    sm_config_set_in_pins(&c_write, 0);
+    pio_sm_init(pio, sm_write, offset_write, &c_write);
+    pio_sm_set_enabled(pio, sm_write, true);
+    pio_sm_put_blocking(pio, sm_write, addr >> 8);
+}
+
+void end_comms_programs(PIO pio, uint32_t sm_write)
+{
+    pio_sm_set_enabled(pio, sm_write, false);
+}
+
+
 uint32_t core1_stack[8];
 
-void __attribute__((noreturn)) core1_entry()
+void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) core1_rom_loop()
 {
-    read_handler(rom_data, ADDR_MASK, &pio0->txf[0]);
+    register uint32_t r0 __asm__("r0") = (uint32_t)rom_data;
+    register uint32_t r1 __asm__("r1") = ADDR_MASK;
+    register uint32_t r2 __asm__("r2") = (uint32_t)&pio0->txf[0];
+
+    __asm__ volatile (
+        "ldr r5, =0xd0000004 \n\t"
+        "loop: \n\t"
+        "ldr r3, [r5] \n\t"
+        "and r3, r1 \n\t"
+        "ldrb r3, [r0, r3] \n\t"
+        "strb r3, [r2] \n\t"
+        "b loop \n\t"
+        : "+r" (r0), "+r" (r1), "+r" (r2)
+        :
+        : "r5", "cc", "memory"
+    );
+
+    __builtin_unreachable();
 }
 
 void init_config()
@@ -123,7 +161,7 @@ void save_config(const char *name, int len)
     flash_range_erase(FLASH_CFG_OFFSET, FLASH_SECTOR_SIZE);
     flash_range_program(FLASH_CFG_OFFSET, (uint8_t *)&cfg, sizeof(cfg));
     restore_interrupts(ints);
-    multicore_launch_core1_with_stack(core1_entry, core1_stack, sizeof(core1_stack));
+    multicore_launch_core1_with_stack(core1_rom_loop, core1_stack, sizeof(core1_stack));
 }
 
 void save_rom()
@@ -133,11 +171,11 @@ void save_rom()
     flash_range_erase(FLASH_ROM_OFFSET, ROM_SIZE);
     flash_range_program(FLASH_ROM_OFFSET, rom_data, ROM_SIZE);
     restore_interrupts(ints);
-    multicore_launch_core1_with_stack(core1_entry, core1_stack, sizeof(core1_stack));
+    multicore_launch_core1_with_stack(core1_rom_loop, core1_stack, sizeof(core1_stack));
 }
 
 
-
+volatile uint32_t popped = 0;
 
 int main()
 {
@@ -145,13 +183,13 @@ int main()
 
     init_config();
 
-    set_sys_clock_khz(160000, true);
+    set_sys_clock_khz(200000, true);
 
     // configure address lines
     for( uint gpio = BASE_ADDR_PIN; gpio < N_ADDR_PINS + BASE_ADDR_PIN; gpio++ )
     {
         gpio_init(gpio);
-        gpio_set_pulls(gpio, false, false);
+        gpio_set_pulls(gpio, false, true);
         gpio_set_input_enabled(gpio, true);
         gpio_set_input_hysteresis_enabled(gpio, false);
         syscfg_hw->proc_in_sync_bypass |= 1 << gpio;
@@ -164,14 +202,21 @@ int main()
 
     uint sm_data = pio_claim_unused_sm(pio0, true);
     uint sm_oe = pio_claim_unused_sm(pio0, true);
+    uint sm_write = pio_claim_unused_sm(pio1, true);
+    uint32_t offset_write;
     init_data_bus_programs(pio0, sm_data, sm_oe);
+    init_comms_programs(pio1, sm_write, &offset_write);
 
-    multicore_launch_core1_with_stack(core1_entry, core1_stack, sizeof(core1_stack));
+    // give core1 bus priority
+    bus_ctrl_hw->priority = BUSCTRL_BUS_PRIORITY_PROC1_BITS;
+
+    multicore_launch_core1_with_stack(core1_rom_loop, core1_stack, sizeof(core1_stack));
 
     while (true)
     {
         // Reset state
         rom_offset = 0;
+        end_comms_programs(pio1, sm_write);
 
         pl_wait_for_connection();
 
@@ -180,7 +225,14 @@ int main()
         // Loop while connected
         while (pl_is_connected())
         {
+            if( pio_sm_get_rx_fifo_level(pio1, sm_write) > 0 )
+            {
+                uint32_t p = pio_sm_get(pio1, sm_write);
+                pl_send_debug("PIO", p, 0);
+            }
+
             const Packet *req = pl_poll();
+
             if (req)
             {
                 switch((PacketType)req->type)
@@ -235,6 +287,22 @@ int main()
                     {
                         save_rom();
                         pl_send_null(PacketType::CommitDone);
+                        break;
+                    }
+
+                    case PacketType::CommsStart:
+                    {
+                        uint32_t addr;
+                        memcpy(&addr, req->payload, 4);
+                        start_comms_programs(pio1, sm_write, offset_write, addr);
+                        pl_send_debug("Comms Started", addr, 0);
+                        break;
+                    }
+
+                    case PacketType::CommsEnd:
+                    {
+                        end_comms_programs(pio1, sm_write);
+                        pl_send_debug("Comms Ended", 0, 0);
                         break;
                     }
 

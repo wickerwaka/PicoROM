@@ -1,6 +1,6 @@
 
 .program output
-out pins, 8
+    out pins, 8
 
 
 .program output_enable
@@ -24,3 +24,32 @@ wait2:
     mov x, isr
     jmp !x wait2
 
+
+.program detect_write
+    ; initialize y from fifo
+    pull block
+    mov y, osr
+
+start:
+    ; loop until upper address bits matches mask 
+    mov osr, pins
+    out null, 8 ; drop first 8 bits
+    out x, 14 ; a8-a18, buf_oe, oe, ce
+    jmp x!=y start
+
+    ; validate that the address this matches, go back to start
+    mov osr, pins
+    out isr, 8 ; push lower 8 bits into ise
+    out x, 14
+    jmp x!=y start
+
+    ; push 8 bits into fifo
+    push noblock
+
+    ; loop until address doesn't match mask
+.wrap_target 
+    mov osr, pins
+    out null, 8
+    out x, 14
+    jmp x!=y start
+.wrap
