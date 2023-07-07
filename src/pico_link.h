@@ -17,11 +17,16 @@ enum class PacketType : uint8_t
     Read = 7,
     ReadData = 8,
 
+    SetMask = 9,
+    GetMask = 10,
+    CurMask = 11,
+
     CommitFlash = 12,
     CommitDone = 13,
 
     CommsStart = 80,
     CommsEnd = 81,
+    CommsData = 82,
 
     Error = 0xfe,
     Debug = 0xff

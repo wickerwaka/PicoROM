@@ -19,11 +19,16 @@ enum PacketKind {
     Read = 7,
     ReadData = 8,
 
+    MaskSet = 9,
+    MaskGet = 10,
+    MaskCur = 11,
+
     CommitFlash = 12,
     CommitDone = 13,
 
     CommsStart = 80,
     CommsEnd = 81,
+    CommsData = 82,
 
     Error = 0xfe,
     Debug = 0xff,
@@ -35,11 +40,14 @@ pub enum ReqPacket {
     IdentSet(String),
     PointerSet(u32),
     PointerGet,
+    MaskSet(u32),
+    MaskGet,
     Write(Vec<u8>),
     Read,
     CommitFlash,
     CommsStart(u32),
-    CommsEnd
+    CommsEnd,
+    CommsData(Vec<u8>)
 }
 
 impl ReqPacket {
@@ -51,11 +59,14 @@ impl ReqPacket {
                 (PacketKind::PointerSet, offset.to_le_bytes().to_vec())
             }
             ReqPacket::PointerGet => (PacketKind::PointerGet, vec![]),
+            ReqPacket::MaskSet(mask) => {(PacketKind::MaskSet, mask.to_le_bytes().to_vec())},
+            ReqPacket::MaskGet => {(PacketKind::MaskGet, vec![])},
             ReqPacket::Write(data) => (PacketKind::Write, data),
             ReqPacket::Read => (PacketKind::Read, vec![]),
             ReqPacket::CommitFlash => (PacketKind::CommitFlash, vec![]),
             ReqPacket::CommsStart(addr) => {(PacketKind::CommsStart, addr.to_le_bytes().to_vec())},
-            ReqPacket::CommsEnd => (PacketKind::CommsEnd, vec![])
+            ReqPacket::CommsEnd => (PacketKind::CommsEnd, vec![]),
+            ReqPacket::CommsData(data) => (PacketKind::CommsData, data)
         };
 
         if payload.len() > 30 {
@@ -76,6 +87,7 @@ pub enum RespPacket {
     PointerCur(u32),
     ReadData(Vec<u8>),
     CommitDone,
+    CommsData(Vec<u8>),
 
     Error(String, u32, u32),
     Debug(String, u32, u32),
@@ -201,6 +213,7 @@ impl PicoLink {
             }
             PacketKind::ReadData => Ok(Some(RespPacket::ReadData(payload.to_vec()))),
             PacketKind::CommitDone => Ok(Some(RespPacket::CommitDone)),
+            PacketKind::CommsData => Ok(Some(RespPacket::CommsData(payload.to_vec()))),
             x => Err(anyhow::format_err!("Unexpected packet kind: {:?}", x)),
         }
     }
@@ -215,6 +228,9 @@ impl PicoLink {
                 }
                 RespPacket::Error(msg, v0, v1) => {
                     println!("ERROR: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
+                }
+                RespPacket::CommsData(v) => {
+                    print!("{}", String::from_utf8_lossy(&v));
                 }
                 _ => {}
             }
@@ -243,6 +259,9 @@ impl PicoLink {
                 }
                 RespPacket::Error(msg, v0, v1) => {
                     println!("ERROR: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
+                }
+                RespPacket::CommsData(v) => {
+                    print!("{}", String::from_utf8_lossy(&v));
                 }
                 x => {
                     let res = f(x);
@@ -285,7 +304,7 @@ impl PicoLink {
         }
     }
 
-    pub fn upload<F>(&mut self, data: &[u8], f: F) -> Result<()> 
+    pub fn upload<F>(&mut self, data: &[u8], addr_mask: u32, f: F) -> Result<()> 
     where F: Fn(usize) {
         self.send(ReqPacket::PointerSet(0))?;
 
@@ -304,6 +323,8 @@ impl PicoLink {
         if cur != data.len() as u32 {
             return Err(anyhow!("Upload did not complete."));
         }
+
+        self.send(ReqPacket::MaskSet(addr_mask))?;
 
         Ok(())
     }

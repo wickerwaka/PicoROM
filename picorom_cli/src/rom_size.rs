@@ -1,6 +1,6 @@
 use clap::{builder::PossibleValue, ValueEnum};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Copy)]
 pub enum RomSize {
     MBit(usize),
     KBit(usize),
@@ -12,6 +12,10 @@ impl RomSize {
             RomSize::MBit(x) => x * 128 * 1024,
             RomSize::KBit(x) => x * 128,
         }
+    }
+
+    pub fn mask(&self) -> u32 {
+        ( self.bytes() as u32 ) - 1
     }
 }
 

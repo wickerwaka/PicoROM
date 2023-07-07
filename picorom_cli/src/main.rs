@@ -16,21 +16,21 @@ mod rom_size;
 use crate::enumerate::*;
 use crate::rom_size::*;
 
-fn read_file(name: &Path, size: RomSize) -> Result<Vec<u8>> {
+fn read_file(name: &Path, rom_size: RomSize) -> Result<Vec<u8>> {
     let mut data = fs::read(name)?;
-    if data.len() > size.bytes() {
+    if data.len() > rom_size.bytes() {
         return Err(anyhow!(
             "{:?} larger ({}) than rom size ({})",
             name,
             data.len(),
-            size.bytes()
+            rom_size.bytes()
         ));
     }
 
-    let diff = size.bytes() - data.len();
+    let diff = rom_size.bytes() - data.len();
     data.extend(iter::repeat(0u8).take(diff));
 
-    Ok(data.repeat(size.bytes() / RomSize::MBit(2).bytes()))
+    Ok(data.repeat(RomSize::MBit(2).bytes() / rom_size.bytes()))
 }
 
 #[derive(Debug, Parser)] // requires `derive` feature
@@ -104,7 +104,7 @@ fn main() -> Result<()> {
                         .unwrap()
                         .progress_chars("#>-"),
                 );
-            pico.upload(&data, |x| progress.inc(x as u64))?;
+            pico.upload(&data, size.mask(), |x| progress.inc(x as u64))?;
             progress.finish_with_message("Done.");
             if store {
                 let spinner = ProgressBar::new_spinner()
@@ -122,6 +122,8 @@ fn main() -> Result<()> {
         Commands::Comms { name, addr } => {
             let mut pico = find_pico(&name)?;
             pico.send(pico_link::ReqPacket::CommsStart(addr))?;
+            pico.send(pico_link::ReqPacket::CommsData("HELLO WORLD.  ".to_owned().into_bytes()))?;
+
             pico.recv_forever()?;
         }
     }

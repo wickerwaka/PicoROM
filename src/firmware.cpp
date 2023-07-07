@@ -11,25 +11,15 @@
 
 #include <tusb.h>
 
+#include "system.h"
 #include "pico_link.h"
+#include "state_machines.h"
 
-#include "data_bus.pio.h"
-
-static constexpr uint N_DATA_PINS = 8;
-static constexpr uint N_OE_PINS = 2;
-static constexpr uint N_ADDR_PINS = 19;
-static constexpr uint BASE_DATA_PIN = 22;
-static constexpr uint BASE_OE_PIN = 20;
-static constexpr uint BASE_ADDR_PIN = 0;
-
-static constexpr uint ROM_SIZE = 0x40000;
-static constexpr uint ADDR_MASK = ROM_SIZE - 1;
-static constexpr uint FLASH_SIZE = 2 * 1024 * 1024;
 
 static constexpr uint FLASH_ROM_OFFSET = FLASH_SIZE - ROM_SIZE;
 static constexpr uint FLASH_CFG_OFFSET = FLASH_ROM_OFFSET - FLASH_SECTOR_SIZE;
 
-static constexpr uint CONFIG_VERSION = 0x00010006;
+static constexpr uint CONFIG_VERSION = 0x00010007;
 
 uint32_t rom_offset = 0;
 uint8_t *rom_data = (uint8_t *)0x21000000; // Start of 4 64kb sram banks
@@ -40,70 +30,15 @@ struct Config
     uint32_t version;
     char name[32];
 
-    uint8_t _padding[256-36];
+    uint32_t addr_mask;
 };
 
-const Config *config = (Config *)(XIP_BASE + FLASH_CFG_OFFSET);
-static_assert(sizeof(Config) == FLASH_PAGE_SIZE);
-
-void init_data_bus_programs(PIO pio, uint sm_data, uint sm_oe)
-{
-    // Assign data and oe pins to pio
-    for( uint ofs = 0; ofs < N_DATA_PINS; ofs++ )
-    {
-        pio_gpio_init(pio, BASE_DATA_PIN + ofs);
-        gpio_set_input_enabled(BASE_DATA_PIN + ofs, false);
-    }
-
-    for( uint ofs = 0; ofs < N_OE_PINS; ofs++ )
-    {
-        pio_gpio_init(pio, BASE_OE_PIN + ofs);
-        gpio_pull_down(BASE_OE_PIN + ofs);
-    }
-
-    // set oe pin directions, data pin direction will be set by the sm
-    pio_sm_set_consecutive_pindirs(pio, sm_oe, BASE_OE_PIN, N_OE_PINS, false);
-
-    // set out/in bases
-    uint offset_data = pio_add_program(pio, &output_program);
-    pio_sm_config c_data = output_program_get_default_config(offset_data);
-
-    sm_config_set_out_pins(&c_data, BASE_DATA_PIN, N_DATA_PINS);
-    sm_config_set_out_shift(&c_data, true, true, N_DATA_PINS);
-    pio_sm_init(pio, sm_data, offset_data, &c_data);
-    pio_sm_set_enabled(pio, sm_data, true);
-
-    uint offset_oe = pio_add_program(pio, &output_enable_program);
-    pio_sm_config c_oe = output_enable_program_get_default_config(offset_oe);
-    sm_config_set_in_pins(&c_oe, BASE_OE_PIN);
-    sm_config_set_out_pins(&c_oe, BASE_DATA_PIN, N_DATA_PINS);
-
-    pio_sm_init(pio, sm_oe, offset_oe, &c_oe);
-    pio_sm_set_enabled(pio, sm_oe, true);
-}
-
-void init_comms_programs(PIO pio, uint sm_write, uint32_t *offset_write)
-{
-    *offset_write = pio_add_program(pio, &detect_write_program);
-}
-
-void start_comms_programs(PIO pio, uint32_t sm_write, uint32_t offset_write, uint32_t addr)
-{
-    pio_sm_config c_write = detect_write_program_get_default_config(offset_write);
-    sm_config_set_in_pins(&c_write, 0);
-    pio_sm_init(pio, sm_write, offset_write, &c_write);
-    pio_sm_set_enabled(pio, sm_write, true);
-    pio_sm_put_blocking(pio, sm_write, addr >> 8);
-}
-
-void end_comms_programs(PIO pio, uint32_t sm_write)
-{
-    pio_sm_set_enabled(pio, sm_write, false);
-}
+Config config;
+const Config *flash_config = (Config *)(XIP_BASE + FLASH_CFG_OFFSET);
+static_assert(sizeof(Config) <= FLASH_PAGE_SIZE);
 
 
 uint32_t core1_stack[8];
-
 void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) core1_rom_loop()
 {
     register uint32_t r0 __asm__("r0") = (uint32_t)rom_data;
@@ -126,43 +61,36 @@ void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) core1_r
     __builtin_unreachable();
 }
 
-void init_config()
+
+void save_config()
 {
-    if (config->version == CONFIG_VERSION) return;
-
-    Config cfg;
-    memset(&cfg, 0, sizeof(cfg));
-
-    cfg.version = CONFIG_VERSION;
-
-    pico_get_unique_board_id_string(cfg.name, sizeof(cfg.name));
-
-    uint32_t ints = save_and_disable_interrupts();
-    flash_range_erase(FLASH_CFG_OFFSET, FLASH_SECTOR_SIZE);
-    flash_range_program(FLASH_CFG_OFFSET, (uint8_t *)&cfg, sizeof(cfg));
-    restore_interrupts(ints);
-}
-
-void save_config(const char *name, int len)
-{
-    Config cfg;
-    memcpy(&cfg, config, sizeof(Config));
-
-    cfg.version = CONFIG_VERSION;
-    if (len == -1) len = strlen(name);
-    if (len >= sizeof(cfg.name)) len = sizeof(cfg.name) - 1;
-    memcpy(cfg.name, name, len);
-    cfg.name[len] = 0;
-
-    if( !memcmp(&cfg, config, sizeof(Config))) return;
+    if( !memcmp(&config, flash_config, sizeof(Config))) return;
 
     multicore_reset_core1();
     uint32_t ints = save_and_disable_interrupts();
     flash_range_erase(FLASH_CFG_OFFSET, FLASH_SECTOR_SIZE);
-    flash_range_program(FLASH_CFG_OFFSET, (uint8_t *)&cfg, sizeof(cfg));
+    flash_range_program(FLASH_CFG_OFFSET, (uint8_t *)&config, FLASH_PAGE_SIZE);
     restore_interrupts(ints);
+
     multicore_launch_core1_with_stack(core1_rom_loop, core1_stack, sizeof(core1_stack));
 }
+
+
+void init_config()
+{
+    memcpy(&config, flash_config, sizeof(Config));
+
+    if (config.version == CONFIG_VERSION) return;
+
+    memset(&config, 0, sizeof(Config));
+
+    config.addr_mask = ADDR_MASK;
+    config.version = CONFIG_VERSION;
+    pico_get_unique_board_id_string(config.name, sizeof(config.name));
+
+    save_config();
+}
+
 
 void save_rom()
 {
@@ -175,7 +103,128 @@ void save_rom()
 }
 
 
-volatile uint32_t popped = 0;
+void configure_address_pins(uint32_t mask)
+{
+    mask &= ADDR_MASK;
+
+    // configure address lines
+    for( uint ofs = 0; ofs < N_ADDR_PINS; ofs++ )
+    {
+        uint gpio = BASE_ADDR_PIN + ofs;
+        
+        gpio_init(gpio);
+        gpio_set_pulls(gpio, false, true);
+        gpio_set_input_hysteresis_enabled(gpio, false);
+        syscfg_hw->proc_in_sync_bypass |= 1 << gpio;
+
+        if (mask & (1 << ofs))
+        {
+            gpio_set_input_enabled(gpio, true);
+        }
+        else
+        {
+            gpio_set_input_enabled(gpio, false);
+        }
+    }
+}
+
+struct CommsRegisters
+{
+    uint8_t magic[4];
+    uint8_t active;
+    uint8_t in_byte;
+    uint8_t in_seq;
+    uint8_t out_seq;
+    uint8_t pending;
+
+    uint8_t pio00;
+    uint8_t pio01;
+    uint8_t pio10;
+    uint8_t pio11;
+
+    uint8_t reserved[256 - 13];
+
+    uint8_t out_area[256];
+};
+
+static_assert(sizeof(CommsRegisters) == 512);
+
+static CommsRegisters *comms_reg = (CommsRegisters *)0x0;
+static uint32_t comms_reg_addr = 0;
+
+void start_comms(uint32_t addr)
+{
+    comms_reg_addr = addr & ADDR_MASK & ~0x1ff;
+    comms_reg = (CommsRegisters *)(rom_data + comms_reg_addr);
+    memset(comms_reg, 0, sizeof(CommsRegisters));
+    memcpy(comms_reg->magic, "PICO", 4);
+    
+    start_comms_programs(comms_reg_addr, offsetof(CommsRegisters, in_byte));
+
+    comms_reg->active = 1;
+}
+
+void end_comms()
+{
+    if (comms_reg == nullptr) return;
+
+    comms_reg->active = 0;
+    comms_reg = nullptr;
+
+    end_comms_programs();
+}
+
+static void update_comms_out(uint8_t *outbytes, int *outcount, int max_outcount)
+{
+    while( comms_poll_write(outbytes + *outcount) )
+    {
+        (*outcount)++;
+        comms_reg->out_seq++;
+
+        if (*outcount == max_outcount)
+        {
+            pl_send_payload(PacketType::CommsData, outbytes, *outcount);
+            *outcount = 0;
+        }
+    }
+}
+
+void update_comms(const uint8_t *data, uint32_t len)
+{
+    if (comms_reg == nullptr) return;
+
+    uint8_t outbytes[MAX_PKT_PAYLOAD];
+    int outcount = 0;
+
+    comms_reg->pio00 = pio0->sm[0].addr;
+    comms_reg->pio01 = pio0->sm[1].addr;
+    comms_reg->pio10 = pio1->sm[0].addr;
+    comms_reg->pio11 = pio1->sm[1].addr;
+
+    update_comms_out(outbytes, &outcount, sizeof(outbytes));
+
+    uint incount = 0;
+
+    while (incount < len)
+    {
+        comms_reg->pending = 1;
+        comms_reg->in_byte = data[incount];
+        comms_reg->in_seq++;
+        incount++;
+
+        while( !comms_poll_read() )
+        {
+            update_comms_out(outbytes, &outcount, sizeof(outbytes));
+        }
+    }
+
+    comms_reg->pending = 0;
+    
+    if (outcount > 0)
+    {
+        pl_send_payload(PacketType::CommsData, outbytes, outcount);
+    }
+}
 
 int main()
 {
@@ -185,38 +234,26 @@ int main()
 
     set_sys_clock_khz(200000, true);
 
-    // configure address lines
-    for( uint gpio = BASE_ADDR_PIN; gpio < N_ADDR_PINS + BASE_ADDR_PIN; gpio++ )
-    {
-        gpio_init(gpio);
-        gpio_set_pulls(gpio, false, true);
-        gpio_set_input_enabled(gpio, true);
-        gpio_set_input_hysteresis_enabled(gpio, false);
-        syscfg_hw->proc_in_sync_bypass |= 1 << gpio;
-    }
+    configure_address_pins(config.addr_mask);
 
     for( uint i = 0; i < ROM_SIZE; i++ )
     {
         rom_data[i] = flash_rom_data[i];
     }
 
-    uint sm_data = pio_claim_unused_sm(pio0, true);
-    uint sm_oe = pio_claim_unused_sm(pio0, true);
-    uint sm_write = pio_claim_unused_sm(pio1, true);
-    uint32_t offset_write;
-    init_data_bus_programs(pio0, sm_data, sm_oe);
-    init_comms_programs(pio1, sm_write, &offset_write);
+    init_data_bus_programs();
 
     // give core1 bus priority
     bus_ctrl_hw->priority = BUSCTRL_BUS_PRIORITY_PROC1_BITS;
 
+    multicore_reset_core1();
     multicore_launch_core1_with_stack(core1_rom_loop, core1_stack, sizeof(core1_stack));
 
     while (true)
     {
         // Reset state
         rom_offset = 0;
-        end_comms_programs(pio1, sm_write);
+        end_comms();
 
         pl_wait_for_connection();
 
@@ -225,11 +262,8 @@ int main()
         // Loop while connected
         while (pl_is_connected())
         {
-            if( pio_sm_get_rx_fifo_level(pio1, sm_write) > 0 )
-            {
-                uint32_t p = pio_sm_get(pio1, sm_write);
-                pl_send_debug("PIO", p, 0);
-            }
+            uint32_t addr = sio_hw->gpio_in & config.addr_mask;
+            update_comms(nullptr, 0);
 
             const Packet *req = pl_poll();
 
@@ -239,13 +273,15 @@ int main()
                 {
                     case PacketType::IdentReq:
                     {
-                        pl_send_string(PacketType::IdentResp, config->name);
+                        pl_send_string(PacketType::IdentResp, config.name);
                         break;
                     }
 
                     case PacketType::IdentSet:
                     {
-                        save_config((const char *)req->payload, req->size);
+                        memcpy(config.name, req->payload, req->size);
+                        config.name[req->size] = '\0';
+                        save_config();
                         break;
                     }
 
@@ -294,15 +330,36 @@ int main()
                     {
                         uint32_t addr;
                         memcpy(&addr, req->payload, 4);
-                        start_comms_programs(pio1, sm_write, offset_write, addr);
+                        start_comms(addr);
                         pl_send_debug("Comms Started", addr, 0);
                         break;
                     }
 
                     case PacketType::CommsEnd:
                     {
-                        end_comms_programs(pio1, sm_write);
+                        end_comms();
                         pl_send_debug("Comms Ended", 0, 0);
+                        break;
+                    }
+
+                    case PacketType::CommsData:
+                    {
+                        update_comms(req->payload, req->size);
+                        break;
+                    }
+
+                    case PacketType::SetMask:
+                    {
+                        uint32_t mask;
+                        memcpy(&mask, req->payload, 4);
+                        config.addr_mask = mask;
+                        configure_address_pins(mask);
+                        break;
+                    }
+
+                    case PacketType::GetMask:
+                    {
+                        pl_send_payload(PacketType::CurMask, &config.addr_mask, 4);
                         break;
                     }
 

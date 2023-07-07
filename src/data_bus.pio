@@ -53,3 +53,29 @@ start:
     out x, 14
     jmp x!=y start
 .wrap
+
+
+.program detect_read
+    ; initialize y from fifo
+    pull block
+    mov y, osr
+
+start:
+    ; loop until upper matches 
+    mov osr, pins
+    out x, 22 ; a0-a18, buf_oe, oe, ce
+    jmp x!=y start
+
+    ; validate that the address this matches, go back to start
+    mov osr, pins
+    out x, 22
+    jmp x!=y start
+
+    push noblock
+
+    ; loop until address doesn't match mask
+.wrap_target 
+    mov osr, pins
+    out x, 22
+    jmp x!=y start
+.wrap
