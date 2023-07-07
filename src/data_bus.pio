@@ -24,6 +24,21 @@ wait2:
     mov x, isr
     jmp !x wait2
 
+.program output_enable_buffer
+
+.wrap_target
+start:
+    mov osr, pins
+    out x, 2
+    jmp !x en_out
+
+dis_out:
+    set pins, 1
+    jmp start
+en_out: 
+    set pins, 0
+.wrap
+
 
 .program detect_write
     ; initialize y from fifo

@@ -19,6 +19,7 @@ target_compile_definitions(firmware PRIVATE
     PICO_CORE1_STACK_SIZE=4
     USB_MAX_ENDPOINTS=4
     PICO_STDIO_ENABLE_CRLF_SUPPORT=0
+    OUTPUT_BUFFER=0
 )
 
 pico_generate_pio_header(firmware ${CMAKE_CURRENT_LIST_DIR}/data_bus.pio)

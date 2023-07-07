@@ -128,21 +128,79 @@ void configure_address_pins(uint32_t mask)
     }
 }
 
+template<uint32_t N>
+struct FIFO
+{
+    uint32_t head;
+    uint32_t tail;
+    uint8_t data[N];
+
+    FIFO()
+    {
+        head = tail = 0;
+    }
+
+    void clear()
+    {
+        tail = head;
+    }
+
+    uint32_t count() const
+    {
+        return head - tail;
+    }
+
+    bool is_full() const
+    {
+        return count() == N;
+    }
+
+    bool is_empty() const
+    {
+        return count() == 0;
+    }
+
+    void push(uint8_t v)
+    {
+        data[head % N] = v;
+        __dmb();
+        head++;
+    }
+
+    uint8_t pop()
+    {
+        uint8_t v = data[tail % N];
+        __dmb();
+        tail++;
+        return v;
+    }
+
+    uint8_t peek()
+    {
+        return data[tail % N];
+    }
+};
+
+
+FIFO<64> comms_out_fifo;
+FIFO<64> comms_in_fifo;
+uint32_t comms_out_deferred_req;
+uint32_t comms_out_deferred_ack;
+uint32_t comms_in_empty_req;
+uint32_t comms_in_empty_ack;
+
 struct CommsRegisters
 {
     uint8_t magic[4];
-    uint8_t active;
-    uint8_t in_byte;
-    uint8_t in_seq;
-    uint8_t out_seq;
-    uint8_t pending;
+    
+    // only the least significant byte is relevant for these, using 32-bits to avoid potential atomic issues
+    uint32_t active;
+    uint32_t pending;
+    uint32_t in_byte;
+    uint32_t in_seq;
+    uint32_t out_seq;
 
-    uint8_t pio00;
-    uint8_t pio01;
-    uint8_t pio10;
-    uint8_t pio11;
-
-    uint8_t reserved[256 - 13];
+    uint8_t reserved[256 - (6 * 4)];
 
     uint8_t out_area[256];
 };
@@ -152,8 +210,52 @@ static_assert(sizeof(CommsRegisters) == 512);
 static CommsRegisters *comms_reg = (CommsRegisters *)0x0;
 static uint32_t comms_reg_addr = 0;
 
+void comms_out_irq_handler()
+{
+    uint8_t byte = pio_sm_get(pio1, 0) & 0xff; // this must be valid at this point
+    if (comms_reg)
+    {
+        comms_out_fifo.push(byte);
+        if (comms_out_fifo.is_full())
+        {
+            comms_out_deferred_req++;
+        }
+        else
+        {
+            comms_reg->out_seq++;
+        }
+    }
+}
+
+void comms_in_irq_handler()
+{
+    pio_sm_get(pio1, 1); // don't care
+    comms_in_fifo.pop();
+
+    if (comms_reg)
+    {
+        if (comms_in_fifo.is_empty())
+        {
+            comms_in_empty_req++;
+            comms_reg->pending = 0;
+        }
+        else
+        {
+            comms_reg->in_byte = comms_in_fifo.peek();
+            comms_reg->in_seq++;
+        }
+    }
+}
+
 void start_comms(uint32_t addr)
 {
+    uint32_t ints = save_and_disable_interrupts();
+    comms_out_fifo.clear();
+    comms_in_fifo.clear();
+    comms_out_deferred_ack = 0;
+    comms_out_deferred_req = 0;
+    comms_in_empty_ack = 0;
+    comms_in_empty_req = 1;
     comms_reg_addr = addr & ADDR_MASK & ~0x1ff;
     comms_reg = (CommsRegisters *)(rom_data + comms_reg_addr);
     memset(comms_reg, 0, sizeof(CommsRegisters));
@@ -161,12 +263,20 @@ void start_comms(uint32_t addr)
     
     start_comms_programs(comms_reg_addr, offsetof(CommsRegisters, in_byte));
 
+    restore_interrupts(ints);
+
+    irq_set_enabled(PIO1_IRQ_0, true);
+    irq_set_enabled(PIO1_IRQ_1, true);
+
     comms_reg->active = 1;
 }
 
 void end_comms()
 {
     if (comms_reg == nullptr) return;
+
+    irq_set_enabled(PIO1_IRQ_0, false);
+    irq_set_enabled(PIO1_IRQ_1, false);
 
     comms_reg->active = 0;
     comms_reg = nullptr;
@@ -176,10 +286,16 @@ void end_comms()
 
 static void update_comms_out(uint8_t *outbytes, int *outcount, int max_outcount)
 {
-    while( comms_poll_write(outbytes + *outcount) )
+    while(comms_out_deferred_ack != comms_out_deferred_req)
     {
-        (*outcount)++;
         comms_reg->out_seq++;
+        comms_out_deferred_ack++;
+    }
+
+    while( comms_out_fifo.count() > 0 )
+    {
+        outbytes[*outcount] = comms_out_fifo.pop();
+        (*outcount)++;
 
         if (*outcount == max_outcount)
         {
@@ -189,41 +305,47 @@ static void update_comms_out(uint8_t *outbytes, int *outcount, int max_outcount)
     }
 }
 
-void update_comms(const uint8_t *data, uint32_t len)
+bool update_comms(const uint8_t *data, uint32_t len, uint32_t timeout_ms)
 {
-    if (comms_reg == nullptr) return;
+    if (comms_reg == nullptr) return true;
+
+    absolute_time_t end_time = make_timeout_time_ms(timeout_ms);
 
     uint8_t outbytes[MAX_PKT_PAYLOAD];
     int outcount = 0;
 
-    comms_reg->pio00 = pio0->sm[0].addr;
-    comms_reg->pio01 = pio0->sm[1].addr;
-    comms_reg->pio10 = pio1->sm[0].addr;
-    comms_reg->pio11 = pio1->sm[1].addr;
-
     update_comms_out(outbytes, &outcount, sizeof(outbytes));
-
+    
     uint incount = 0;
-
     while (incount < len)
     {
         comms_reg->pending = 1;
-        comms_reg->in_byte = data[incount];
-        comms_reg->in_seq++;
-        incount++;
-
-        while( !comms_poll_read() )
+        do
         {
             update_comms_out(outbytes, &outcount, sizeof(outbytes));
+            if (get_absolute_time() > end_time)
+            {
+                return false;
+            }
+        } while (comms_in_fifo.is_full());
+
+        comms_in_fifo.push(data[incount]);
+        incount++;
+
+        if(comms_in_empty_ack != comms_in_empty_req)
+        {
+            comms_reg->in_byte = comms_in_fifo.peek();
+            comms_reg->in_seq++;
+            comms_in_empty_ack++;
         }
     }
-
-    comms_reg->pending = 0;
     
     if (outcount > 0)
     {
         pl_send_payload(PacketType::CommsData, outbytes, outcount);
     }
+
+    return true;
 }
 
 int main()
@@ -242,6 +364,9 @@ int main()
     }
 
     init_data_bus_programs();
+
+    irq_set_exclusive_handler(PIO1_IRQ_0, comms_out_irq_handler);
+    irq_set_exclusive_handler(PIO1_IRQ_1, comms_in_irq_handler);
 
     // give core1 bus priority
     bus_ctrl_hw->priority = BUSCTRL_BUS_PRIORITY_PROC1_BITS;
@@ -263,7 +388,10 @@ int main()
         while (pl_is_connected())
         {
             uint32_t addr = sio_hw->gpio_in & config.addr_mask;
-            update_comms(nullptr, 0);
+            if( !update_comms(nullptr, 0, 5000) )
+            {
+                pl_send_error("Comms Update Timeout", 0, 0);
+            }
 
             const Packet *req = pl_poll();
 
@@ -344,7 +472,10 @@ int main()
 
                     case PacketType::CommsData:
                     {
-                        update_comms(req->payload, req->size);
+                        if( !update_comms(req->payload, req->size, 5000) )
+                        {
+                            pl_send_error("Comms send timeout", 0, 0);
+                        }
                         break;
                     }
 
