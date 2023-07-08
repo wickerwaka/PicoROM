@@ -9,11 +9,9 @@ use std::path::{Path, PathBuf};
 use std::time::Duration;
 use clap_num::maybe_hex;
 
-mod enumerate;
-mod pico_link;
-mod rom_size;
+use picolink::*;
 
-use crate::enumerate::*;
+mod rom_size;
 use crate::rom_size::*;
 
 fn read_file(name: &Path, rom_size: RomSize) -> Result<Vec<u8>> {
@@ -127,8 +125,8 @@ fn main() -> Result<()> {
         },
         Commands::Comms { name, addr } => {
             let mut pico = find_pico(&name)?;
-            pico.send(pico_link::ReqPacket::CommsStart(addr))?;
-            pico.send(pico_link::ReqPacket::CommsData("HELLO".to_owned().into_bytes()))?;
+            pico.send(ReqPacket::CommsStart(addr))?;
+            pico.send(ReqPacket::CommsData("HELLO".to_owned().into_bytes()))?;
 
             pico.recv_forever()?;
         }

@@ -1,5 +1,5 @@
 [package]
-name = "picorom_cli"
+name = "picorom"
 version = "0.1.0"
 edition = "2021"
 
@@ -13,3 +13,5 @@ clap-num = "1"
 num-traits = "0.2"
 num-derive = "0.4"
 indicatif = "0.17"
+
+picolink = { path = "../picolink" }
