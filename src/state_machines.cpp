@@ -30,6 +30,11 @@ void init_data_bus_programs()
         gpio_set_input_enabled(BASE_BUF_OE_PIN + ofs, false);
     }
 
+    // OUTPUT_BUFFER==0 does this in the oe program
+#if OUTPUT_BUFFER==1
+    pio_sm_set_consecutive_pindirs(data_pio, sm_data, BASE_DATA_PIN, N_DATA_PINS, true);
+#endif
+
     // set out/in bases
     uint offset_data = pio_add_program(data_pio, &output_program);
     pio_sm_config c_data = output_program_get_default_config(offset_data);
@@ -45,9 +50,9 @@ void init_data_bus_programs()
 
 #if OUTPUT_BUFFER==1
     uint offset_oe = pio_add_program(data_pio, &output_enable_buffer_program);
-    pio_sm_config c_oe = output_enable_program_get_default_config(offset_oe);
+    pio_sm_config c_oe = output_enable_buffer_program_get_default_config(offset_oe);
     sm_config_set_in_pins(&c_oe, BASE_OE_PIN);
-    sm_config_set_out_pins(&c_oe, BASE_BUF_OE_PIN, N_BUF_OE_PINS);
+    sm_config_set_set_pins(&c_oe, BASE_BUF_OE_PIN, N_BUF_OE_PINS);
 #else
     uint offset_oe = pio_add_program(data_pio, &output_enable_program);
     pio_sm_config c_oe = output_enable_program_get_default_config(offset_oe);
