@@ -224,13 +224,10 @@ impl PicoLink {
         while let Some(pkt) = self.recv(deadline)? {
             match pkt {
                 RespPacket::Debug(msg, v0, v1) => {
-                    println!("DEBUG: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
+                    eprintln!("DEBUG: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
                 }
                 RespPacket::Error(msg, v0, v1) => {
-                    println!("ERROR: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
-                }
-                RespPacket::CommsData(v) => {
-                    print!("{}", String::from_utf8_lossy(&v));
+                    eprintln!("ERROR: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
                 }
                 _ => {}
             }
@@ -259,9 +256,6 @@ impl PicoLink {
                 }
                 RespPacket::Error(msg, v0, v1) => {
                     println!("ERROR: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
-                }
-                RespPacket::CommsData(v) => {
-                    print!("{}", String::from_utf8_lossy(&v));
                 }
                 x => {
                     let res = f(x);

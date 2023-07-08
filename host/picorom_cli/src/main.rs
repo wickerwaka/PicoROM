@@ -81,13 +81,19 @@ fn main() -> Result<()> {
     match args.command {
         Commands::List => {
             let found = enumerate_picos()?;
-            for k in found.keys() {
-                println!("  {}", k);
+            if found.len() > 0 {
+                println!("Available PicoROMs:");
+                for k in found.keys() {
+                    println!("  {}", k);
+                }
+            } else {
+                println!("No PicoROMs found.");
             }
         }
         Commands::Rename { current, new } => {
             let mut pico = find_pico(&current)?;
             pico.set_ident(&new)?;
+            println!( "Renamed '{}' to '{}'", current, new );
         }
         Commands::Upload {
             name,
@@ -122,7 +128,7 @@ fn main() -> Result<()> {
         Commands::Comms { name, addr } => {
             let mut pico = find_pico(&name)?;
             pico.send(pico_link::ReqPacket::CommsStart(addr))?;
-            pico.send(pico_link::ReqPacket::CommsData("HELLO WORLD.  ".to_owned().into_bytes()))?;
+            pico.send(pico_link::ReqPacket::CommsData("HELLO".to_owned().into_bytes()))?;
 
             pico.recv_forever()?;
         }
