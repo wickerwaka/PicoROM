@@ -1,13 +1,39 @@
+#include "hardware/structs/bus_ctrl.h"
+#include "pico/multicore.h"
 
-#include "state_machines.h"
+#include "rom.h"
 #include "system.h"
 
 #include "data_bus.pio.h"
 
 static PIO data_pio = pio0;
-static PIO addr_pio = pio1;
 
-void init_data_bus_programs()
+uint8_t *rom_data = (uint8_t *)0x21000000; // Start of 4 64kb sram banks
+
+uint32_t core1_stack[8];
+static void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) rom_loop()
+{
+    register uint32_t r0 __asm__("r0") = (uint32_t)rom_data;
+    register uint32_t r1 __asm__("r1") = ADDR_MASK;
+    register uint32_t r2 __asm__("r2") = (uint32_t)&data_pio->txf[0];
+
+    __asm__ volatile (
+        "ldr r5, =0xd0000004 \n\t"
+        "loop: \n\t"
+        "ldr r3, [r5] \n\t"
+        "and r3, r1 \n\t"
+        "ldrb r3, [r0, r3] \n\t"
+        "strb r3, [r2] \n\t"
+        "b loop \n\t"
+        : "+r" (r0), "+r" (r1), "+r" (r2)
+        :
+        : "r5", "cc", "memory"
+    );
+
+    __builtin_unreachable();
+}
+
+void rom_init_programs()
 {
     uint sm_data = pio_claim_unused_sm(data_pio, true);
     uint sm_oe = pio_claim_unused_sm(data_pio, true);
@@ -63,62 +89,21 @@ void init_data_bus_programs()
     pio_sm_set_enabled(data_pio, sm_oe, true);
 }
 
-io_wo_32 *get_data_bus_fifo()
+uint8_t *rom_get_buffer()
 {
-    return &data_pio->txf[0];
+    return rom_data;
 }
 
-
-void start_comms_programs(uint32_t addr, uint32_t byte_offset)
+void rom_service_start()
 {
-    pio_clear_instruction_memory(addr_pio);
+    // give core1 bus priority
+    bus_ctrl_hw->priority = BUSCTRL_BUS_PRIORITY_PROC1_BITS;
 
-    uint32_t offset_write = pio_add_program(addr_pio, &detect_write_program);
-    uint32_t offset_read = pio_add_program(addr_pio, &detect_read_program);
-
-    pio_sm_config c_write = detect_write_program_get_default_config(offset_write);
-    sm_config_set_in_pins(&c_write, 0);
-    pio_sm_init(addr_pio, 0, offset_write, &c_write);
-    pio_sm_set_enabled(addr_pio, 0, true);
-    pio_sm_put_blocking(addr_pio, 0, (addr + 0x100) >> 8);
-    pio_set_irq0_source_enabled(addr_pio, pis_sm0_rx_fifo_not_empty, true);
-
-    pio_sm_config c_read = detect_read_program_get_default_config(offset_read);
-    sm_config_set_in_pins(&c_read, 0);
-    pio_sm_init(addr_pio, 1, offset_read, &c_read);
-    pio_sm_set_enabled(addr_pio, 1, true);
-    pio_sm_put_blocking(addr_pio, 1, addr + byte_offset);
-    pio_set_irq1_source_enabled(addr_pio, pis_sm1_rx_fifo_not_empty, true);
+    multicore_reset_core1();
+    multicore_launch_core1_with_stack(rom_loop, core1_stack, sizeof(core1_stack));
 }
 
-void end_comms_programs()
+void rom_service_stop()
 {
-    pio_sm_set_enabled(addr_pio, 0, false);
-    pio_sm_set_enabled(addr_pio, 1, false);
+    multicore_reset_core1();
 }
-
-bool comms_poll_write(uint8_t *out)
-{
-    if (pio_sm_get_rx_fifo_level(addr_pio, 0) > 0)
-    {
-        *out = pio_sm_get(addr_pio, 0);
-        return true;
-    }
-
-    return false;
-}
-
-
-bool comms_poll_read()
-{
-    bool was_read = false;
-    while( pio_sm_get_rx_fifo_level(addr_pio, 1) > 0 )
-    {
-        pio_sm_get(addr_pio, 1);
-        was_read = true;
-    }
-
-    return was_read;
-}
-
-
