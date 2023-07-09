@@ -172,7 +172,7 @@ impl PicoLink {
         }
     }
 
-    fn recv(&mut self, deadline: Instant) -> Result<Option<RespPacket>> {
+    pub fn recv(&mut self, deadline: Instant) -> Result<Option<RespPacket>> {
         let pkt = self.recv_raw(deadline)?;
 
         if pkt.is_none() {
@@ -334,6 +334,34 @@ impl PicoLink {
             },
             Duration::from_secs(5),
         )
+    }
+
+    pub fn poll_comms(&mut self, outgoing: Option<Vec<u8>>) -> Result<Vec<u8>> {
+        let mut incoming = Vec::new();
+        if let Some(outgoing) = outgoing {
+            for chunk in outgoing.chunks(30) {
+                while let Some(pkt) = self.recv(Instant::now())? {
+                    match pkt {
+                        RespPacket::CommsData(data) => {
+                            incoming.extend_from_slice(&data);
+                        }
+                        _ => {}
+                    }
+                }
+                let pkt = ReqPacket::CommsData(chunk.to_vec()).encode()?;
+                self.port.write_all(&pkt)?;
+            }
+        }
+        while let Some(pkt) = self.recv(Instant::now())? {
+            match pkt {
+                RespPacket::CommsData(data) => {
+                    incoming.extend_from_slice(&data);
+                }
+                _ => {}
+            }
+        }
+
+        Ok(incoming)
     }
 }
 
