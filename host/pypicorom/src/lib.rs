@@ -1,16 +1,21 @@
-use pyo3::{prelude::*};
+use picolink::*;
 use pyo3::create_exception;
 use pyo3::exceptions::PyException;
-use picolink::*;
+use pyo3::prelude::*;
 
-create_exception!(pypicorom, CommsStateError, PyException, "Invalid comms setup");
+create_exception!(
+    pypicorom,
+    CommsStateError,
+    PyException,
+    "Invalid comms setup"
+);
 
 /// A PicoROM connection.
 #[pyclass]
 struct PicoROM {
     link: PicoLink,
     read_buffer: Vec<u8>,
-    comms_active: bool
+    comms_active: bool,
 }
 
 impl PicoROM {
@@ -74,7 +79,7 @@ impl PicoROM {
     /// Start two-way communications
     fn start_comms(&mut self, addr: u32) -> PyResult<()> {
         self.comms_inactive()?;
-        
+
         self.link.send(ReqPacket::CommsStart(addr))?;
         self.comms_active = true;
         self.read_buffer.clear();
@@ -84,7 +89,7 @@ impl PicoROM {
     /// End two-way communications
     fn end_comms(&mut self) -> PyResult<()> {
         self.comms_active()?;
-        
+
         self.link.send(ReqPacket::CommsEnd)?;
         self.comms_active = false;
         self.read_buffer.clear();
@@ -95,10 +100,9 @@ impl PicoROM {
     #[pyo3(signature = (size=-1), text_signature = "(size=-1, /)")]
     fn read(&mut self, size: i32) -> PyResult<Option<Vec<u8>>> {
         self.comms_active()?;
-        
+
         let new_data = self.link.poll_comms(None)?;
         self.read_buffer.extend_from_slice(&new_data);
-        
 
         if self.read_buffer.len() == 0 {
             return Ok(None);
@@ -116,7 +120,7 @@ impl PicoROM {
     /// Write to the communication channel
     fn write(&mut self, data: Vec<u8>) -> PyResult<usize> {
         self.comms_active()?;
-        
+
         let len = data.len();
         let new_data = self.link.poll_comms(Some(data))?;
         self.read_buffer.extend_from_slice(&new_data);
@@ -131,12 +135,15 @@ fn enumerate() -> PyResult<Vec<String>> {
     Ok(Vec::from_iter(picos.keys().cloned()))
 }
 
-
 /// Open a connection to the named PicoROM.
 #[pyfunction]
 fn open(name: &str) -> PyResult<PicoROM> {
     let mut pico = find_pico(name)?;
-    Ok(PicoROM { link: pico, read_buffer: Vec::new(), comms_active: false } )
+    Ok(PicoROM {
+        link: pico,
+        read_buffer: Vec::new(),
+        comms_active: false,
+    })
 }
 
 /// Python module for communicating with PicoROMs.

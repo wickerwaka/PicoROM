@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use serialport::SerialPort;
-use std::{thread::sleep, time::Duration, time::Instant};
 use std::collections::HashMap;
+use std::{thread::sleep, time::Duration, time::Instant};
 
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -48,7 +48,7 @@ pub enum ReqPacket {
     CommitFlash,
     CommsStart(u32),
     CommsEnd,
-    CommsData(Vec<u8>)
+    CommsData(Vec<u8>),
 }
 
 impl ReqPacket {
@@ -60,14 +60,14 @@ impl ReqPacket {
                 (PacketKind::PointerSet, offset.to_le_bytes().to_vec())
             }
             ReqPacket::PointerGet => (PacketKind::PointerGet, vec![]),
-            ReqPacket::MaskSet(mask) => {(PacketKind::MaskSet, mask.to_le_bytes().to_vec())},
-            ReqPacket::MaskGet => {(PacketKind::MaskGet, vec![])},
+            ReqPacket::MaskSet(mask) => (PacketKind::MaskSet, mask.to_le_bytes().to_vec()),
+            ReqPacket::MaskGet => (PacketKind::MaskGet, vec![]),
             ReqPacket::Write(data) => (PacketKind::Write, data),
             ReqPacket::Read => (PacketKind::Read, vec![]),
             ReqPacket::CommitFlash => (PacketKind::CommitFlash, vec![]),
-            ReqPacket::CommsStart(addr) => {(PacketKind::CommsStart, addr.to_le_bytes().to_vec())},
+            ReqPacket::CommsStart(addr) => (PacketKind::CommsStart, addr.to_le_bytes().to_vec()),
             ReqPacket::CommsEnd => (PacketKind::CommsEnd, vec![]),
-            ReqPacket::CommsData(data) => (PacketKind::CommsData, data)
+            ReqPacket::CommsData(data) => (PacketKind::CommsData, data),
         };
 
         if payload.len() > 30 {
@@ -96,7 +96,7 @@ pub enum RespPacket {
 
 pub struct PicoLink {
     port: Box<dyn SerialPort>,
-    debug: bool
+    debug: bool,
 }
 
 struct RawPacket {
@@ -114,13 +114,18 @@ impl PicoLink {
         let expected = "PicoROM Hello".as_bytes();
         let mut preamble = Vec::new();
 
+        port.write_data_terminal_ready(true)?;
+
         while preamble.len() < expected.len() && !preamble.ends_with(&expected) {
             let mut buf = [0u8];
             port.read_exact(&mut buf)?;
             preamble.push(buf[0]);
         }
 
-        Ok(PicoLink { port: port, debug: debug })
+        Ok(PicoLink {
+            port: port,
+            debug: debug,
+        })
     }
 
     pub fn send(&mut self, packet: ReqPacket) -> Result<()> {
@@ -183,7 +188,7 @@ impl PicoLink {
         let pkt = pkt.unwrap();
         let payload = &pkt.payload[0..pkt.size];
 
-        //println!("<<< {} {} {:?}", kind, size, payload);
+        //println!("<<< {:?} {} {:?}", pkt.kind, pkt.size, payload);
 
         match pkt.kind {
             PacketKind::IdentResp => Ok(Some(RespPacket::Ident(
@@ -308,8 +313,10 @@ impl PicoLink {
         }
     }
 
-    pub fn upload<F>(&mut self, data: &[u8], addr_mask: u32, f: F) -> Result<()> 
-    where F: Fn(usize) {
+    pub fn upload<F>(&mut self, data: &[u8], addr_mask: u32, f: F) -> Result<()>
+    where
+        F: Fn(usize),
+    {
         self.send(ReqPacket::PointerSet(0))?;
 
         for chunk in data.chunks(30) {
@@ -333,8 +340,10 @@ impl PicoLink {
         Ok(())
     }
 
-    pub fn upload_to<F>(&mut self, addr: u32, data: &[u8], f: F) -> Result<()> 
-    where F: Fn(usize) {
+    pub fn upload_to<F>(&mut self, addr: u32, data: &[u8], f: F) -> Result<()>
+    where
+        F: Fn(usize),
+    {
         self.send(ReqPacket::PointerSet(addr))?;
 
         for chunk in data.chunks(30) {
@@ -396,7 +405,6 @@ impl PicoLink {
         Ok(incoming)
     }
 }
-
 
 /// Find all USB serial ports matching the PicoROM VID:PID
 fn enumerate_ports() -> Result<Vec<String>> {
