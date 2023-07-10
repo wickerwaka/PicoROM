@@ -96,6 +96,7 @@ pub enum RespPacket {
 
 pub struct PicoLink {
     port: Box<dyn SerialPort>,
+    debug: bool
 }
 
 struct RawPacket {
@@ -105,7 +106,7 @@ struct RawPacket {
 }
 
 impl PicoLink {
-    pub fn open(port_path: &str) -> Result<PicoLink> {
+    pub fn open(port_path: &str, debug: bool) -> Result<PicoLink> {
         let mut port = serialport::new(port_path, 9600)
             .timeout(std::time::Duration::from_millis(1000))
             .open()?;
@@ -119,7 +120,7 @@ impl PicoLink {
             preamble.push(buf[0]);
         }
 
-        Ok(PicoLink { port: port })
+        Ok(PicoLink { port: port, debug: debug })
     }
 
     pub fn send(&mut self, packet: ReqPacket) -> Result<()> {
@@ -225,10 +226,14 @@ impl PicoLink {
         while let Some(pkt) = self.recv(deadline)? {
             match pkt {
                 RespPacket::Debug(msg, v0, v1) => {
-                    eprintln!("DEBUG: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
+                    if self.debug {
+                        eprintln!("DEBUG: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
+                    }
                 }
                 RespPacket::Error(msg, v0, v1) => {
-                    eprintln!("ERROR: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
+                    if self.debug {
+                        eprintln!("ERROR: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
+                    }
                 }
                 _ => {}
             }
@@ -253,10 +258,14 @@ impl PicoLink {
         while let Some(pkt) = self.recv(deadline)? {
             match pkt {
                 RespPacket::Debug(msg, v0, v1) => {
-                    println!("DEBUG: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
+                    if self.debug {
+                        eprintln!("DEBUG: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
+                    }
                 }
                 RespPacket::Error(msg, v0, v1) => {
-                    println!("ERROR: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
+                    if self.debug {
+                        eprintln!("ERROR: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
+                    }
                 }
                 x => {
                     let res = f(x);
@@ -320,6 +329,29 @@ impl PicoLink {
         }
 
         self.send(ReqPacket::MaskSet(addr_mask))?;
+
+        Ok(())
+    }
+
+    pub fn upload_to<F>(&mut self, addr: u32, data: &[u8], f: F) -> Result<()> 
+    where F: Fn(usize) {
+        self.send(ReqPacket::PointerSet(addr))?;
+
+        for chunk in data.chunks(30) {
+            f(chunk.len());
+            self.send(ReqPacket::Write(chunk.to_vec()))?;
+        }
+
+        self.send(ReqPacket::PointerGet)?;
+
+        let cur = self.recv_until(|x| match x {
+            RespPacket::PointerCur(x) => Some(x),
+            _ => None,
+        })?;
+
+        if (cur - addr) != data.len() as u32 {
+            return Err(anyhow!("Upload did not complete."));
+        }
 
         Ok(())
     }
@@ -388,7 +420,7 @@ fn enumerate_ports() -> Result<Vec<String>> {
 pub fn enumerate_picos() -> Result<HashMap<String, PicoLink>> {
     let mut found = HashMap::new();
     for p in enumerate_ports()?.iter() {
-        let link = PicoLink::open(p);
+        let link = PicoLink::open(p, false);
         if let Ok(mut link) = link {
             if let Ok(ident) = link.get_ident() {
                 found.insert(ident, link);
