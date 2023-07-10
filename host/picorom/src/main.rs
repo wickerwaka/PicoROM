@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
+use clap_num::maybe_hex;
 use indicatif;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
@@ -7,7 +8,6 @@ use std::fs;
 use std::iter;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
-use clap_num::maybe_hex;
 
 use picolink::*;
 
@@ -65,15 +65,11 @@ enum Commands {
         #[arg(short, long, default_value_t = false)]
         store: bool,
     },
-
-    Comms {
-        name: String,
-        #[arg(value_parser=maybe_hex::<u32>)]
-        addr: u32
-    }
 }
 
 fn main() -> Result<()> {
+    enumerate_picos()?;
+
     let args = Cli::parse();
 
     match args.command {
@@ -91,7 +87,7 @@ fn main() -> Result<()> {
         Commands::Rename { current, new } => {
             let mut pico = find_pico(&current)?;
             pico.set_ident(&new)?;
-            println!( "Renamed '{}' to '{}'", current, new );
+            println!("Renamed '{}' to '{}'", current, new);
         }
         Commands::Upload {
             name,
@@ -122,13 +118,6 @@ fn main() -> Result<()> {
                 pico.commit_rom()?;
                 spinner.finish_with_message("Done.");
             }
-        },
-        Commands::Comms { name, addr } => {
-            let mut pico = find_pico(&name)?;
-            pico.send(ReqPacket::CommsStart(addr))?;
-            pico.send(ReqPacket::CommsData("HELLO".to_owned().into_bytes()))?;
-
-            pico.recv_forever()?;
         }
     }
 

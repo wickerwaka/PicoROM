@@ -15,7 +15,7 @@ impl RomSize {
     }
 
     pub fn mask(&self) -> u32 {
-        ( self.bytes() as u32 ) - 1
+        (self.bytes() as u32) - 1
     }
 }
 
