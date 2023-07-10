@@ -5,10 +5,11 @@
   (paper "A3")
 
   (title_block
-    (title "RP2040 Minimal Design Example")
-    (date "2020-12-18")
-    (rev "REV1")
-    (company "Raspberry Pi (Trading) Ltd")
+    (title "PicoROM - ROM Emulator")
+    (date "2023-07-09")
+    (rev "REV2")
+    (company "Martin Donlon (@wickerwaka)")
+    (comment 1 "Based on RP2040 minimal example")
   )
 
   (lib_symbols
@@ -2326,6 +2327,10 @@
   (text "Make sure C8 is close to pin 45 of RP2040" (at 120.65 82.55 0)
     (effects (font (size 1.27 1.27)) (justify left bottom))
     (uuid aca6c033-0079-449d-bee5-fa19832f3e42)
+  )
+  (text "Select between 5v and 3.3v VCC\nfor 74x245 buffer." (at 290.83 173.99 0)
+    (effects (font (size 1.27 1.27) (color 72 81 255 1)) (justify left bottom))
+    (uuid cef5e47d-998e-4fbe-a16c-843d4e4339e7)
   )
   (text "Make sure C10 is close to pin 44 of RP2040" (at 231.14 83.82 0)
     (effects (font (size 1.27 1.27)) (justify left bottom))
