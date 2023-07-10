@@ -186,7 +186,7 @@ bool comms_update(const uint8_t *data, uint32_t len, uint32_t timeout_ms)
         do
         {
             update_comms_out(outbytes, &outcount, sizeof(outbytes));
-            if (get_absolute_time() > end_time)
+            if (absolute_time_diff_us(get_absolute_time(), end_time) < 0)
             {
                 return false;
             }
