@@ -36,19 +36,19 @@ jobs:
         with:
           targets: ${{ matrix.target }}
       - run: cargo build --release --target ${{ matrix.target }} --manifest-path host/picorom/Cargo.toml --target-dir target
-      - uses: actions/upload-artifact@v3
+      - run: |
+          mkdir artifacts
+          cp target/${{ matrix.target }}/release/picorom.exe artifacts/picorom-${{ matrix.target }}.exe
+          cp target/${{ matrix.target }}/release/picorom.pdb artifacts/picorom-${{ matrix.target }}.pdb
         if: ${{ matrix.host == 'windows-latest' }}
-        with:
-          name: picorom
-          path: |
-            target/${{ matrix.target }}/release/picorom.exe
-            target/${{ matrix.target }}/release/picorom.pdb
-          if-no-files-found: error
-      - uses: actions/upload-artifact@v3
+      - run: |
+          mkdir artifacts
+          cp target/${{ matrix.target }}/release/picorom artifacts/picorom-${{ matrix.target }}
         if: ${{ matrix.host != 'windows-latest' }}
+      - uses: actions/upload-artifact@v3
         with:
           name: picorom
-          path: target/${{ matrix.target }}/release/picorom
+          path: artifacts/*
           if-no-files-found: error
 
   release:
