@@ -1,0 +1,39 @@
+name: Firmware CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '*'
+    paths:
+      - 'firmware/**'
+      - '.github/workflows/firmware.yml'
+  pull_request:
+    paths:
+      - 'firmware/**'
+      - '.github/workflows/firmware.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Checkout SDK
+        run: |
+          git clone https://github.com/raspberrypi/pico-sdk.git --branch master
+          cd pico-sdk
+          git submodule update --init
+      - name: Setup Build Dependencies
+        run: sudo apt install cmake gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential libstdc++-arm-none-eabi-newlib
+      - name: Build
+        run: |
+          mkdir build
+          cd build
+          export PICO_SDK_PATH=../pico-sdk
+          cmake ..
+          make
