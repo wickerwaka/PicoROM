@@ -41,8 +41,8 @@ jobs:
         with:
           name: firmware
           path: |
-            build/picorom.elf
-            build/picorom.uf2
+            build/PicoROM.elf
+            build/PicoROM.uf2
           if-no-files-found: error
 
   release:
@@ -58,5 +58,5 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           file_glob: true
-          file: picorom*
+          file: PicoROM*
 
