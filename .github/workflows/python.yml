@@ -87,6 +87,11 @@ jobs:
       - uses: actions/download-artifact@v3
         with:
           name: wheels
+      - name: Attach wheels
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file_glob: true
+          file: pypicorom*
       - name: Publish to PyPI
         uses: PyO3/maturin-action@v1
         env:
@@ -94,3 +99,4 @@ jobs:
         with:
           command: upload
           args: --skip-existing *
+          
