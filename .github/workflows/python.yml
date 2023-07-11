@@ -3,7 +3,7 @@
 #
 #    maturin generate-ci -m host/pypicorom/Cargo.toml github
 #
-name: Python CI
+name: Python Module CI
 
 on:
   push:
@@ -11,7 +11,13 @@ on:
       - main
     tags:
       - '*'
+    paths:
+      - 'host/**'
+      - '.github/workflows/python.yml'
   pull_request:
+    paths:
+      - 'host/**'
+      - '.github/workflows/python.yml'
   workflow_dispatch:
 
 permissions:

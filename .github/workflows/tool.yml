@@ -1,4 +1,4 @@
-name: Picorom
+name: PicoROM Tool CI
 
 on:
   push:
@@ -6,7 +6,15 @@ on:
       - main
     tags:
       - '*'
+    paths:
+      - 'host/**'
+      - '.github/workflows/tool.yml'
+
   pull_request:
+    paths:
+      - 'host/**'
+      - '.github/workflows/tool.yml'
+
   workflow_dispatch:
 
 permissions:
