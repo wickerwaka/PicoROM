@@ -138,7 +138,7 @@ fn enumerate() -> PyResult<Vec<String>> {
 /// Open a connection to the named PicoROM.
 #[pyfunction]
 fn open(name: &str) -> PyResult<PicoROM> {
-    let mut pico = find_pico(name)?;
+    let pico = find_pico(name)?;
     Ok(PicoROM {
         link: pico,
         read_buffer: Vec::new(),

@@ -9,5 +9,5 @@ name = "pypicorom"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.19.0", features = ["anyhow"] }
+pyo3 = { version = "0.19.0", features = ["anyhow", "abi3-py310"] }
 picolink = { path = "../picolink" }
