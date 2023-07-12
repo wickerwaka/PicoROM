@@ -7,11 +7,8 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1"
-serialport = "4.2"
 clap = { version = "4", features = ["derive", "string"] }
 clap-num = "1"
-num-traits = "0.2"
-num-derive = "0.4"
 indicatif = "0.17"
 
 picolink = { path = "../picolink" }

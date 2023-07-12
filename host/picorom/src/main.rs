@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
-use clap_num::maybe_hex;
 use indicatif;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
