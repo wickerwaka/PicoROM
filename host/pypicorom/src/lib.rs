@@ -1,3 +1,6 @@
+use std::thread::sleep;
+use std::time::{Duration, Instant};
+
 use picolink::*;
 use pyo3::create_exception;
 use pyo3::exceptions::PyException;
@@ -8,6 +11,13 @@ create_exception!(
     CommsStateError,
     PyException,
     "Invalid comms setup"
+);
+
+create_exception!(
+    pypicorom,
+    CommsTimeoutError,
+    PyException,
+    "Communication timeout"
 );
 
 /// A PicoROM connection.
@@ -117,6 +127,35 @@ impl PicoROM {
         Ok(Some(self.read_buffer.drain(0..end).collect()))
     }
 
+    /// Read an exact amount with an optional timeout
+    fn read_exact(
+        &mut self,
+        size: usize,
+        timeout: Option<f32>,
+        py: Python<'_>,
+    ) -> PyResult<Vec<u8>> {
+        self.comms_active()?;
+
+        let end = timeout.map(|x| Instant::now() + Duration::from_secs_f32(x));
+
+        loop {
+            let new_data = self.link.poll_comms(None)?;
+            self.read_buffer.extend_from_slice(&new_data);
+
+            if self.read_buffer.len() < size {
+                if let Some(end) = end {
+                    if Instant::now() >= end {
+                        return Err(CommsTimeoutError::new_err("read_all timeout"));
+                    }
+                }
+                py.check_signals()?;
+                sleep(Duration::from_micros(10));
+            } else {
+                return Ok(self.read_buffer.drain(0..size).collect());
+            }
+        }
+    }
+
     /// Write to the communication channel
     fn write(&mut self, data: Vec<u8>) -> PyResult<usize> {
         self.comms_active()?;
@@ -153,5 +192,6 @@ fn pypicorom(py: Python, m: &PyModule) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(open, m)?)?;
     m.add_class::<PicoROM>()?;
     m.add("CommsStateError", py.get_type::<CommsStateError>())?;
+    m.add("CommsTimeoutError", py.get_type::<CommsTimeoutError>())?;
     Ok(())
 }
