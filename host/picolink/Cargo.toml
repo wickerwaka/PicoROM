@@ -13,7 +13,6 @@ num-derive = "0.4"
 
 [dependencies.serialport]
 git = "https://github.com/wickerwaka/serialport-rs.git"
-branch = "uevent-info"
 rev = "c14ea8611834c39390a02f0eec3efb51fc576712"
 default-features = false
 features = ["uevent-info"]
