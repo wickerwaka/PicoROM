@@ -2602,6 +2602,10 @@
     (effects (font (size 1.27 1.27)) (justify left bottom))
     (uuid 7193a94c-7995-4c08-ba2b-4a8aa438305a)
   )
+  (label "+5V" (at 267.97 232.41 0) (fields_autoplaced)
+    (effects (font (size 1.27 1.27)) (justify left bottom))
+    (uuid 7606371f-ca68-443e-aa02-e918f7084cef)
+  )
   (label "A4" (at 245.11 121.92 180) (fields_autoplaced)
     (effects (font (size 1.27 1.27)) (justify right bottom))
     (uuid 76210dfc-56bd-429c-bfd0-67572265c943)
@@ -4174,31 +4178,6 @@
       (project "PicoROM"
         (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
           (reference "D2") (unit 1)
-        )
-      )
-    )
-  )
-
-  (symbol (lib_id "power:+3V3") (at 267.97 232.41 0) (unit 1)
-    (in_bom yes) (on_board yes) (dnp no)
-    (uuid 74884e0b-d2b0-4c86-84c6-1d228812e606)
-    (property "Reference" "#PWR020" (at 267.97 236.22 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Value" "+3V3" (at 268.351 228.0158 0)
-      (effects (font (size 1.27 1.27)))
-    )
-    (property "Footprint" "" (at 267.97 232.41 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (property "Datasheet" "" (at 267.97 232.41 0)
-      (effects (font (size 1.27 1.27)) hide)
-    )
-    (pin "1" (uuid 427fcb25-3bc9-4656-a246-ae64f9f77f6b))
-    (instances
-      (project "PicoROM"
-        (path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
-          (reference "#PWR020") (unit 1)
         )
       )
     )
