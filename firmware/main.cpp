@@ -105,13 +105,19 @@ void configure_address_pins(uint32_t mask)
 
 int main()
 {
-    stdio_init_all();
+    tusb_init();
 
     init_config();
 
     set_sys_clock_khz(160000, true);
 
     configure_address_pins(config.addr_mask);
+
+#if ACTIVITY_LED==1
+    gpio_init(ACTIVITY_LED_PIN);
+    gpio_set_dir(ACTIVITY_LED_PIN, true);
+    gpio_set_input_enabled(ACTIVITY_LED_PIN, false);
+#endif
 
     memcpy(rom_get_buffer(), flash_rom_data, ROM_SIZE);
 

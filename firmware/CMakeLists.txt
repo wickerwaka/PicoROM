@@ -21,6 +21,7 @@ target_compile_definitions(PicoROM PRIVATE
     USB_MAX_ENDPOINTS=4
     PICO_STDIO_ENABLE_CRLF_SUPPORT=0
     OUTPUT_BUFFER=1
+    ACTIVITY_LED=1
 )
 
 pico_generate_pio_header(PicoROM ${CMAKE_CURRENT_LIST_DIR}/data_bus.pio)
@@ -32,4 +33,10 @@ pico_enable_stdio_uart(PicoROM 0)
 pico_set_linker_script(PicoROM ${CMAKE_CURRENT_LIST_DIR}/memmap_firmware.ld)
 
 pico_add_extra_outputs(PicoROM)
-target_link_libraries(PicoROM pico_stdlib pico_multicore hardware_pio)
+target_link_libraries(PicoROM
+    pico_stdlib
+    pico_multicore
+    hardware_flash
+    hardware_pio
+    pico_unique_id
+)

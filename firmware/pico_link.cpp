@@ -11,9 +11,6 @@ static uint8_t incoming_count;
 
 void usb_send(const void *data, size_t len)
 {
-    write(1, data, len);
-
-#if 0
     const uint8_t *ptr = (const uint8_t *)data;
     uint32_t remaining = len;
 
@@ -22,10 +19,10 @@ void usb_send(const void *data, size_t len)
         uint32_t sent = tud_cdc_write(ptr, remaining);
         ptr += sent;
         remaining -= sent;
+        tud_task();
     }
 
     tud_cdc_write_flush();
-#endif
 }
 
 
@@ -82,11 +79,14 @@ void pl_wait_for_connection()
     // Wait for connection
     while(!tud_cdc_connected())
     {
+        tud_task();
         sleep_ms(1);
     }
 
     // Flush input
     tud_cdc_read_flush();
+
+    incoming_count = 0;
 
     // Write preamble
     usb_send("PicoROM Hello", 13);
@@ -99,6 +99,8 @@ bool pl_is_connected()
 
 const Packet *pl_poll()
 {
+    tud_task();
+
     uint32_t space = sizeof(incoming_buffer) - incoming_count;
     uint32_t rx_avail = tud_cdc_available();
 
