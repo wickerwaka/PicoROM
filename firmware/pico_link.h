@@ -54,5 +54,7 @@ bool pl_is_connected();
 const Packet *pl_poll();
 void pl_consume_packet(const Packet *pkt);
 
+bool pl_check_activity();
+
 
 #endif // PICO_LINK_H

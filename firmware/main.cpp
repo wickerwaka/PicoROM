@@ -102,12 +102,12 @@ void configure_address_pins(uint32_t mask)
     }
 }
 
-static uint32_t identify_request = 0;
+static uint8_t identify_request = 0;
 
 #if ACTIVITY_LED==1
 repeating_timer_t activity_timer;
 
-static uint32_t identify_ack = 0;
+static uint8_t identify_ack = 0;
 static uint8_t activity_cycles = 0;
 static uint8_t activity_duty = 0;
 static uint8_t activity_count = 0;
@@ -117,21 +117,26 @@ bool activity_timer_callback(repeating_timer_t * /*unused*/)
     if (activity_count >= activity_cycles)
     {
         bool rom_access = rom_check_oe();
-        bool usb_connected = pl_is_connected();
+        bool usb_activity = pl_check_activity();
         bool identify_req = identify_request != identify_ack;
 
         activity_cycles = 0;
         activity_duty = 0;
-        
+
         if (identify_req)
         {
             identify_ack++;
-            activity_cycles = 10;
-            activity_duty = 8;
+            activity_cycles = 100;
+            activity_duty = 90;
+        }
+        else if (usb_activity)
+        {
+            activity_cycles = 20;
+            activity_duty = 10;
         }
         else if (rom_access)
         {
-            activity_cycles = 3;
+            activity_cycles = 5;
             activity_duty = 1;
         }
 
@@ -170,7 +175,7 @@ int main()
     gpio_set_dir(ACTIVITY_LED_PIN, true);
     gpio_set_input_enabled(ACTIVITY_LED_PIN, false);
 
-    add_repeating_timer_ms(100, activity_timer_callback, nullptr, &activity_timer);
+    add_repeating_timer_ms(10, activity_timer_callback, nullptr, &activity_timer);
 #endif
 
     memcpy(rom_get_buffer(), flash_rom_data, ROM_SIZE);

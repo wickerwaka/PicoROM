@@ -9,6 +9,9 @@
 static uint8_t incoming_buffer[sizeof(Packet)];
 static uint8_t incoming_count;
 
+static uint8_t activity_count = 0;
+static uint8_t activity_report = 0;
+
 void usb_send(const void *data, size_t len)
 {
     const uint8_t *ptr = (const uint8_t *)data;
@@ -23,6 +26,8 @@ void usb_send(const void *data, size_t len)
     }
 
     tud_cdc_write_flush();
+
+    activity_count++;
 }
 
 
@@ -89,6 +94,8 @@ void pl_wait_for_connection()
 
     incoming_count = 0;
 
+    activity_count = activity_report = 0;
+
     // Write preamble
     usb_send("PicoROM Hello", 13);
 }
@@ -116,6 +123,7 @@ const Packet *pl_poll()
         Packet *pkt = (Packet *)incoming_buffer;
         if ((pkt->size + 2) <= incoming_count)
         {
+            activity_count++;
             return pkt;
         }
     }
@@ -134,4 +142,15 @@ void pl_consume_packet(const Packet *pkt)
     }
 
     incoming_count = remaining;
+}
+
+bool pl_check_activity()
+{
+    if (activity_count != activity_report)
+    {
+        activity_report = activity_count;
+        return true;
+    }
+
+    return false;
 }

@@ -51,6 +51,7 @@ void rom_init_programs()
     for( uint ofs = 0; ofs < N_OE_PINS; ofs++ )
     {
         pio_gpio_init(data_pio, BASE_OE_PIN + ofs);
+        gpio_set_pulls(BASE_OE_PIN + ofs, true, false);
     }
 
     for( uint ofs = 0; ofs < N_BUF_OE_PINS; ofs++ )
