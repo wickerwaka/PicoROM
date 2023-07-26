@@ -43,6 +43,18 @@ enum Commands {
     /// Return a list of currently connected PicoROM devices.
     List,
 
+    /// Flash the activity LED on a specific PicoRom
+    Identify {
+        /// PicoROM device name.
+        name: String,
+    },
+
+    /// Commit the current ROM image to flash memory
+    Commit {
+        /// PicoROM device name.
+        name: String,
+    },
+
     /// Change the name of a PicoROM device.
     Rename {
         /// Current name.
@@ -67,8 +79,6 @@ enum Commands {
 }
 
 fn main() -> Result<()> {
-    enumerate_picos()?;
-
     let args = Cli::parse();
 
     match args.command {
@@ -82,6 +92,24 @@ fn main() -> Result<()> {
             } else {
                 println!("No PicoROMs found.");
             }
+        }
+        Commands::Identify { name } => {
+            let mut pico = find_pico(&name)?;
+            pico.identify()?;
+            println!("Requested identification from '{}'", name);
+        }
+        Commands::Commit { name } => {
+            let mut pico = find_pico(&name)?;
+            let spinner = ProgressBar::new_spinner()
+                .with_prefix("Storing to Flash")
+                .with_style(
+                    ProgressStyle::with_template("{prefix:.bold} {spinner} {msg}")
+                        .unwrap()
+                        .tick_chars(r"\|/--"),
+                );
+            spinner.enable_steady_tick(Duration::from_millis(250));
+            pico.commit_rom()?;
+            spinner.finish_with_message("Done.");
         }
         Commands::Rename { current, new } => {
             let mut pico = find_pico(&current)?;

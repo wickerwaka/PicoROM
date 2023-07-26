@@ -85,6 +85,7 @@ void pl_wait_for_connection()
 
     // Flush input
     tud_cdc_read_flush();
+    tud_cdc_write_clear();
 
     incoming_count = 0;
 

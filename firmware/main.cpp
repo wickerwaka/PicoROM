@@ -102,6 +102,56 @@ void configure_address_pins(uint32_t mask)
     }
 }
 
+static uint32_t identify_request = 0;
+
+#if ACTIVITY_LED==1
+repeating_timer_t activity_timer;
+
+static uint32_t identify_ack = 0;
+static uint8_t activity_cycles = 0;
+static uint8_t activity_duty = 0;
+static uint8_t activity_count = 0;
+
+bool activity_timer_callback(repeating_timer_t * /*unused*/)
+{
+    if (activity_count >= activity_cycles)
+    {
+        bool rom_access = rom_check_oe();
+        bool usb_connected = pl_is_connected();
+        bool identify_req = identify_request != identify_ack;
+
+        activity_cycles = 0;
+        activity_duty = 0;
+        
+        if (identify_req)
+        {
+            identify_ack++;
+            activity_cycles = 10;
+            activity_duty = 8;
+        }
+        else if (rom_access)
+        {
+            activity_cycles = 3;
+            activity_duty = 1;
+        }
+
+        activity_count = 0;
+    }
+
+    if (activity_count >= activity_duty)
+    {
+        gpio_put(ACTIVITY_LED_PIN, false);
+    }
+    else
+    {
+        gpio_put(ACTIVITY_LED_PIN, true);
+    }
+
+    activity_count++;
+
+    return true;
+}
+#endif // ACTIVITY_LED==1
 
 int main()
 {
@@ -114,9 +164,13 @@ int main()
     configure_address_pins(config.addr_mask);
 
 #if ACTIVITY_LED==1
+    identify_ack = identify_request = 0;
+
     gpio_init(ACTIVITY_LED_PIN);
     gpio_set_dir(ACTIVITY_LED_PIN, true);
     gpio_set_input_enabled(ACTIVITY_LED_PIN, false);
+
+    add_repeating_timer_ms(100, activity_timer_callback, nullptr, &activity_timer);
 #endif
 
     memcpy(rom_get_buffer(), flash_rom_data, ROM_SIZE);
@@ -244,6 +298,12 @@ int main()
                     case PacketType::GetMask:
                     {
                         pl_send_payload(PacketType::CurMask, &config.addr_mask, 4);
+                        break;
+                    }
+
+                    case PacketType::Identify:
+                    {
+                        identify_request += 5;
                         break;
                     }
 

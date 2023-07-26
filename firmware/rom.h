@@ -10,6 +10,6 @@ void rom_service_stop();
 
 uint8_t *rom_get_buffer();
 
-
+bool rom_check_oe();
 
 #endif // ROM_H

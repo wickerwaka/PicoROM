@@ -33,10 +33,13 @@ static void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) 
     __builtin_unreachable();
 }
 
+static uint sm_report = 0;
 void rom_init_programs()
 {
     uint sm_data = pio_claim_unused_sm(data_pio, true);
     uint sm_oe = pio_claim_unused_sm(data_pio, true);
+    
+    sm_report = pio_claim_unused_sm(data_pio, true);
 
     // Assign data and oe pins to pio
     for( uint ofs = 0; ofs < N_DATA_PINS; ofs++ )
@@ -87,6 +90,17 @@ void rom_init_programs()
 #endif
     pio_sm_init(data_pio, sm_oe, offset_oe, &c_oe);
     pio_sm_set_enabled(data_pio, sm_oe, true);
+
+    uint offset_report = pio_add_program(data_pio, &output_enable_report_program);
+    pio_sm_config c_report = output_enable_report_program_get_default_config(offset_report);
+    sm_config_set_in_pins(&c_report, BASE_OE_PIN);
+    pio_set_irq0_source_enabled(data_pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm_report), false);
+    pio_set_irq1_source_enabled(data_pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm_report), false);
+    pio_interrupt_clear(data_pio, sm_report);
+
+    pio_sm_init(data_pio, sm_report, offset_report, &c_report);
+    pio_sm_set_enabled(data_pio, sm_report, true);
+
 }
 
 uint8_t *rom_get_buffer()
@@ -106,4 +120,14 @@ void rom_service_start()
 void rom_service_stop()
 {
     multicore_reset_core1();
+}
+
+bool rom_check_oe()
+{
+    if( pio_interrupt_get(data_pio, sm_report) )
+    {
+        pio_interrupt_clear(data_pio, sm_report);
+        return true;
+    }
+    return false;
 }

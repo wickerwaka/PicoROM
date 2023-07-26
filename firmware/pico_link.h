@@ -28,6 +28,7 @@ enum class PacketType : uint8_t
     CommsEnd = 81,
     CommsData = 82,
 
+    Identify = 0xf8,
     Error = 0xfe,
     Debug = 0xff
 };

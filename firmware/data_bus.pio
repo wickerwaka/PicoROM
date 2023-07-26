@@ -38,3 +38,17 @@ dis_out:
 en_out: 
     set pins, 0
 .wrap
+
+.program output_enable_report
+
+.wrap_target
+start:
+    mov osr, pins
+    out x, 2
+    jmp !x en_out
+
+dis_out:
+    jmp start
+en_out: 
+    irq wait 0 rel
+.wrap

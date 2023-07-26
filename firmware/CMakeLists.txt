@@ -15,8 +15,8 @@ pico_set_float_implementation(PicoROM none)
 pico_set_double_implementation(PicoROM none)
 
 target_compile_definitions(PicoROM PRIVATE
-    PICO_HEAP_SIZE=128
-    PICO_STACK_SIZE=512
+    PICO_HEAP_SIZE=16
+    PICO_STACK_SIZE=640
     PICO_CORE1_STACK_SIZE=4
     USB_MAX_ENDPOINTS=4
     PICO_STDIO_ENABLE_CRLF_SUPPORT=0

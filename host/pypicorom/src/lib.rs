@@ -67,6 +67,13 @@ impl PicoROM {
         Ok(self.link.commit_rom()?)
     }
 
+    /// Ask PicoROM to identify itself
+    fn identify(&mut self) -> PyResult<()> {
+        self.comms_inactive()?;
+
+        Ok(self.link.identify()?)
+    }
+
     /// Upload ROM data
     #[pyo3(signature = (data, mask=0x3ffff), text_signature = "(data, mask=0x3ffff, /)")]
     fn upload(&mut self, data: &[u8], mask: u32) -> PyResult<()> {

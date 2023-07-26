@@ -31,6 +31,7 @@ enum PacketKind {
     CommsEnd = 81,
     CommsData = 82,
 
+    Identify = 0xf8,
     Error = 0xfe,
     Debug = 0xff,
 }
@@ -49,6 +50,7 @@ pub enum ReqPacket {
     CommsStart(u32),
     CommsEnd,
     CommsData(Vec<u8>),
+    Identify,
 }
 
 impl ReqPacket {
@@ -68,6 +70,7 @@ impl ReqPacket {
             ReqPacket::CommsStart(addr) => (PacketKind::CommsStart, addr.to_le_bytes().to_vec()),
             ReqPacket::CommsEnd => (PacketKind::CommsEnd, vec![]),
             ReqPacket::CommsData(data) => (PacketKind::CommsData, data),
+            ReqPacket::Identify => (PacketKind::Identify, vec![]),
         };
 
         if payload.len() > 30 {
@@ -375,6 +378,11 @@ impl PicoLink {
             },
             Duration::from_secs(5),
         )
+    }
+
+    pub fn identify(&mut self) -> Result<()> {
+        self.send(ReqPacket::Identify)?;
+        Ok(())
     }
 
     pub fn poll_comms(&mut self, outgoing: Option<Vec<u8>>) -> Result<Vec<u8>> {
