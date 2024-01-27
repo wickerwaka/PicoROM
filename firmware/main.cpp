@@ -164,7 +164,7 @@ int main()
 
     init_config();
 
-    set_sys_clock_khz(160000, true);
+    set_sys_clock_khz(200000, true);
 
     configure_address_pins(config.addr_mask);
 
