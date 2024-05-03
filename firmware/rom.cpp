@@ -20,11 +20,11 @@ static void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) 
     __asm__ volatile (
         "ldr r5, =0xd0000004 \n\t"
         "loop: \n\t"
-        "ldr r3, [r5] \n\t"
-        "and r3, r1 \n\t"
-        "ldrb r3, [r0, r3] \n\t"
-        "strb r3, [r2] \n\t"
-        "b loop \n\t"
+        "ldr r3, [r5] \n\t" // 1
+        "and r3, r1 \n\t" // 1
+        "ldrb r3, [r0, r3] \n\t" // 2
+        "strb r3, [r2] \n\t" // 1
+        "b loop \n\t" // 2
         : "+r" (r0), "+r" (r1), "+r" (r2)
         :
         : "r5", "cc", "memory"
