@@ -9997,6 +9997,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C2040"
+			(at 198.12 144.78 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "ea1e0988-f549-4e3f-972c-60e48f5805be")
 		)
@@ -10231,6 +10240,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C1557"
+			(at 50.8 218.44 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "245e7ed6-2000-4589-ba54-e8664a01f509")
 		)
@@ -10292,6 +10310,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 50.8 228.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C1557"
 			(at 50.8 228.6 0)
 			(effects
 				(font
@@ -10424,6 +10451,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 78.74 128.27 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C115407"
 			(at 78.74 128.27 0)
 			(effects
 				(font
@@ -10647,6 +10683,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C11702"
+			(at 48.26 125.73 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "d9708ce5-5ee5-44fc-84a5-43e8f6c93fc9")
 		)
@@ -10708,6 +10753,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 85.09 106.68 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C1525"
 			(at 85.09 106.68 0)
 			(effects
 				(font
@@ -10978,6 +11032,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C25100"
+			(at 245.11 96.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "576644a4-73a9-4b74-90b3-78e02f21220c")
 		)
@@ -11037,6 +11100,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 245.11 104.14 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C25100"
 			(at 245.11 104.14 0)
 			(effects
 				(font
@@ -11309,6 +11381,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C1525"
+			(at 223.52 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "7deefaef-1361-4774-8339-167f8f9d375a")
 		)
@@ -11370,6 +11451,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 234.95 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C1525"
 			(at 234.95 66.04 0)
 			(effects
 				(font
@@ -11447,6 +11537,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C1525"
+			(at 246.38 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "1ebcafc3-471b-47fb-9ee7-5b5935411ee4")
 		)
@@ -11508,6 +11607,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 257.81 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C1525"
 			(at 257.81 66.04 0)
 			(effects
 				(font
@@ -11585,6 +11693,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C1525"
+			(at 269.24 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "88e1b47c-6242-41b8-a5d6-af58838fc5c5")
 		)
@@ -11646,6 +11763,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 280.67 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C1525"
 			(at 280.67 66.04 0)
 			(effects
 				(font
@@ -11723,6 +11849,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C1525"
+			(at 292.1 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "3d27af48-a33e-41a5-897b-135b0eea850a")
 		)
@@ -11784,6 +11919,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 157.48 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C1525"
 			(at 157.48 66.04 0)
 			(effects
 				(font
@@ -11861,6 +12005,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C1525"
+			(at 168.91 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "4eb88592-da1e-413a-b0dc-9f03ff50430a")
 		)
@@ -11930,6 +12083,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C52923"
+			(at 168.91 81.28 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "3dfd1de2-1f5e-44d1-a7a7-72e187dc7f13")
 		)
@@ -11991,6 +12153,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 223.52 81.28 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C52923"
 			(at 223.52 81.28 0)
 			(effects
 				(font
@@ -12458,6 +12629,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C28323"
+			(at 82.55 49.53 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "8a85868e-c63a-47f1-b952-2fc47c4bcd12")
 		)
@@ -12519,6 +12699,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 118.11 49.53 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C28323"
 			(at 118.11 49.53 0)
 			(effects
 				(font
@@ -12724,6 +12913,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C11702"
+			(at 83.82 228.6 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "4e3727fc-e3a6-4cc0-b7d5-2050952dddad")
 		)
@@ -12785,6 +12983,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 66.04 223.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C148313"
 			(at 66.04 223.52 0)
 			(effects
 				(font
@@ -12862,6 +13069,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C1525"
+			(at 176.53 214.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "31197785-4196-4edf-8542-22ec7a03bed7")
 		)
@@ -12922,6 +13138,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 100.33 46.99 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C51118"
 			(at 100.33 46.99 0)
 			(effects
 				(font
@@ -13001,6 +13226,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 314.96 190.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C2925173"
 			(at 314.96 190.5 0)
 			(effects
 				(font
@@ -13213,6 +13447,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C2652112"
+			(at 200.66 241.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "1293b668-5ced-4c9a-8575-1e263cd67f5c")
 		)
@@ -13346,6 +13589,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C11702"
+			(at 382.27 223.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "28a56bdc-bd67-4208-9807-7d0b970e9fa3")
 		)
@@ -13416,6 +13668,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C2674123"
+			(at 328.93 133.35 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "829d6ec4-41cf-4b7f-b3fb-cddd0e7e4529")
 		)
@@ -13454,7 +13715,7 @@
 		(at 387.35 55.88 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -13496,6 +13757,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 387.35 55.88 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" ""
 			(at 387.35 55.88 0)
 			(effects
 				(font
@@ -13607,6 +13877,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 303.53 66.04 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C1525"
 			(at 303.53 66.04 0)
 			(effects
 				(font
@@ -13741,6 +14020,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 347.98 209.55 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C1525"
 			(at 347.98 209.55 0)
 			(effects
 				(font
@@ -14014,6 +14302,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C2922668"
+			(at 302.26 190.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "0c132c32-894f-4aa1-9a29-c39338949378")
 		)
@@ -14083,6 +14380,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C1525"
+			(at 304.8 147.32 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "02970cac-8bf2-4b3f-99d1-9a9a74e55b46")
 		)
@@ -14103,7 +14409,7 @@
 		(at 24.13 125.73 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -14143,6 +14449,15 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x01, script generated"
+			(at 24.13 125.73 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" ""
 			(at 24.13 125.73 0)
 			(effects
 				(font
@@ -14207,6 +14522,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 302.26 180.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C11702"
 			(at 302.26 180.34 0)
 			(effects
 				(font
@@ -14282,6 +14606,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C11702"
+			(at 290.83 180.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "1134c6e0-4686-4576-afd7-cf4640ed9c18")
 		)
@@ -14343,6 +14676,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 165.1 214.63 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C1525"
 			(at 165.1 214.63 0)
 			(effects
 				(font
@@ -14567,7 +14909,7 @@
 		(mirror y)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -14607,6 +14949,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 337.82 55.88 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" ""
 			(at 337.82 55.88 0)
 			(effects
 				(font
@@ -14727,6 +15078,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C510027"
+			(at 290.83 190.5 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "f31a4c89-7799-42f1-b9d8-8c46ea70c61f")
 		)
@@ -14794,6 +15154,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C25905"
+			(at 58.42 53.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "139de59c-44bb-4626-b3a4-b71e08d948b2")
 		)
@@ -14814,7 +15183,7 @@
 		(at 24.13 116.84 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(fields_autoplaced yes)
@@ -14854,6 +15223,15 @@
 			)
 		)
 		(property "Description" "Generic connector, single row, 01x01, script generated"
+			(at 24.13 116.84 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" ""
 			(at 24.13 116.84 0)
 			(effects
 				(font
@@ -15053,6 +15431,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 264.16 241.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C549170"
 			(at 264.16 241.3 0)
 			(effects
 				(font
@@ -15378,6 +15765,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C2843970"
+			(at 25.4 59.69 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "A1"
 			(uuid "9fe2d582-940d-4ef2-b741-cd93b3ac2533")
 		)
@@ -15482,6 +15878,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 314.96 180.34 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C11702"
 			(at 314.96 180.34 0)
 			(effects
 				(font
@@ -15624,6 +16029,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C1525"
+			(at 290.83 219.71 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "14bdca36-819c-4986-b474-0008e255c80f")
 		)
@@ -15756,6 +16170,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C25905"
+			(at 58.42 62.23 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "1"
 			(uuid "1f533ff2-eff2-474f-bee8-cf45caafa06d")
 		)
@@ -15815,6 +16238,15 @@
 			)
 		)
 		(property "Description" "Single Buffer Gate Tri-State, Low-Voltage CMOS"
+			(at 365.76 223.52 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C148200"
 			(at 365.76 223.52 0)
 			(effects
 				(font
@@ -15894,6 +16326,15 @@
 			)
 		)
 		(property "Description" ""
+			(at 139.7 241.3 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C2652112"
 			(at 139.7 241.3 0)
 			(effects
 				(font
