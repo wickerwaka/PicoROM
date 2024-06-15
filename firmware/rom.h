@@ -12,4 +12,7 @@ uint8_t *rom_get_buffer();
 
 bool rom_check_oe();
 
+void tca_set_pins(uint8_t pins);
+void tca_set_pin(int pin, bool en);
+
 #endif // ROM_H

@@ -104,13 +104,69 @@ void configure_address_pins(uint32_t mask)
 
 static uint8_t identify_request = 0;
 
-#if ACTIVITY_LED==1
 repeating_timer_t activity_timer;
 
 static uint8_t identify_ack = 0;
 static uint8_t activity_cycles = 0;
 static uint8_t activity_duty = 0;
 static uint8_t activity_count = 0;
+
+static uint8_t link_cycles = 0;
+static uint8_t link_duty = 0;
+static uint8_t link_count = 0;
+
+#if TCA_EXPANDER==1
+bool activity_timer_callback(repeating_timer_t * /*unused*/)
+{
+    if (activity_count >= activity_cycles)
+    {
+        bool rom_access = rom_check_oe();
+
+        activity_cycles = 0;
+        activity_duty = 0;
+
+        if (rom_access)
+        {
+            activity_cycles = 5;
+            activity_duty = 1;
+        }
+
+        activity_count = 0;
+    }
+
+    if (link_count >= link_cycles)
+    {
+        bool identify_req = identify_request != identify_ack;
+        bool usb_activity = pl_check_activity();
+
+        link_cycles = 0;
+        link_duty = 0;
+
+        if (identify_req)
+        {
+            identify_ack++;
+            link_cycles = 100;
+            link_duty = 90;
+        }
+        else if (usb_activity)
+        {
+            link_cycles = 20;
+            link_duty = 10;
+        }
+
+        link_count = 0;
+    }
+
+    tca_set_pin(TCA_LINK_PIN, link_count < link_duty);
+    tca_set_pin(TCA_READ_PIN, activity_count < activity_duty);
+
+    activity_count++;
+    link_count++;
+
+    return true;
+}
+
+#else
 
 bool activity_timer_callback(repeating_timer_t * /*unused*/)
 {
@@ -143,20 +199,13 @@ bool activity_timer_callback(repeating_timer_t * /*unused*/)
         activity_count = 0;
     }
 
-    if (activity_count >= activity_duty)
-    {
-        gpio_put(ACTIVITY_LED_PIN, false);
-    }
-    else
-    {
-        gpio_put(ACTIVITY_LED_PIN, true);
-    }
+    gpio_put(ACTIVITY_LED_PIN, activity_count < activity_duty);
 
     activity_count++;
 
     return true;
 }
-#endif // ACTIVITY_LED==1
+#endif // TCA_EXPANDER
 
 int main()
 {
@@ -168,15 +217,15 @@ int main()
 
     configure_address_pins(config.addr_mask);
 
-#if ACTIVITY_LED==1
     identify_ack = identify_request = 0;
 
+#if TCA_EXPANDER==0
     gpio_init(ACTIVITY_LED_PIN);
     gpio_set_dir(ACTIVITY_LED_PIN, true);
     gpio_set_input_enabled(ACTIVITY_LED_PIN, false);
+#endif
 
     add_repeating_timer_ms(10, activity_timer_callback, nullptr, &activity_timer);
-#endif
 
     memcpy(rom_get_buffer(), flash_rom_data, ROM_SIZE);
 
@@ -310,6 +359,26 @@ int main()
                     {
                         identify_request += 5;
                         break;
+                    }
+
+                    case PacketType::Reset:
+                    {
+                        switch(req->payload[0])
+                        {
+                            case 'L':
+                                tca_set_pin(TCA_RESET_VALUE_PIN, false);
+                                tca_set_pin(TCA_RESET_PIN, true);
+                                break;
+
+                            case 'H':
+                                tca_set_pin(TCA_RESET_VALUE_PIN, true);
+                                tca_set_pin(TCA_RESET_PIN, true);
+                                break;
+
+                            default:
+                                tca_set_pin(TCA_RESET_PIN, false);
+                                break;
+                        }
                     }
 
                     default:

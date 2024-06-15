@@ -51,4 +51,16 @@ dis_out:
     jmp start
 en_out: 
     irq wait 0 rel
+
+wait_clear:
+    mov osr, pins
+    out x, 2
+    jmp !x wait_clear
+.wrap
+
+
+.program tca5405
+
+.wrap_target
+    out pins, 1
 .wrap

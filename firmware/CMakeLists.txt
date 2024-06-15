@@ -20,8 +20,7 @@ target_compile_definitions(PicoROM PRIVATE
     PICO_CORE1_STACK_SIZE=4
     USB_MAX_ENDPOINTS=4
     PICO_STDIO_ENABLE_CRLF_SUPPORT=0
-    OUTPUT_BUFFER=1
-    ACTIVITY_LED=1
+    TCA_EXPANDER=1
 )
 
 pico_generate_pio_header(PicoROM ${CMAKE_CURRENT_LIST_DIR}/data_bus.pio)
@@ -40,3 +39,7 @@ target_link_libraries(PicoROM
     hardware_pio
     pico_unique_id
 )
+
+pico_set_program_name(PicoROM PicoROM)
+pico_set_program_url(PicoROM https://github.com/wickerwaka/PicoROM)
+pico_set_program_version(PicoROM 1.5)
