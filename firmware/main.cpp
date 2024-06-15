@@ -14,6 +14,9 @@
 #include "rom.h"
 #include "comms.h"
 
+#if TCA_EXPANDER
+bi_decl(bi_program_feature("Reset"));
+#endif
 
 static constexpr uint FLASH_ROM_OFFSET = FLASH_SIZE - ROM_SIZE;
 static constexpr uint FLASH_CFG_OFFSET = FLASH_ROM_OFFSET - FLASH_SECTOR_SIZE;
@@ -115,7 +118,7 @@ static uint8_t link_cycles = 0;
 static uint8_t link_duty = 0;
 static uint8_t link_count = 0;
 
-#if TCA_EXPANDER==1
+#if TCA_EXPANDER
 bool activity_timer_callback(repeating_timer_t * /*unused*/)
 {
     if (activity_count >= activity_cycles)
@@ -219,7 +222,7 @@ int main()
 
     identify_ack = identify_request = 0;
 
-#if TCA_EXPANDER==0
+#if !TCA_EXPANDER
     gpio_init(ACTIVITY_LED_PIN);
     gpio_set_dir(ACTIVITY_LED_PIN, true);
     gpio_set_input_enabled(ACTIVITY_LED_PIN, false);
@@ -363,6 +366,7 @@ int main()
 
                     case PacketType::Reset:
                     {
+#if TCA_EXPANDER
                         switch(req->payload[0])
                         {
                             case 'L':
@@ -379,6 +383,7 @@ int main()
                                 tca_set_pin(TCA_RESET_PIN, false);
                                 break;
                         }
+#endif // TCA_EXPANDER
                     }
 
                     default:

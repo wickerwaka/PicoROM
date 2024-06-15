@@ -9,7 +9,7 @@ static constexpr uint32_t BASE_DATA_PIN = 22;
 static constexpr uint32_t N_OE_PINS = 2;
 static constexpr uint32_t BASE_OE_PIN = 20;
 
-#if TCA_EXPANDER==1
+#if TCA_EXPANDER
 static constexpr uint32_t N_ADDR_PINS = 18;
 static constexpr uint32_t BASE_ADDR_PIN = 0;
 static constexpr uint32_t N_BUF_OE_PINS = 1;

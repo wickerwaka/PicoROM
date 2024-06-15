@@ -62,10 +62,10 @@ void rom_init_programs()
         gpio_set_input_enabled(BASE_BUF_OE_PIN + ofs, false);
     }
 
+#if TCA_EXPANDER
     pio_gpio_init(data_pio, TCA_EXPANDER_PIN);
     gpio_set_input_enabled(TCA_EXPANDER_PIN, false);
-
-
+#endif // TCA_EXPANDER
 
     pio_sm_set_consecutive_pindirs(data_pio, sm_data, BASE_DATA_PIN, N_DATA_PINS, true);
 
@@ -100,7 +100,7 @@ void rom_init_programs()
     pio_sm_init(data_pio, sm_report, offset_report, &c_report);
     pio_sm_set_enabled(data_pio, sm_report, true);
 
-
+#if TCA_EXPANDER
     pio_sm_set_consecutive_pindirs(data_pio, sm_tca, TCA_EXPANDER_PIN, 1, true);
     pio_sm_set_pins_with_mask(data_pio, sm_tca, 0xffffffff, 1 << TCA_EXPANDER_PIN);
 
@@ -115,6 +115,7 @@ void rom_init_programs()
 
     tca_set_pins(0x00);
     tca_set_pins(0x00);
+#endif // TCA_EXPANDER
 }
 
 uint8_t *rom_get_buffer()
@@ -146,6 +147,7 @@ bool rom_check_oe()
     return false;
 }
 
+#if TCA_EXPANDER
 static uint8_t tca_pins_state = 0x0;
 void tca_set_pins(uint8_t pins)
 {
@@ -167,4 +169,4 @@ void tca_set_pin(int pin, bool en)
         tca_set_pins(new_state);
     }
 }
-
+#endif // TCA_EXPANDER
