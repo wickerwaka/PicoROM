@@ -27,6 +27,8 @@ enum PacketKind {
     CommitFlash = 12,
     CommitDone = 13,
 
+    Reset = 14,
+
     CommsStart = 80,
     CommsEnd = 81,
     CommsData = 82,
@@ -34,6 +36,13 @@ enum PacketKind {
     Identify = 0xf8,
     Error = 0xfe,
     Debug = 0xff,
+}
+
+#[derive(Clone, Debug)]
+pub enum ResetKind {
+    High,
+    Low,
+    Z
 }
 
 #[derive(Clone, Debug)]
@@ -51,6 +60,7 @@ pub enum ReqPacket {
     CommsEnd,
     CommsData(Vec<u8>),
     Identify,
+    Reset(ResetKind)
 }
 
 impl ReqPacket {
@@ -71,6 +81,9 @@ impl ReqPacket {
             ReqPacket::CommsEnd => (PacketKind::CommsEnd, vec![]),
             ReqPacket::CommsData(data) => (PacketKind::CommsData, data),
             ReqPacket::Identify => (PacketKind::Identify, vec![]),
+            ReqPacket::Reset(ResetKind::Low) => (PacketKind::Reset, vec![b'L']),
+            ReqPacket::Reset(ResetKind::High) => (PacketKind::Reset, vec![b'H']),
+            ReqPacket::Reset(ResetKind::Z) => (PacketKind::Reset, vec![b'Z']),
         };
 
         if payload.len() > 30 {
@@ -382,6 +395,11 @@ impl PicoLink {
 
     pub fn identify(&mut self) -> Result<()> {
         self.send(ReqPacket::Identify)?;
+        Ok(())
+    }
+
+    pub fn reset(&mut self, kind: ResetKind) -> Result<()> {
+        self.send(ReqPacket::Reset(kind))?;
         Ok(())
     }
 

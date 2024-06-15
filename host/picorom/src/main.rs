@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
-use clap::{Parser, Subcommand};
+use clap::builder::PossibleValue;
+use clap::{Parser, Subcommand, ValueEnum};
 use indicatif;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
@@ -28,6 +29,31 @@ fn read_file(name: &Path, rom_size: RomSize) -> Result<Vec<u8>> {
     data.extend(iter::repeat(0u8).take(diff));
 
     Ok(data.repeat(RomSize::MBit(2).bytes() / rom_size.bytes()))
+}
+
+#[derive(Clone, Debug, Copy)]
+pub enum ResetKind {
+    Low,
+    High,
+    Z,
+}
+
+impl ValueEnum for ResetKind {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[
+            ResetKind::Low,
+            ResetKind::High,
+            ResetKind::Z
+        ]
+    }
+
+    fn to_possible_value(&self) -> Option<clap::builder::PossibleValue> {
+        match self {
+            ResetKind::High => Some(PossibleValue::new("high")),
+            ResetKind::Low => Some(PossibleValue::new("low")),
+            ResetKind::Z => Some(PossibleValue::new("z")),
+        }
+    }
 }
 
 #[derive(Debug, Parser)] // requires `derive` feature
@@ -76,6 +102,14 @@ enum Commands {
         #[arg(short, long, default_value_t = false)]
         store: bool,
     },
+
+    Reset {
+        /// PicoROM device name.
+        name: String,
+
+        /// Reset Output
+        kind: ResetKind,
+    }
 }
 
 fn main() -> Result<()> {
@@ -145,6 +179,17 @@ fn main() -> Result<()> {
                 pico.commit_rom()?;
                 spinner.finish_with_message("Done.");
             }
+        }
+        Commands::Reset { name, kind } => {
+            let mut pico = find_pico(&name)?;
+            let lib_kind = match kind {
+                ResetKind::High => picolink::ResetKind::High,
+                ResetKind::Low => picolink::ResetKind::Low,
+                ResetKind::Z => picolink::ResetKind::Z,
+            };
+
+            pico.reset(lib_kind)?;
+            println!("Setting '{}' reset pin to: {:?}", name, kind);
         }
     }
 

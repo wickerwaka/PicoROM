@@ -12,4 +12,9 @@ uint8_t *rom_get_buffer();
 
 bool rom_check_oe();
 
+#if TCA_EXPANDER
+void tca_set_pins(uint8_t pins);
+void tca_set_pin(int pin, bool en);
+#endif // TCA_EXPANDER
+
 #endif // ROM_H

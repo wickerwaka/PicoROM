@@ -23,6 +23,7 @@ enum class PacketType : uint8_t
 
     CommitFlash = 12,
     CommitDone = 13,
+    Reset = 14,
 
     CommsStart = 80,
     CommsEnd = 81,
