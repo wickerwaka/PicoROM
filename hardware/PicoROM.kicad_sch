@@ -7,7 +7,7 @@
 	(title_block
 		(title "PicoROM - ROM Emulator")
 		(date "2023-07-09")
-		(rev "1.1")
+		(rev "1.5")
 		(company "Martin Donlon (@wickerwaka)")
 		(comment 1 "Based on RP2040 minimal example")
 	)
