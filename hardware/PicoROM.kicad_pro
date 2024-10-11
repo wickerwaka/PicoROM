@@ -91,6 +91,7 @@
         "footprint_type_mismatch": "error",
         "hole_clearance": "error",
         "hole_near_hole": "error",
+        "holes_co_located": "warning",
         "invalid_outline": "error",
         "isolated_copper": "warning",
         "item_on_disabled_layer": "error",
@@ -523,19 +524,19 @@
       },
       {
         "bus_width": 12,
-        "clearance": 0.105,
-        "diff_pair_gap": 0.105,
+        "clearance": 0.1,
+        "diff_pair_gap": 0.2023,
         "diff_pair_via_gap": 0.25,
-        "diff_pair_width": 0.1765,
+        "diff_pair_width": 0.1554,
         "line_style": 0,
         "microvia_diameter": 0.3,
         "microvia_drill": 0.1,
         "name": "USB_DIFF_90",
         "pcb_color": "rgba(0, 0, 0, 0.000)",
         "schematic_color": "rgba(0, 0, 0, 0.000)",
-        "track_width": 0.1765,
-        "via_diameter": 0.5,
-        "via_drill": 0.3,
+        "track_width": 0.1,
+        "via_diameter": 0.3,
+        "via_drill": 0.15,
         "wire_width": 6
       }
     ],
@@ -583,6 +584,7 @@
   },
   "schematic": {
     "annotate_start_num": 0,
+    "bom_export_filename": "",
     "bom_fmt_presets": [],
     "bom_fmt_settings": {
       "field_delimiter": ",",
