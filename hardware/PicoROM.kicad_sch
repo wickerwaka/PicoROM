@@ -14449,7 +14449,7 @@
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board yes)
-		(dnp no)
+		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "2a9d9ba7-8e06-47fa-86f3-13ca7b24374b")
 		(property "Reference" "J4"
@@ -15276,7 +15276,7 @@
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board yes)
-		(dnp no)
+		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "769187f3-6809-427f-9232-3737f0b2f1bf")
 		(property "Reference" "J5"
@@ -16053,7 +16053,7 @@
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board yes)
-		(dnp no)
+		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "8d8e69c6-f0c4-428f-a411-08de957543ed")
 		(property "Reference" "J3"
@@ -16593,7 +16593,7 @@
 		(exclude_from_sim no)
 		(in_bom no)
 		(on_board yes)
-		(dnp no)
+		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "a3e99137-7db7-4835-bbf3-c77f7d3ef40e")
 		(property "Reference" "J2"
@@ -17654,6 +17654,15 @@
 			)
 		)
 		(property "Description" "8-Bit Dual-Supply Bus Transceiver With Configurable Voltage Translation and 3-State Outputs"
+			(at 266.7 238.76 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C350563"
 			(at 266.7 238.76 0)
 			(effects
 				(font
