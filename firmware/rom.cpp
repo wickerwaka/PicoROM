@@ -1,4 +1,5 @@
 #include "hardware/structs/bus_ctrl.h"
+#include "hardware/dma.h"
 #include "pico/multicore.h"
 
 #include "rom.h"
@@ -19,11 +20,13 @@ static void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) 
 
     __asm__ volatile (
         "ldr r5, =0xd0000004 \n\t"
+        "ldr r2, =0xd0000010 \n\t"
         "loop: \n\t"
         "ldr r3, [r5] \n\t" // 1
         "and r3, r1 \n\t" // 1
         "ldrb r3, [r0, r3] \n\t" // 2
-        "strb r3, [r2] \n\t" // 1
+        "lsl r3, r3, #22 \n\t" // 1
+        "str r3, [r2] \n\t" // 1
         "b loop \n\t" // 2
         : "+r" (r0), "+r" (r1), "+r" (r2)
         :
@@ -46,19 +49,22 @@ void rom_init_programs()
     // Assign data and oe pins to pio
     for( uint ofs = 0; ofs < N_DATA_PINS; ofs++ )
     {
-        pio_gpio_init(data_pio, BASE_DATA_PIN + ofs);
+        gpio_init(BASE_DATA_PIN + ofs);
+        gpio_set_dir(BASE_DATA_PIN + ofs, true);
+        gpio_set_drive_strength(BASE_DATA_PIN + ofs, GPIO_DRIVE_STRENGTH_2MA);
         gpio_set_input_enabled(BASE_DATA_PIN + ofs, false);
     }
 
     for( uint ofs = 0; ofs < N_OE_PINS; ofs++ )
     {
         pio_gpio_init(data_pio, BASE_OE_PIN + ofs);
-        gpio_set_pulls(BASE_OE_PIN + ofs, true, false);
+        gpio_set_drive_strength(BASE_OE_PIN + ofs, GPIO_DRIVE_STRENGTH_2MA);
     }
 
     for( uint ofs = 0; ofs < N_BUF_OE_PINS; ofs++ )
     {
         pio_gpio_init(data_pio, BASE_BUF_OE_PIN + ofs);
+        gpio_set_drive_strength(BASE_BUF_OE_PIN + ofs, GPIO_DRIVE_STRENGTH_2MA);
         gpio_set_input_enabled(BASE_BUF_OE_PIN + ofs, false);
     }
 
@@ -76,7 +82,7 @@ void rom_init_programs()
     sm_config_set_out_pins(&c_data, BASE_DATA_PIN, N_DATA_PINS);
     sm_config_set_out_shift(&c_data, true, true, N_DATA_PINS);
     pio_sm_init(data_pio, sm_data, offset_data, &c_data);
-    pio_sm_set_enabled(data_pio, sm_data, true);
+    //pio_sm_set_enabled(data_pio, sm_data, true);
 
     // set oe pin directions, data pin direction will be set by the sm
     pio_sm_set_consecutive_pindirs(data_pio, sm_oe, BASE_OE_PIN, N_OE_PINS, false);
@@ -85,6 +91,7 @@ void rom_init_programs()
     uint offset_oe = pio_add_program(data_pio, &output_enable_buffer_program);
     pio_sm_config c_oe = output_enable_buffer_program_get_default_config(offset_oe);
     sm_config_set_in_pins(&c_oe, BASE_OE_PIN);
+    sm_config_set_out_pins(&c_oe, BASE_DATA_PIN, N_DATA_PINS);
     sm_config_set_set_pins(&c_oe, BASE_BUF_OE_PIN, N_BUF_OE_PINS);
 
     pio_sm_init(data_pio, sm_oe, offset_oe, &c_oe);
@@ -116,6 +123,8 @@ void rom_init_programs()
     tca_set_pins(0x00);
     tca_set_pins(0x00);
 #endif // TCA_EXPANDER
+
+    dma_channel_configure()
 }
 
 uint8_t *rom_get_buffer()
