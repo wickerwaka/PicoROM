@@ -33,9 +33,13 @@ start:
     jmp !x en_out
 
 dis_out:
+    mov osr, null
+    out pindirs, 8
     set pins, 1
     jmp start
 en_out: 
+    mov osr, ~null
+    out pindirs, 8
     set pins, 0
 .wrap
 
