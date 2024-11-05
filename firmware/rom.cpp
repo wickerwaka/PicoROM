@@ -123,8 +123,6 @@ void rom_init_programs()
     tca_set_pins(0x00);
     tca_set_pins(0x00);
 #endif // TCA_EXPANDER
-
-    dma_channel_configure()
 }
 
 uint8_t *rom_get_buffer()
