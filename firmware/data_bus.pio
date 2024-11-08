@@ -1,29 +1,4 @@
 
-.program output
-    out pins, 8
-
-
-.program output_enable
-
-start:
-    mov osr, null
-    out pindirs, 8
-
-wait1:
-    in null, 30 ; read OE and CE into x
-    in pins, 2
-    mov x, isr
-    jmp x-- wait1
-
-    mov osr, ~null ; clear ISR
-    out pindirs, 8 ; set the direction of the 8 data pins
-
-wait2:
-    in null, 30 ; read OE and CE into x
-    in pins, 2
-    mov x, isr
-    jmp !x wait2
-
 .program output_enable_buffer
 
 .wrap_target
@@ -33,13 +8,13 @@ start:
     jmp !x en_out
 
 dis_out:
-    mov osr, null
-    out pindirs, 8
+    ;mov osr, null
+    ;out pindirs, 8
     set pins, 1
     jmp start
 en_out: 
-    mov osr, ~null
-    out pindirs, 8
+    ;mov osr, ~null
+    ;out pindirs, 8
     set pins, 0
 .wrap
 

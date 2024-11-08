@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "pico/stdlib.h"
+#include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "hardware/flash.h"
 #include "hardware/structs/syscfg.h"
@@ -14,9 +15,7 @@
 #include "rom.h"
 #include "comms.h"
 
-#if TCA_EXPANDER
 bi_decl(bi_program_feature("Reset"));
-#endif
 
 static constexpr uint FLASH_ROM_OFFSET = FLASH_SIZE - ROM_SIZE;
 static constexpr uint FLASH_CFG_OFFSET = FLASH_ROM_OFFSET - FLASH_SECTOR_SIZE;
@@ -118,7 +117,6 @@ static uint8_t link_cycles = 0;
 static uint8_t link_duty = 0;
 static uint8_t link_count = 0;
 
-#if TCA_EXPANDER
 bool activity_timer_callback(repeating_timer_t * /*unused*/)
 {
     if (activity_count >= activity_cycles)
@@ -169,46 +167,6 @@ bool activity_timer_callback(repeating_timer_t * /*unused*/)
     return true;
 }
 
-#else
-
-bool activity_timer_callback(repeating_timer_t * /*unused*/)
-{
-    if (activity_count >= activity_cycles)
-    {
-        bool rom_access = rom_check_oe();
-        bool usb_activity = pl_check_activity();
-        bool identify_req = identify_request != identify_ack;
-
-        activity_cycles = 0;
-        activity_duty = 0;
-
-        if (identify_req)
-        {
-            identify_ack++;
-            activity_cycles = 100;
-            activity_duty = 90;
-        }
-        else if (usb_activity)
-        {
-            activity_cycles = 20;
-            activity_duty = 10;
-        }
-        else if (rom_access)
-        {
-            activity_cycles = 5;
-            activity_duty = 1;
-        }
-
-        activity_count = 0;
-    }
-
-    gpio_put(ACTIVITY_LED_PIN, activity_count < activity_duty);
-
-    activity_count++;
-
-    return true;
-}
-#endif // TCA_EXPANDER
 
 int main()
 {
@@ -216,17 +174,11 @@ int main()
 
     init_config();
 
-    set_sys_clock_khz(200000, true);
+    set_sys_clock_khz(250000, true);
 
     configure_address_pins(config.addr_mask);
 
     identify_ack = identify_request = 0;
-
-#if !TCA_EXPANDER
-    gpio_init(ACTIVITY_LED_PIN);
-    gpio_set_dir(ACTIVITY_LED_PIN, true);
-    gpio_set_input_enabled(ACTIVITY_LED_PIN, false);
-#endif
 
     add_repeating_timer_ms(10, activity_timer_callback, nullptr, &activity_timer);
 
@@ -366,7 +318,6 @@ int main()
 
                     case PacketType::Reset:
                     {
-#if TCA_EXPANDER
                         switch(req->payload[0])
                         {
                             case 'L':
@@ -383,7 +334,6 @@ int main()
                                 tca_set_pin(TCA_RESET_PIN, false);
                                 break;
                         }
-#endif // TCA_EXPANDER
                     }
 
                     default:

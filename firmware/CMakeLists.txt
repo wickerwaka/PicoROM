@@ -5,7 +5,7 @@ set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
 pico_sdk_init()
 
-foreach(TARGET PicoROM PicoROM-1.2)
+foreach(TARGET PicoROM)
     add_executable(${TARGET}
         main.cpp
         pico_link.cpp
@@ -38,7 +38,6 @@ foreach(TARGET PicoROM PicoROM-1.2)
 endforeach()
 
 pico_set_program_version(PicoROM 1.5/1.5)
-pico_set_program_version(PicoROM-1.2 1.5/1.2)
 
 target_compile_definitions(PicoROM PRIVATE
     PICO_HEAP_SIZE=16
@@ -46,15 +45,4 @@ target_compile_definitions(PicoROM PRIVATE
     PICO_CORE1_STACK_SIZE=4
     USB_MAX_ENDPOINTS=4
     PICO_STDIO_ENABLE_CRLF_SUPPORT=0
-    TCA_EXPANDER=1
 )
-
-target_compile_definitions(PicoROM-1.2 PRIVATE
-    PICO_HEAP_SIZE=16
-    PICO_STACK_SIZE=640
-    PICO_CORE1_STACK_SIZE=4
-    USB_MAX_ENDPOINTS=4
-    PICO_STDIO_ENABLE_CRLF_SUPPORT=0
-    TCA_EXPANDER=0
-)
-
