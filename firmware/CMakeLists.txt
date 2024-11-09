@@ -46,3 +46,8 @@ target_compile_definitions(PicoROM PRIVATE
     USB_MAX_ENDPOINTS=4
     PICO_STDIO_ENABLE_CRLF_SUPPORT=0
 )
+
+pico_define_boot_stage2(boot_div4 ${PICO_DEFAULT_BOOT_STAGE2_FILE})
+target_compile_definitions(boot_div4 PRIVATE PICO_FLASH_SPI_CLKDIV=4)
+
+pico_set_boot_stage2(PicoROM boot_div4)

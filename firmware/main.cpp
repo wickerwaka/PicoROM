@@ -3,6 +3,7 @@
 #include "pico/stdlib.h"
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
+#include "hardware/clocks.h"
 #include "hardware/flash.h"
 #include "hardware/structs/syscfg.h"
 #include "pico/binary_info.h"
@@ -174,7 +175,7 @@ int main()
 
     init_config();
 
-    set_sys_clock_khz(250000, true);
+    set_sys_clock_khz(270000, true);
 
     configure_address_pins(config.addr_mask);
 
