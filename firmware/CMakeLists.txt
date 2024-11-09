@@ -58,3 +58,7 @@ target_compile_definitions(PicoROM-1.2 PRIVATE
     TCA_EXPANDER=0
 )
 
+pico_define_boot_stage2(boot_div4 ${PICO_DEFAULT_BOOT_STAGE2_FILE})
+target_compile_definitions(boot_div4 PRIVATE PICO_FLASH_SPI_CLKDIV=4)
+
+pico_set_boot_stage2(PicoROM boot_div4)

@@ -48,6 +48,7 @@ void rom_init_programs()
     {
         pio_gpio_init(data_pio, BASE_DATA_PIN + ofs);
         gpio_set_input_enabled(BASE_DATA_PIN + ofs, false);
+        gpio_set_drive_strength(BASE_DATA_PIN + ofs, GPIO_DRIVE_STRENGTH_2MA);
     }
 
     for( uint ofs = 0; ofs < N_OE_PINS; ofs++ )
@@ -60,11 +61,13 @@ void rom_init_programs()
     {
         pio_gpio_init(data_pio, BASE_BUF_OE_PIN + ofs);
         gpio_set_input_enabled(BASE_BUF_OE_PIN + ofs, false);
+        gpio_set_drive_strength(BASE_BUF_OE_PIN + ofs, GPIO_DRIVE_STRENGTH_2MA);
     }
 
 #if TCA_EXPANDER
     pio_gpio_init(data_pio, TCA_EXPANDER_PIN);
     gpio_set_input_enabled(TCA_EXPANDER_PIN, false);
+    gpio_set_drive_strength(TCA_EXPANDER_PIN, GPIO_DRIVE_STRENGTH_2MA);
 #endif // TCA_EXPANDER
 
     pio_sm_set_consecutive_pindirs(data_pio, sm_data, BASE_DATA_PIN, N_DATA_PINS, true);
@@ -86,7 +89,8 @@ void rom_init_programs()
     pio_sm_config c_oe = output_enable_buffer_program_get_default_config(offset_oe);
     sm_config_set_in_pins(&c_oe, BASE_OE_PIN);
     sm_config_set_set_pins(&c_oe, BASE_BUF_OE_PIN, N_BUF_OE_PINS);
-
+    sm_config_set_out_pins(&c_oe, BASE_DATA_PIN, N_DATA_PINS);
+    
     pio_sm_init(data_pio, sm_oe, offset_oe, &c_oe);
     pio_sm_set_enabled(data_pio, sm_oe, true);
 
