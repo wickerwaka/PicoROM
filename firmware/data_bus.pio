@@ -24,6 +24,27 @@ enable_output:
     set pins, 0          ; set the x245 /OE input low
 .wrap
 
+; Control pin direction and buffer based on /OE and /CS
+.program output_enable_buffer2
+.wrap_target
+    ; enable output
+    mov osr, ~null       ; fill OSR with 1's
+    out pindirs, 8       ; set all data pins to output
+    set pins, 0          ; set the x245 /OE input low
+wait_disable:
+    mov osr, pins        ; read /OE and /CS pins
+    out x, 2             ; move the values into x
+    jmp !x wait_disable  ; If both are low, keep checking
+    ; disable output
+    mov osr, null        ; clear OSR
+    out pindirs, 8       ; disable all data pins
+    set pins, 1          ; set the x245 /OE input high
+wait_enable:
+    mov osr, pins        ; read /OE and /CS pins
+    out x, 2             ; move the values into x
+    jmp x-- wait_enable  ; If either are high, keep checking 
+.wrap
+
 ; Report activity to CPU
 .program output_enable_report
 .wrap_target
@@ -41,6 +62,23 @@ wait_clear:
     mov osr, pins
     out x, 2
     jmp !x wait_clear
+.wrap
+
+; Report activity to CPU
+.program output_enable_report2
+wait_oe:
+    mov y, pins    ; read in all pins
+    mov osr, y     ; move into the osr so we can shift them out
+    out null, 22   ; skip all the other pins
+    out x, 2       ; move OE in x 
+    jmp x-- wait_oe  ; if /OE or /CS are high, check again
+
+    irq nowait 0 rel ; tell the cpu
+
+.wrap_target
+wait_change:
+    mov x, pins    ; read all pins again
+    jmp x!=y wait_oe ; if any have changed, restart and check oe again
 .wrap
 
 
