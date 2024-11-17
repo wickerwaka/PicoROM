@@ -33,16 +33,83 @@ static void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) 
     __builtin_unreachable();
 }
 
-static uint sm_report = 0;
-static uint sm_tca = 0;
+static constexpr uint SM_DATA = 0;
+static constexpr uint SM_OE = 1;
+static constexpr uint SM_REPORT = 2;
+static constexpr uint SM_TCA = 3;
+
+static void rom_pio_init_output_program()
+{
+    // Set the output direction
+    pio_sm_set_consecutive_pindirs(data_pio, SM_DATA, BASE_DATA_PIN, N_DATA_PINS, true);
+
+    uint offset = pio_add_program(data_pio, &output_program);
+    pio_sm_config cfg = output_program_get_default_config(offset);
+
+    // Set output pins and autopull at 8-bits
+    sm_config_set_out_pins(&cfg, BASE_DATA_PIN, N_DATA_PINS);
+    sm_config_set_out_shift(&cfg, true, true, N_DATA_PINS);
+    pio_sm_init(data_pio, SM_DATA, offset, &cfg);
+    pio_sm_set_enabled(data_pio, SM_DATA, true);
+}
+
+static void rom_pio_init_output_enable_program()
+{
+    // set oe pin directions, data pin direction will be set by the state machine
+    pio_sm_set_consecutive_pindirs(data_pio, SM_OE, BASE_OE_PIN, N_OE_PINS, false);
+    pio_sm_set_consecutive_pindirs(data_pio, SM_OE, BASE_BUF_OE_PIN, N_BUF_OE_PINS, true);
+
+
+    uint offset = pio_add_program(data_pio, &output_enable_buffer_program);
+    pio_sm_config cfg = output_enable_buffer_program_get_default_config(offset);
+
+    // OE pins as input
+    sm_config_set_in_pins(&cfg, BASE_OE_PIN);
+    
+    // Data pins as output, but just the direction is set
+    sm_config_set_out_pins(&cfg, BASE_DATA_PIN, N_DATA_PINS);
+
+    // We set the BUF_OE pin using the SET op
+    sm_config_set_set_pins(&cfg, BASE_BUF_OE_PIN, N_BUF_OE_PINS);
+    
+    pio_sm_init(data_pio, SM_OE, offset, &cfg);
+    pio_sm_set_enabled(data_pio, SM_OE, true);
+}
+
+static void rom_pio_init_output_enable_report_program()
+{
+    uint offset = pio_add_program(data_pio, &output_enable_report_program);
+    pio_sm_config cfg = output_enable_report_program_get_default_config(offset);
+    // This program looks at all input pins
+    sm_config_set_in_pins(&cfg, 0);
+
+    // Disable interrupts, we manually check the flag and clear it
+    pio_set_irq0_source_enabled(data_pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + SM_REPORT), false);
+    pio_set_irq1_source_enabled(data_pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + SM_REPORT), false);
+    pio_interrupt_clear(data_pio, SM_REPORT);
+
+    pio_sm_init(data_pio, SM_REPORT, offset, &cfg);
+    pio_sm_set_enabled(data_pio, SM_REPORT, true);
+}
+
+static void rom_pio_init_tca_program()
+{
+    // Enable output and set pin high
+    pio_sm_set_pindirs_with_mask(data_pio, SM_TCA, 0xffffffff, TCA_EXPANDER_PIN_MASK);
+    pio_sm_set_pins_with_mask(data_pio, SM_TCA, 0xffffffff, TCA_EXPANDER_PIN_MASK);
+
+    uint offset = pio_add_program(data_pio, &tca5405_program);
+    pio_sm_config cfg = tca5405_program_get_default_config(offset);
+    sm_config_set_out_pins(&cfg, TCA_EXPANDER_PIN, 1);
+    sm_config_set_clkdiv(&cfg, 1000); // divide down to TCA rate
+    sm_config_set_out_shift(&cfg, true, true, 10); // 4-bits of preample, 5-bits of data, 1-end bit 
+
+    pio_sm_init(data_pio, SM_TCA, offset, &cfg);
+    pio_sm_set_enabled(data_pio, SM_TCA, true);
+}
+
 void rom_init_programs()
 {
-    uint sm_data = pio_claim_unused_sm(data_pio, true);
-    uint sm_oe = pio_claim_unused_sm(data_pio, true);
-    
-    sm_report = pio_claim_unused_sm(data_pio, true);
-    sm_tca = pio_claim_unused_sm(data_pio, true);
-
     // Assign data and oe pins to pio
     for( uint ofs = 0; ofs < N_DATA_PINS; ofs++ )
     {
@@ -72,51 +139,12 @@ void rom_init_programs()
     gpio_set_inover(TCA_EXPANDER_PIN, GPIO_OVERRIDE_LOW);
     gpio_set_drive_strength(TCA_EXPANDER_PIN, GPIO_DRIVE_STRENGTH_2MA);
 
-    pio_sm_set_consecutive_pindirs(data_pio, sm_data, BASE_DATA_PIN, N_DATA_PINS, true);
+    pio_sm_set_consecutive_pindirs(data_pio, SM_DATA, BASE_DATA_PIN, N_DATA_PINS, true);
 
-    // set out/in bases
-    uint offset_data = pio_add_program(data_pio, &output_program);
-    pio_sm_config c_data = output_program_get_default_config(offset_data);
-
-    sm_config_set_out_pins(&c_data, BASE_DATA_PIN, N_DATA_PINS);
-    sm_config_set_out_shift(&c_data, true, true, N_DATA_PINS);
-    pio_sm_init(data_pio, sm_data, offset_data, &c_data);
-    pio_sm_set_enabled(data_pio, sm_data, true);
-
-    // set oe pin directions, data pin direction will be set by the sm
-    pio_sm_set_consecutive_pindirs(data_pio, sm_oe, BASE_OE_PIN, N_OE_PINS, false);
-    pio_sm_set_consecutive_pindirs(data_pio, sm_oe, BASE_BUF_OE_PIN, N_BUF_OE_PINS, true);
-
-    uint offset_oe = pio_add_program(data_pio, &output_enable_buffer_program);
-    pio_sm_config c_oe = output_enable_buffer_program_get_default_config(offset_oe);
-    sm_config_set_in_pins(&c_oe, BASE_OE_PIN);
-    sm_config_set_out_pins(&c_oe, BASE_DATA_PIN, N_DATA_PINS);
-    sm_config_set_set_pins(&c_oe, BASE_BUF_OE_PIN, N_BUF_OE_PINS);
-    
-    pio_sm_init(data_pio, sm_oe, offset_oe, &c_oe);
-    pio_sm_set_enabled(data_pio, sm_oe, true);
-   
-    uint offset_report = pio_add_program(data_pio, &output_enable_report_program);
-    pio_sm_config c_report = output_enable_report_program_get_default_config(offset_report);
-    sm_config_set_in_pins(&c_report, 0);
-    pio_set_irq0_source_enabled(data_pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm_report), false);
-    pio_set_irq1_source_enabled(data_pio, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm_report), false);
-    pio_interrupt_clear(data_pio, sm_report);
-
-    pio_sm_init(data_pio, sm_report, offset_report, &c_report);
-    pio_sm_set_enabled(data_pio, sm_report, true);
-
-    pio_sm_set_consecutive_pindirs(data_pio, sm_tca, TCA_EXPANDER_PIN, 1, true);
-    pio_sm_set_pins_with_mask(data_pio, sm_tca, 0xffffffff, 1 << TCA_EXPANDER_PIN);
-
-    uint offset_tca = pio_add_program(data_pio, &tca5405_program);
-    pio_sm_config c_tca = tca5405_program_get_default_config(offset_tca);
-    sm_config_set_out_pins(&c_tca, TCA_EXPANDER_PIN, 1);
-    sm_config_set_clkdiv(&c_tca, 1000);
-    sm_config_set_out_shift(&c_tca, true, true, 10); // 4-bits of preample, 5-bits of data, 1-end bit 
-
-    pio_sm_init(data_pio, sm_tca, offset_tca, &c_tca);
-    pio_sm_set_enabled(data_pio, sm_tca, true);
+    rom_pio_init_output_program();
+    rom_pio_init_output_enable_program();
+    rom_pio_init_output_enable_report_program();
+    rom_pio_init_tca_program();
 
     tca_set_pins(0x00);
     tca_set_pins(0x00);
@@ -143,9 +171,9 @@ void rom_service_stop()
 
 bool rom_check_oe()
 {
-    if( pio_interrupt_get(data_pio, sm_report) )
+    if( pio_interrupt_get(data_pio, SM_REPORT) )
     {
-        pio_interrupt_clear(data_pio, sm_report);
+        pio_interrupt_clear(data_pio, SM_REPORT);
         return true;
     }
     return false;
@@ -155,7 +183,7 @@ static uint8_t tca_pins_state = 0x0;
 void tca_set_pins(uint8_t pins)
 {
     uint32_t bitstream = 0b1000001010 | ((pins & 0x1f) << 4);
-    data_pio->txf[sm_tca] = bitstream;
+    data_pio->txf[SM_TCA] = bitstream;
     tca_pins_state = pins; 
 }
 
