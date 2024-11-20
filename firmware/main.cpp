@@ -14,71 +14,12 @@
 #include "system.h"
 #include "pico_link.h"
 #include "rom.h"
+#include "flash.h"
 #include "comms.h"
 
 bi_decl(bi_program_feature("Reset"));
 
-static constexpr uint FLASH_ROM_OFFSET = FLASH_SIZE - ROM_SIZE;
-static constexpr uint FLASH_CFG_OFFSET = FLASH_ROM_OFFSET - FLASH_SECTOR_SIZE;
-
-static constexpr uint CONFIG_VERSION = 0x00010007;
-
 uint32_t rom_offset = 0;
-const uint8_t *flash_rom_data = (uint8_t *)(XIP_BASE + FLASH_ROM_OFFSET);
-
-struct Config
-{
-    uint32_t version;
-    char name[32];
-
-    uint32_t addr_mask;
-};
-
-Config config;
-const Config *flash_config = (Config *)(XIP_BASE + FLASH_CFG_OFFSET);
-static_assert(sizeof(Config) <= FLASH_PAGE_SIZE);
-
-
-
-void save_config()
-{
-    if( !memcmp(&config, flash_config, sizeof(Config))) return;
-
-    rom_service_stop();
-    uint32_t ints = save_and_disable_interrupts();
-    flash_range_erase(FLASH_CFG_OFFSET, FLASH_SECTOR_SIZE);
-    flash_range_program(FLASH_CFG_OFFSET, (uint8_t *)&config, FLASH_PAGE_SIZE);
-    restore_interrupts(ints);
-    rom_service_start();
-}
-
-
-void init_config()
-{
-    memcpy(&config, flash_config, sizeof(Config));
-
-    if (config.version == CONFIG_VERSION) return;
-
-    memset(&config, 0, sizeof(Config));
-
-    config.addr_mask = ADDR_MASK;
-    config.version = CONFIG_VERSION;
-    pico_get_unique_board_id_string(config.name, sizeof(config.name));
-
-    save_config();
-}
-
-
-void save_rom()
-{
-    rom_service_stop();
-    uint32_t ints = save_and_disable_interrupts();
-    flash_range_erase(FLASH_ROM_OFFSET, ROM_SIZE);
-    flash_range_program(FLASH_ROM_OFFSET, rom_get_buffer(), ROM_SIZE);
-    restore_interrupts(ints);
-    rom_service_start();
-}
-
 
 void configure_address_pins(uint32_t mask)
 {
@@ -168,22 +109,24 @@ bool activity_timer_callback(repeating_timer_t * /*unused*/)
     return true;
 }
 
+uint32_t flash_load_time = 0;
 
 int main()
 {
-    tusb_init();
-
-    init_config();
+    Config config;
 
     set_sys_clock_khz(270000, true);
+
+    flash_init_config(&config);
+    flash_load_time = flash_load_rom();
+
+    tusb_init();
 
     configure_address_pins(config.addr_mask);
 
     identify_ack = identify_request = 0;
 
     add_repeating_timer_ms(10, activity_timer_callback, nullptr, &activity_timer);
-
-    memcpy(rom_get_buffer(), flash_rom_data, ROM_SIZE);
 
     rom_init_programs();
 
@@ -200,6 +143,7 @@ int main()
         pl_wait_for_connection();
 
         pl_send_debug("Connected", 1, 2);
+        pl_send_debug("Flash Load Time", flash_load_time, 0);
 
         // Loop while connected
         while (pl_is_connected())
@@ -226,7 +170,7 @@ int main()
                     {
                         memcpy(config.name, req->payload, req->size);
                         config.name[req->size] = '\0';
-                        save_config();
+                        flash_save_config(&config);
                         break;
                     }
 
@@ -266,7 +210,7 @@ int main()
 
                     case PacketType::CommitFlash:
                     {
-                        save_rom();
+                        flash_save_rom();
                         pl_send_null(PacketType::CommitDone);
                         break;
                     }

@@ -8,6 +8,7 @@ pico_sdk_init()
 foreach(TARGET PicoROM)
     add_executable(${TARGET}
         main.cpp
+        flash.cpp
         pico_link.cpp
         rom.cpp
         comms.cpp
@@ -30,6 +31,7 @@ foreach(TARGET PicoROM)
         pico_multicore
         hardware_flash
         hardware_pio
+        hardware_dma    
         pico_unique_id
     )
 
