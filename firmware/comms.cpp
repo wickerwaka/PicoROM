@@ -8,6 +8,7 @@
 
 #include "pico/stdlib.h"
 #include "hardware/pio.h"
+#include "hardware/dma.h"
 
 static PIO comms_pio = pio1;
 
@@ -28,8 +29,9 @@ struct CommsRegisters
     uint32_t in_byte;
     uint32_t in_seq;
     uint32_t out_seq;
+    uint32_t cycle_count;
 
-    uint8_t reserved[256 - (6 * 4)];
+    uint8_t reserved[256 - (7 * 4)];
 
     uint8_t out_area[256];
 };
@@ -76,26 +78,62 @@ void comms_in_irq_handler()
     }
 }
 
-static void comms_start_programs(uint32_t addr, uint32_t byte_offset)
+static void pio_set_y(PIO p, uint sm, uint32_t v)
+{
+    const uint instr_shift = pio_encode_in(pio_y, 4);
+    const uint instr_mov = pio_encode_mov(pio_y, pio_isr);
+    for (int i = 7; i >= 0; i--)
+    {
+        const uint32_t nibble = (v >> (i * 4)) & 0xf;
+        pio_sm_exec(p, sm, pio_encode_set(pio_y, nibble));
+        pio_sm_exec(p, sm, instr_shift);
+    }
+    pio_sm_exec(p, sm, instr_mov);
+}
+
+static void comms_start_programs(uint32_t addr, CommsRegisters *regs, uint32_t byte_offset)
 {
     pio_clear_instruction_memory(comms_pio);
 
     uint32_t offset_write = pio_add_program(comms_pio, &detect_write_program);
     uint32_t offset_read = pio_add_program(comms_pio, &detect_read_program);
+    uint32_t offset_clock = pio_add_program(comms_pio, &detect_clock_program);
 
     pio_sm_config c_write = detect_write_program_get_default_config(offset_write);
     sm_config_set_in_pins(&c_write, 0);
+    pio_set_y(comms_pio, 0, (addr + 0x100) >> 8);
     pio_sm_init(comms_pio, 0, offset_write, &c_write);
     pio_sm_set_enabled(comms_pio, 0, true);
-    pio_sm_put_blocking(comms_pio, 0, (addr + 0x100) >> 8);
     pio_set_irq0_source_enabled(comms_pio, pis_sm0_rx_fifo_not_empty, true);
 
     pio_sm_config c_read = detect_read_program_get_default_config(offset_read);
     sm_config_set_in_pins(&c_read, 0);
+    pio_set_y(comms_pio, 0, addr + byte_offset);
     pio_sm_init(comms_pio, 1, offset_read, &c_read);
     pio_sm_set_enabled(comms_pio, 1, true);
     pio_sm_put_blocking(comms_pio, 1, addr + byte_offset);
     pio_set_irq1_source_enabled(comms_pio, pis_sm1_rx_fifo_not_empty, true);
+
+
+    pio_gpio_init(comms_pio, CLOCK_PIN);
+    gpio_set_dir(CLOCK_PIN, false);
+    gpio_set_input_enabled(CLOCK_PIN, true);
+
+    pio_sm_config c_clock = detect_clock_program_get_default_config(offset_clock);
+    sm_config_set_in_pins(&c_clock, CLOCK_PIN);
+    sm_config_set_in_shift(&c_clock, true, true, 32);
+    pio_sm_init(comms_pio, 2, offset_clock, &c_clock);
+    pio_sm_set_enabled(comms_pio, 2, true);
+
+    dma_channel_config c = dma_channel_get_default_config(2);
+    channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
+    channel_config_set_read_increment(&c, false);
+    channel_config_set_write_increment(&c, false);
+    channel_config_set_dreq(&c, DREQ_PIO1_RX2);
+    channel_config_set_chain_to(&c, 3);
+    dma_channel_configure(2, &c, &regs->cycle_count, &pio1_hw->rxf[2], 0xffffffff, true);
+    channel_config_set_chain_to(&c, 2);
+    dma_channel_configure(3, &c, &regs->cycle_count, &pio1_hw->rxf[2], 0xffffffff, true);
 }
 
 static void comms_end_programs()
@@ -145,7 +183,7 @@ void comms_begin_session(uint32_t addr, uint8_t *rom_base)
     memset(comms_reg, 0, sizeof(CommsRegisters));
     memcpy(comms_reg->magic, "PICO", 4);
     
-    comms_start_programs(comms_reg_addr, offsetof(CommsRegisters, in_byte));
+    comms_start_programs(comms_reg_addr, comms_reg, offsetof(CommsRegisters, in_byte));
 
     restore_interrupts(ints);
 

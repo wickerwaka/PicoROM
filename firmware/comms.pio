@@ -1,8 +1,9 @@
-.program detect_write
-    ; initialize y from fifo
-    pull block
-    mov y, osr
 
+
+; 
+
+; y set by cpu
+.program detect_write
 start:
     ; loop until upper address bits matches mask 
     mov osr, pins
@@ -28,11 +29,8 @@ start:
 .wrap
 
 
+; y set by cpu
 .program detect_read
-    ; initialize y from fifo
-    pull block
-    mov y, osr
-
 start:
     ; loop until upper matches 
     mov osr, pins
@@ -51,4 +49,13 @@ start:
     mov osr, pins
     out x, 22
     jmp x!=y start
+.wrap
+
+.program detect_clock
+.wrap_target
+    wait 0 pin 0
+    wait 1 pin 0    
+    jmp x-- dummy_jump
+dummy_jump:
+    in x, 32
 .wrap
