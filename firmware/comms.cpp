@@ -26,17 +26,21 @@ struct CommsRegisters
     // only the least significant byte is relevant for these, using 32-bits to avoid potential atomic issues
     uint32_t active;
     uint32_t pending;
-    uint32_t in_byte;
     uint32_t in_seq;
     uint32_t out_seq;
     uint32_t cycle_count;
+    uint32_t debug1;
+    uint32_t debug2;
 
-    uint8_t reserved[256 - (7 * 4)];
+    uint8_t reserved[512 - (8 * 4)];
 
+    uint32_t in_byte;
+    uint8_t reserved2[256 - (1 * 4)];
+    
     uint8_t out_area[256];
 };
 
-static_assert(sizeof(CommsRegisters) == 512);
+static_assert(sizeof(CommsRegisters) == 1024);
 
 static CommsRegisters *comms_reg = (CommsRegisters *)0x0;
 static uint32_t comms_reg_addr = 0;
@@ -46,6 +50,7 @@ void comms_out_irq_handler()
     uint8_t byte = pio_sm_get(pio1, 0) & 0xff; // this must be valid at this point
     if (comms_reg)
     {
+        comms_reg->debug2++;
         comms_out_fifo.push(byte);
         if (comms_out_fifo.is_full())
         {
@@ -61,10 +66,13 @@ void comms_out_irq_handler()
 void comms_in_irq_handler()
 {
     pio_sm_get(pio1, 1); // don't care
+
     comms_in_fifo.pop();
 
     if (comms_reg)
     {
+        comms_reg->debug1++;
+        comms_reg->debug2 = comms_in_fifo.count();
         if (comms_in_fifo.is_empty())
         {
             comms_in_empty_req++;
@@ -80,6 +88,9 @@ void comms_in_irq_handler()
 
 static void pio_set_y(PIO p, uint sm, uint32_t v)
 {
+    uint32_t shift_save = p->sm[sm].shiftctrl;
+    p->sm[sm].shiftctrl &= ~PIO_SM0_SHIFTCTRL_IN_SHIFTDIR_BITS;
+
     const uint instr_shift = pio_encode_in(pio_y, 4);
     const uint instr_mov = pio_encode_mov(pio_y, pio_isr);
     for (int i = 7; i >= 0; i--)
@@ -89,31 +100,37 @@ static void pio_set_y(PIO p, uint sm, uint32_t v)
         pio_sm_exec(p, sm, instr_shift);
     }
     pio_sm_exec(p, sm, instr_mov);
+    p->sm[sm].shiftctrl &= shift_save;
 }
 
-static void comms_start_programs(uint32_t addr, CommsRegisters *regs, uint32_t byte_offset)
+static void comms_start_programs(uint32_t addr, CommsRegisters *regs)
 {
     pio_clear_instruction_memory(comms_pio);
 
-    uint32_t offset_write = pio_add_program(comms_pio, &detect_write_program);
-    uint32_t offset_read = pio_add_program(comms_pio, &detect_read_program);
+    uint32_t offset_write = pio_add_program(comms_pio, &detect_write2_program);
+    uint32_t offset_read = pio_add_program(comms_pio, &detect_read2_program);
     uint32_t offset_clock = pio_add_program(comms_pio, &detect_clock_program);
+    uint32_t offset_stable_addr = pio_add_program(comms_pio, &wait_stable_addr_program);
 
-    pio_sm_config c_write = detect_write_program_get_default_config(offset_write);
+    // TODO update offset
+    pio_sm_config c_write = detect_write2_program_get_default_config(offset_write);
     sm_config_set_in_pins(&c_write, 0);
-    pio_set_y(comms_pio, 0, (addr + 0x100) >> 8);
     pio_sm_init(comms_pio, 0, offset_write, &c_write);
+    pio_set_y(comms_pio, 0, 0x1ff);
     pio_sm_set_enabled(comms_pio, 0, true);
     pio_set_irq0_source_enabled(comms_pio, pis_sm0_rx_fifo_not_empty, true);
 
-    pio_sm_config c_read = detect_read_program_get_default_config(offset_read);
+    pio_sm_config c_read = detect_read2_program_get_default_config(offset_read);
     sm_config_set_in_pins(&c_read, 0);
-    pio_set_y(comms_pio, 0, addr + byte_offset);
     pio_sm_init(comms_pio, 1, offset_read, &c_read);
+    pio_set_y(comms_pio, 1, addr + offsetof(CommsRegisters, in_byte));
     pio_sm_set_enabled(comms_pio, 1, true);
-    pio_sm_put_blocking(comms_pio, 1, addr + byte_offset);
     pio_set_irq1_source_enabled(comms_pio, pis_sm1_rx_fifo_not_empty, true);
 
+    pio_sm_config c_addr = wait_stable_addr_program_get_default_config(offset_stable_addr);
+    sm_config_set_in_pins(&c_addr, BASE_OE_PIN);
+    pio_sm_init(comms_pio, 2, offset_stable_addr, &c_addr);
+    pio_sm_set_enabled(comms_pio, 2, true);
 
     pio_gpio_init(comms_pio, CLOCK_PIN);
     gpio_set_dir(CLOCK_PIN, false);
@@ -122,24 +139,28 @@ static void comms_start_programs(uint32_t addr, CommsRegisters *regs, uint32_t b
     pio_sm_config c_clock = detect_clock_program_get_default_config(offset_clock);
     sm_config_set_in_pins(&c_clock, CLOCK_PIN);
     sm_config_set_in_shift(&c_clock, true, true, 32);
-    pio_sm_init(comms_pio, 2, offset_clock, &c_clock);
-    pio_sm_set_enabled(comms_pio, 2, true);
+    pio_sm_init(comms_pio, 3, offset_clock, &c_clock);
+    pio_sm_set_enabled(comms_pio, 3, true);
 
     dma_channel_config c = dma_channel_get_default_config(2);
     channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
     channel_config_set_read_increment(&c, false);
     channel_config_set_write_increment(&c, false);
-    channel_config_set_dreq(&c, DREQ_PIO1_RX2);
+    channel_config_set_dreq(&c, DREQ_PIO1_RX3);
+    channel_config_set_high_priority(&c, true);
+    channel_config_set_irq_quiet(&c, true);
     channel_config_set_chain_to(&c, 3);
-    dma_channel_configure(2, &c, &regs->cycle_count, &pio1_hw->rxf[2], 0xffffffff, true);
+    dma_channel_configure(2, &c, &regs->cycle_count, &pio1_hw->rxf[3], 0xffffffff, true);
     channel_config_set_chain_to(&c, 2);
-    dma_channel_configure(3, &c, &regs->cycle_count, &pio1_hw->rxf[2], 0xffffffff, true);
+    dma_channel_configure(3, &c, &regs->cycle_count, &pio1_hw->rxf[3], 0xffffffff, true);
 }
 
 static void comms_end_programs()
 {
     pio_sm_set_enabled(comms_pio, 0, false);
     pio_sm_set_enabled(comms_pio, 1, false);
+    pio_sm_set_enabled(comms_pio, 2, false);
+    pio_sm_set_enabled(comms_pio, 3, false);
 }
 
 static void update_comms_out(uint8_t *outbytes, int *outcount, int max_outcount)
@@ -178,12 +199,12 @@ void comms_begin_session(uint32_t addr, uint8_t *rom_base)
     comms_out_deferred_req = 0;
     comms_in_empty_ack = 0;
     comms_in_empty_req = 1;
-    comms_reg_addr = addr & ADDR_MASK & ~0x1ff;
+    comms_reg_addr = (addr & ADDR_MASK & ~0x3ff);
     comms_reg = (CommsRegisters *)(rom_base + comms_reg_addr);
     memset(comms_reg, 0, sizeof(CommsRegisters));
     memcpy(comms_reg->magic, "PICO", 4);
     
-    comms_start_programs(comms_reg_addr, comms_reg, offsetof(CommsRegisters, in_byte));
+    comms_start_programs(comms_reg_addr, comms_reg);
 
     restore_interrupts(ints);
 
