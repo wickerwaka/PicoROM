@@ -19,91 +19,18 @@ start:
     out x, 2 ; oe, cs
     jmp x-- start
 
-    ; push 8 bits into fifo
-    push noblock
-
     ; loop until address doesn't match mask
 .wrap_target 
     mov osr, pins
     out null, 9
     out x, 8
-    jmp x!=y start
+    jmp x!=y commit
 .wrap
 
-.program wait_stable_addr2
-start:
-    mov osr, pins
-    out x, 2
-    jmp x--, start
-
-
-    mov osr, pins
-    out x, (32 - 5)
-    mov osr, pins
-    out y, (32 - 5)
-    jmp x!=y, start
-
-    irq set 0
-    irq set 1
-
-.wrap_target
-    mov osr, pins
-    out y, (32 - 5)
-    jmp x!=y, start
-.wrap
-
-.program wait_stable_addr
-start:
-    mov osr, pins
-    out x, 2
-    jmp x--, start
-
-    mov osr, pins
-    out x, (32 - 5)
-    mov osr, pins
-    out y, (32 - 5)
-    jmp x!=y, start
-
-    irq set 0
-    irq set 1
-
-.wrap_target
-    mov osr, pins
-    out y, (32 - 5)
-    jmp x!=y, start
-.wrap
-
-
-; y set by cpu
-.program detect_write2
-.wrap_target
-start:
-    wait 1 irq 0
-
-    mov osr, pins
-    out isr, 9 ; 
-    out x, 8
-
-    jmp x!=y start
-
+commit:
     ; push 8 bits into fifo
     push noblock
-.wrap
-
-; y set by cpu
-.program detect_read2
-.wrap_target
-start:
-    wait 1 irq 1
-
-    mov osr, pins
-    out x, 17 ; addr pins
-
-    jmp x!=y start
-
-    ; just push
-    push noblock
-.wrap
+    jmp start
 
 
 .program detect_clock
@@ -112,5 +39,6 @@ start:
     wait 1 pin 0   
     jmp x-- dummy_jump
 dummy_jump:
-    in x, 32
+    mov y, ~x
+    in y, 32
 .wrap
