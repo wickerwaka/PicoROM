@@ -29,10 +29,11 @@ struct CommsRegisters
     uint32_t in_seq;
     uint32_t out_seq;
     uint32_t cycle_count;
+    uint32_t cycle_reset;
     uint32_t debug1;
     uint32_t debug2;
 
-    uint8_t reserved[512 - (8 * 4)];
+    uint8_t reserved[512 - (9 * 4)];
 
     uint32_t in_byte;
     uint8_t reserved2[256 - (1 * 4)];
@@ -106,13 +107,13 @@ static void comms_start_programs(uint32_t addr, CommsRegisters *regs)
 {
     pio_clear_instruction_memory(comms_pio);
 
-    uint32_t offset_access = pio_add_program(comms_pio, &detect_access_simple_program);
+    uint32_t offset_access = pio_add_program(comms_pio, &detect_access_program);
     uint32_t offset_clock = pio_add_program(comms_pio, &detect_clock_program);
 
-    pio_sm_config c_access = detect_access_simple_program_get_default_config(offset_access);
+    pio_sm_config c_access = detect_access_program_get_default_config(offset_access);
     sm_config_set_in_pins(&c_access, 0);
     pio_sm_init(comms_pio, 0, offset_access, &c_access);
-    pio_set_y(comms_pio, 0, 0xff);
+    pio_set_y(comms_pio, 0, (addr + 0x200) >> 9);
     pio_sm_set_enabled(comms_pio, 0, true);
     pio_set_irq0_source_enabled(comms_pio, pis_sm0_rx_fifo_not_empty, true);
 
@@ -121,9 +122,10 @@ static void comms_start_programs(uint32_t addr, CommsRegisters *regs)
     gpio_set_input_enabled(CLOCK_PIN, true);
 
     pio_sm_config c_clock = detect_clock_program_get_default_config(offset_clock);
-    sm_config_set_in_pins(&c_clock, CLOCK_PIN);
-    sm_config_set_in_shift(&c_clock, true, true, 32);
+    sm_config_set_in_pins(&c_clock, 0);
+    sm_config_set_in_shift(&c_clock, true, false, 32);
     pio_sm_init(comms_pio, 3, offset_clock, &c_clock);
+    pio_set_y(comms_pio, 3, addr + offsetof(CommsRegisters, cycle_reset));
     pio_sm_set_enabled(comms_pio, 3, true);
 
     dma_channel_config c = dma_channel_get_default_config(2);
@@ -134,7 +136,7 @@ static void comms_start_programs(uint32_t addr, CommsRegisters *regs)
     channel_config_set_high_priority(&c, true);
     channel_config_set_irq_quiet(&c, true);
     channel_config_set_chain_to(&c, 3);
-    dma_channel_configure(2, &c, &regs->cycle_count, &pio1_hw->rxf[3], 0xffffffff, true);
+    dma_channel_configure(2, &c, &regs->cycle_count, &pio1_hw->rxf[3], 0xffffffff, false);
     channel_config_set_chain_to(&c, 2);
     dma_channel_configure(3, &c, &regs->cycle_count, &pio1_hw->rxf[3], 0xffffffff, true);
 }
@@ -184,7 +186,10 @@ void comms_begin_session(uint32_t addr, uint8_t *rom_base)
     comms_in_empty_req = 1;
     comms_reg_addr = (addr & ADDR_MASK & ~0x3ff);
     comms_reg = (CommsRegisters *)(rom_base + comms_reg_addr);
-    memset(comms_reg, 0, sizeof(CommsRegisters));
+    comms_reg->active = 0;
+    comms_reg->pending = 0;
+    comms_reg->in_seq = 0;
+    comms_reg->out_seq = 0;
     memcpy(comms_reg->magic, "PICO", 4);
     
     comms_start_programs(comms_reg_addr, comms_reg);
