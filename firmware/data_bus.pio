@@ -9,17 +9,17 @@
 .program output_enable_buffer
 .wrap_target
     ; enable output
+    set pins, 0          ; set the x245 /OE input low
     mov osr, ~null       ; fill OSR with 1's
     out pindirs, 8       ; set all data pins to output
-    set pins, 0          ; set the x245 /OE input low
 wait_disable:
     mov osr, pins        ; read /OE and /CS pins
     out x, 2             ; move the values into x
     jmp !x wait_disable  ; If both are low, keep checking
     ; disable output
+    set pins, 1          ; set the x245 /OE input high
     mov osr, null        ; clear OSR
     out pindirs, 8       ; disable all data pins
-    set pins, 1          ; set the x245 /OE input high
 wait_enable:
     mov osr, pins        ; read /OE and /CS pins
     out x, 2             ; move the values into x
