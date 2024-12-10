@@ -29,11 +29,13 @@ struct CommsRegisters
     uint32_t in_seq;
     uint32_t out_seq;
     uint32_t cycle_count;
-    uint32_t cycle_reset;
     uint32_t debug1;
     uint32_t debug2;
 
-    uint8_t reserved[512 - (9 * 4)];
+    uint8_t reserved0[256 - (8 * 4)];
+
+    uint32_t cycle_reset;
+    uint8_t reserved1[256 - (1 * 4)];
 
     uint32_t in_byte;
     uint8_t reserved2[256 - (1 * 4)];
