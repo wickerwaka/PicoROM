@@ -111,9 +111,10 @@ bool activity_timer_callback(repeating_timer_t * /*unused*/)
 
 uint32_t flash_load_time = 0;
 
+
 int main()
 {
-    Config config;
+    static Config config; // static because it can't be on the stack otherwise it will be at the end of memory and will fault when copying to flash memory
 
     set_sys_clock_khz(270000, true);
 
