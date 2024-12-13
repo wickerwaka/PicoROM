@@ -14,7 +14,7 @@
 static constexpr uint FLASH_ROM_OFFSET = FLASH_SIZE - ROM_SIZE;
 static constexpr uint FLASH_CFG_OFFSET = FLASH_ROM_OFFSET - FLASH_SECTOR_SIZE;
 
-static constexpr uint CONFIG_VERSION = 0x00010007;
+static constexpr uint CONFIG_VERSION = 0x00010008;
 
 const uint8_t *flash_rom_data = (uint8_t *)(XIP_BASE + FLASH_ROM_OFFSET);
 const Config *flash_config = (Config *)(XIP_BASE + FLASH_CFG_OFFSET);

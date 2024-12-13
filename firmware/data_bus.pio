@@ -6,7 +6,7 @@
 .wrap
 
 ; Control pin direction and buffer based on /OE and /CS
-.program output_enable_buffer
+.program output_enable_pindir_slow
 .wrap_target
     ; enable output
     set pins, 0          ; set the x245 /OE input low
@@ -25,6 +25,24 @@ wait_enable:
     out x, 2             ; move the values into x
     jmp x-- wait_enable  ; If either are high, keep checking 
 .wrap
+
+
+.program output_enable_fast
+.origin 0
+.side_set 1
+    mov pc, pins side 0
+    mov pc, pins side 1
+    mov pc, pins side 1
+    mov pc, pins side 1
+
+.program pindir_fast
+.origin 0
+.side_set 4 pindirs
+    mov pc, pins side 0xf
+    mov pc, pins side 0
+    mov pc, pins side 0
+    mov pc, pins side 0
+
 
 ; Report activity to CPU
 .program output_enable_report

@@ -31,4 +31,6 @@ static constexpr uint32_t ROM_SIZE = 0x40000;
 static constexpr uint32_t ADDR_MASK = ROM_SIZE - 1;
 static constexpr uint32_t FLASH_SIZE = 2 * 1024 * 1024;
 
+static constexpr uint32_t STATUS_PIO_INIT = 0x00000001;
+
 #endif // SYSTEM_H

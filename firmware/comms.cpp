@@ -1,22 +1,20 @@
+#include <hardware/irq.h>
 #include <string.h>
 
 #include "system.h"
 #include "comms.h"
 #include "pico_link.h"
+#include "pio_programs.h"
 
-#include "comms.pio.h"
-
-#include "pico/stdlib.h"
 #include "hardware/pio.h"
+#include "pico/time.h"
 
-static PIO comms_pio = pio1;
-
-FIFO<64> comms_out_fifo;
-FIFO<64> comms_in_fifo;
-uint32_t comms_out_deferred_req;
-uint32_t comms_out_deferred_ack;
-uint32_t comms_in_empty_req;
-uint32_t comms_in_empty_ack;
+FIFO<32> comms_out_fifo;
+FIFO<32> comms_in_fifo;
+uint8_t comms_out_deferred_req;
+uint8_t comms_out_deferred_ack;
+uint8_t comms_in_empty_req;
+uint8_t comms_in_empty_ack;
 
 struct CommsRegisters
 {
@@ -41,7 +39,7 @@ static uint32_t comms_reg_addr = 0;
 
 void comms_out_irq_handler()
 {
-    uint8_t byte = pio_sm_get(pio1, 0) & 0xff; // this must be valid at this point
+    uint8_t byte = pio_sm_get(prg_comms_write.pio(), prg_comms_read.sm) & 0xff; // this must be valid at this point
     if (comms_reg)
     {
         comms_out_fifo.push(byte);
@@ -58,7 +56,7 @@ void comms_out_irq_handler()
 
 void comms_in_irq_handler()
 {
-    pio_sm_get(pio1, 1); // don't care
+    pio_sm_get(prg_comms_read.pio(), prg_comms_read.sm); // don't care
     comms_in_fifo.pop();
 
     if (comms_reg)
@@ -78,30 +76,59 @@ void comms_in_irq_handler()
 
 static void comms_start_programs(uint32_t addr, uint32_t byte_offset)
 {
-    pio_clear_instruction_memory(comms_pio);
+    if (prg_comms_write.valid())
+    {
+        PRG_LOCAL(prg_comms_write, pio, sm, offset, cfg);
 
-    uint32_t offset_write = pio_add_program(comms_pio, &detect_write_program);
-    uint32_t offset_read = pio_add_program(comms_pio, &detect_read_program);
+        sm_config_set_in_pins(&cfg, 0);
+        pio_sm_init(pio, sm, offset, &cfg);
+        pio_sm_clear_fifos(pio, sm);
+        pio_sm_set_enabled(pio, sm, true);
+        pio_sm_put_blocking(pio, sm, (addr + 0x100) >> 8);
+        pio_set_irq0_source_enabled(pio, (pio_interrupt_source_t)(pis_sm0_rx_fifo_not_empty + sm), true);
+        irq_set_exclusive_handler(PIO_IRQ_NUM(pio, 0), comms_out_irq_handler);
+        irq_set_enabled(PIO_IRQ_NUM(pio, 0), true);
+    }
 
-    pio_sm_config c_write = detect_write_program_get_default_config(offset_write);
-    sm_config_set_in_pins(&c_write, 0);
-    pio_sm_init(comms_pio, 0, offset_write, &c_write);
-    pio_sm_set_enabled(comms_pio, 0, true);
-    pio_sm_put_blocking(comms_pio, 0, (addr + 0x100) >> 8);
-    pio_set_irq0_source_enabled(comms_pio, pis_sm0_rx_fifo_not_empty, true);
+    if (prg_comms_read.valid())
+    {
+        PRG_LOCAL(prg_comms_read, pio, sm, offset, cfg);
 
-    pio_sm_config c_read = detect_read_program_get_default_config(offset_read);
-    sm_config_set_in_pins(&c_read, 0);
-    pio_sm_init(comms_pio, 1, offset_read, &c_read);
-    pio_sm_set_enabled(comms_pio, 1, true);
-    pio_sm_put_blocking(comms_pio, 1, addr + byte_offset);
-    pio_set_irq1_source_enabled(comms_pio, pis_sm1_rx_fifo_not_empty, true);
+        sm_config_set_in_pins(&cfg, 0);
+        pio_sm_init(pio, sm, offset, &cfg);
+        pio_sm_clear_fifos(pio, sm);
+        pio_sm_set_enabled(pio, sm, true);
+        pio_sm_put_blocking(pio, sm, addr + byte_offset);
+        pio_set_irq1_source_enabled(pio, (pio_interrupt_source_t)(pis_sm0_rx_fifo_not_empty + sm), true);
+        irq_set_exclusive_handler(PIO_IRQ_NUM(pio, 1), comms_in_irq_handler);
+        irq_set_enabled(PIO_IRQ_NUM(pio, 1), true);
+    } 
 }
 
 static void comms_end_programs()
 {
-    pio_sm_set_enabled(comms_pio, 0, false);
-    pio_sm_set_enabled(comms_pio, 1, false);
+    if (prg_comms_write.valid())
+    {
+        PRG_LOCAL(prg_comms_write, pio, sm, offset, cfg);
+
+        pio_sm_set_enabled(pio, sm, false);
+        pio_sm_clear_fifos(pio, sm);
+        pio_set_irq0_source_enabled(pio, (pio_interrupt_source_t)(pis_sm0_rx_fifo_not_empty + sm), false);
+        irq_set_exclusive_handler(PIO_IRQ_NUM(pio, 0), __unhandled_user_irq);
+        irq_set_enabled(PIO_IRQ_NUM(pio, 0), false);
+    }
+
+    if (prg_comms_read.valid())
+    {
+        PRG_LOCAL(prg_comms_read, pio, sm, offset, cfg);
+
+        pio_sm_set_enabled(pio, sm, false);
+        pio_sm_clear_fifos(pio, sm);
+        pio_set_irq1_source_enabled(pio, (pio_interrupt_source_t)(pis_sm0_rx_fifo_not_empty + sm), false);
+        
+        irq_set_exclusive_handler(PIO_IRQ_NUM(pio, 1), __unhandled_user_irq);
+        irq_set_enabled(PIO_IRQ_NUM(pio, 1), false);
+    }
 }
 
 static void update_comms_out(uint8_t *outbytes, int *outcount, int max_outcount)
@@ -125,15 +152,8 @@ static void update_comms_out(uint8_t *outbytes, int *outcount, int max_outcount)
     }
 }
 
-void comms_init()
-{
-    irq_set_exclusive_handler(PIO1_IRQ_0, comms_out_irq_handler);
-    irq_set_exclusive_handler(PIO1_IRQ_1, comms_in_irq_handler);
-}
-
 void comms_begin_session(uint32_t addr, uint8_t *rom_base)
 {
-    uint32_t ints = save_and_disable_interrupts();
     comms_out_fifo.clear();
     comms_in_fifo.clear();
     comms_out_deferred_ack = 0;
@@ -147,11 +167,6 @@ void comms_begin_session(uint32_t addr, uint8_t *rom_base)
     
     comms_start_programs(comms_reg_addr, offsetof(CommsRegisters, in_byte));
 
-    restore_interrupts(ints);
-
-    irq_set_enabled(PIO1_IRQ_0, true);
-    irq_set_enabled(PIO1_IRQ_1, true);
-
     comms_reg->active = 1;
 }
 
@@ -159,13 +174,11 @@ void comms_end_session()
 {
     if (comms_reg == nullptr) return;
 
-    irq_set_enabled(PIO1_IRQ_0, false);
-    irq_set_enabled(PIO1_IRQ_1, false);
-
+    comms_end_programs();
+    
     comms_reg->active = 0;
     comms_reg = nullptr;
 
-    comms_end_programs();
 }
 
 bool comms_update(const uint8_t *data, uint32_t len, uint32_t timeout_ms)

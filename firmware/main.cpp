@@ -16,6 +16,7 @@
 #include "rom.h"
 #include "flash.h"
 #include "comms.h"
+#include "pio_programs.h"
 
 bi_decl(bi_program_feature("Reset"));
 
@@ -111,6 +112,7 @@ bool activity_timer_callback(repeating_timer_t * /*unused*/)
 
 uint32_t flash_load_time = 0;
 
+uint32_t system_status = 0;
 
 int main()
 {
@@ -121,6 +123,11 @@ int main()
     flash_init_config(&config);
     flash_load_time = flash_load_rom();
 
+    if( pio_programs_init() )
+    {
+        system_status |= STATUS_PIO_INIT;
+    }
+
     tusb_init();
 
     configure_address_pins(config.addr_mask);
@@ -130,8 +137,6 @@ int main()
     add_repeating_timer_ms(10, activity_timer_callback, nullptr, &activity_timer);
 
     rom_init_programs();
-
-    comms_init();
 
     rom_service_start();
 
@@ -144,7 +149,7 @@ int main()
         pl_wait_for_connection();
 
         pl_send_debug("Connected", 1, 2);
-        pl_send_debug("Flash Load Time", flash_load_time, 0);
+        pl_send_debug("Flash Load Time", flash_load_time, system_status);
 
         // Loop while connected
         while (pl_is_connected())

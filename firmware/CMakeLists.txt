@@ -12,6 +12,7 @@ foreach(TARGET PicoROM)
         pico_link.cpp
         rom.cpp
         comms.cpp
+        pio_programs.cpp
     )
 
     pico_set_float_implementation(${TARGET} none)
@@ -47,7 +48,7 @@ target_compile_definitions(PicoROM PRIVATE
     PICO_CORE1_STACK_SIZE=4
     USB_MAX_ENDPOINTS=4
     PICO_STDIO_ENABLE_CRLF_SUPPORT=0
-    PICO_TIME_DEFAULT_ALARM_POOL_MAX_TIMERS=8
+    PICO_TIME_DEFAULT_ALARM_POOL_MAX_TIMERS=2
 )
 
 pico_define_boot_stage2(boot_div4 ${PICO_DEFAULT_BOOT_STAGE2_FILE})
