@@ -43,8 +43,6 @@ jobs:
           path: |
             build/PicoROM.elf
             build/PicoROM.uf2
-            build/PicoROM-1.2.elf
-            build/PicoROM-1.2.uf2
           if-no-files-found: error
 
   release:

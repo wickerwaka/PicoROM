@@ -1,7 +1,9 @@
 #include <stdio.h>
 #include <unistd.h>
 #include "pico/stdlib.h"
+#include "hardware/clocks.h"
 #include "hardware/gpio.h"
+#include "hardware/clocks.h"
 #include "hardware/flash.h"
 #include "hardware/structs/syscfg.h"
 #include "pico/binary_info.h"
@@ -12,73 +14,13 @@
 #include "system.h"
 #include "pico_link.h"
 #include "rom.h"
+#include "flash.h"
 #include "comms.h"
+#include "pio_programs.h"
 
-#if TCA_EXPANDER
 bi_decl(bi_program_feature("Reset"));
-#endif
-
-static constexpr uint FLASH_ROM_OFFSET = FLASH_SIZE - ROM_SIZE;
-static constexpr uint FLASH_CFG_OFFSET = FLASH_ROM_OFFSET - FLASH_SECTOR_SIZE;
-
-static constexpr uint CONFIG_VERSION = 0x00010007;
 
 uint32_t rom_offset = 0;
-const uint8_t *flash_rom_data = (uint8_t *)(XIP_BASE + FLASH_ROM_OFFSET);
-
-struct Config
-{
-    uint32_t version;
-    char name[32];
-
-    uint32_t addr_mask;
-};
-
-Config config;
-const Config *flash_config = (Config *)(XIP_BASE + FLASH_CFG_OFFSET);
-static_assert(sizeof(Config) <= FLASH_PAGE_SIZE);
-
-
-
-void save_config()
-{
-    if( !memcmp(&config, flash_config, sizeof(Config))) return;
-
-    rom_service_stop();
-    uint32_t ints = save_and_disable_interrupts();
-    flash_range_erase(FLASH_CFG_OFFSET, FLASH_SECTOR_SIZE);
-    flash_range_program(FLASH_CFG_OFFSET, (uint8_t *)&config, FLASH_PAGE_SIZE);
-    restore_interrupts(ints);
-    rom_service_start();
-}
-
-
-void init_config()
-{
-    memcpy(&config, flash_config, sizeof(Config));
-
-    if (config.version == CONFIG_VERSION) return;
-
-    memset(&config, 0, sizeof(Config));
-
-    config.addr_mask = ADDR_MASK;
-    config.version = CONFIG_VERSION;
-    pico_get_unique_board_id_string(config.name, sizeof(config.name));
-
-    save_config();
-}
-
-
-void save_rom()
-{
-    rom_service_stop();
-    uint32_t ints = save_and_disable_interrupts();
-    flash_range_erase(FLASH_ROM_OFFSET, ROM_SIZE);
-    flash_range_program(FLASH_ROM_OFFSET, rom_get_buffer(), ROM_SIZE);
-    restore_interrupts(ints);
-    rom_service_start();
-}
-
 
 void configure_address_pins(uint32_t mask)
 {
@@ -118,7 +60,6 @@ static uint8_t link_cycles = 0;
 static uint8_t link_duty = 0;
 static uint8_t link_count = 0;
 
-#if TCA_EXPANDER
 bool activity_timer_callback(repeating_timer_t * /*unused*/)
 {
     if (activity_count >= activity_cycles)
@@ -169,72 +110,33 @@ bool activity_timer_callback(repeating_timer_t * /*unused*/)
     return true;
 }
 
-#else
+uint32_t flash_load_time = 0;
 
-bool activity_timer_callback(repeating_timer_t * /*unused*/)
-{
-    if (activity_count >= activity_cycles)
-    {
-        bool rom_access = rom_check_oe();
-        bool usb_activity = pl_check_activity();
-        bool identify_req = identify_request != identify_ack;
-
-        activity_cycles = 0;
-        activity_duty = 0;
-
-        if (identify_req)
-        {
-            identify_ack++;
-            activity_cycles = 100;
-            activity_duty = 90;
-        }
-        else if (usb_activity)
-        {
-            activity_cycles = 20;
-            activity_duty = 10;
-        }
-        else if (rom_access)
-        {
-            activity_cycles = 5;
-            activity_duty = 1;
-        }
-
-        activity_count = 0;
-    }
-
-    gpio_put(ACTIVITY_LED_PIN, activity_count < activity_duty);
-
-    activity_count++;
-
-    return true;
-}
-#endif // TCA_EXPANDER
+uint32_t system_status = 0;
 
 int main()
 {
+    static Config config; // static because it can't be on the stack otherwise it will be at the end of memory and will fault when copying to flash memory
+
+    set_sys_clock_khz(270000, true);
+
+    flash_init_config(&config);
+    flash_load_time = flash_load_rom();
+
+    if( pio_programs_init() )
+    {
+        system_status |= STATUS_PIO_INIT;
+    }
+
     tusb_init();
-
-    init_config();
-
-    set_sys_clock_khz(200000, true);
 
     configure_address_pins(config.addr_mask);
 
     identify_ack = identify_request = 0;
 
-#if !TCA_EXPANDER
-    gpio_init(ACTIVITY_LED_PIN);
-    gpio_set_dir(ACTIVITY_LED_PIN, true);
-    gpio_set_input_enabled(ACTIVITY_LED_PIN, false);
-#endif
-
     add_repeating_timer_ms(10, activity_timer_callback, nullptr, &activity_timer);
 
-    memcpy(rom_get_buffer(), flash_rom_data, ROM_SIZE);
-
     rom_init_programs();
-
-    comms_init();
 
     rom_service_start();
 
@@ -247,6 +149,7 @@ int main()
         pl_wait_for_connection();
 
         pl_send_debug("Connected", 1, 2);
+        pl_send_debug("Flash Load Time", flash_load_time, system_status);
 
         // Loop while connected
         while (pl_is_connected())
@@ -273,7 +176,7 @@ int main()
                     {
                         memcpy(config.name, req->payload, req->size);
                         config.name[req->size] = '\0';
-                        save_config();
+                        flash_save_config(&config);
                         break;
                     }
 
@@ -313,7 +216,7 @@ int main()
 
                     case PacketType::CommitFlash:
                     {
-                        save_rom();
+                        flash_save_rom();
                         pl_send_null(PacketType::CommitDone);
                         break;
                     }
@@ -366,7 +269,6 @@ int main()
 
                     case PacketType::Reset:
                     {
-#if TCA_EXPANDER
                         switch(req->payload[0])
                         {
                             case 'L':
@@ -383,7 +285,6 @@ int main()
                                 tca_set_pin(TCA_RESET_PIN, false);
                                 break;
                         }
-#endif // TCA_EXPANDER
                     }
 
                     default:

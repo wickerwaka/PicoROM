@@ -59,7 +59,6 @@ struct FIFO
     }
 };
 
-void comms_init();
 void comms_begin_session(uint32_t addr, uint8_t *rom_base);
 void comms_end_session();
 bool comms_update(const uint8_t *data, uint32_t len, uint32_t timeout_ms);
