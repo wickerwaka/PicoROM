@@ -52,3 +52,7 @@ start:
     out x, 22
     jmp x!=y start
 .wrap
+
+
+; vim:ft=pioasm
+

@@ -35,6 +35,7 @@ wait_enable:
     mov pc, pins side 1
     mov pc, pins side 1
 
+
 .program pindir_fast
 .origin 0
 .side_set 4 pindirs
@@ -67,3 +68,6 @@ wait_change:
 .wrap_target
     out pins, 1
 .wrap
+
+; vim:ft=pioasm
+

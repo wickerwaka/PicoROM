@@ -5,6 +5,7 @@
 #include "rom.h"
 #include "system.h"
 #include "pio_programs.h"
+#include <hardware/gpio.h>
 
 uint8_t *rom_data = (uint8_t *)0x21000000; // Start of 4 64kb sram banks
 
@@ -55,17 +56,17 @@ static void rom_pio_init_output_enable_program()
 
         // set oe pin directions, data pin direction will be set by the state machine
         pio_sm_set_consecutive_pindirs(p, sm, BASE_OE_PIN, N_OE_PINS, false);
-        pio_sm_set_consecutive_pindirs(p, sm, BASE_BUF_OE_PIN, N_BUF_OE_PINS, true);
+        pio_sm_set_consecutive_pindirs(p, sm, BUF_OE_PIN, 1, true);
 
         // OE pins as input
         sm_config_set_in_pins(&cfg, BASE_OE_PIN);
-        sm_config_set_sideset_pins(&cfg, BASE_BUF_OE_PIN);
+        sm_config_set_sideset_pins(&cfg, BUF_OE_PIN);
 
         // Data pins as output, but just the direction is set
         sm_config_set_out_pins(&cfg, BASE_DATA_PIN, N_DATA_PINS);
 
         // We set the BUF_OE pin using the SET op
-        sm_config_set_set_pins(&cfg, BASE_BUF_OE_PIN, N_BUF_OE_PINS);
+        sm_config_set_set_pins(&cfg, BUF_OE_PIN, 1);
         
         pio_sm_init(p, sm, offset, &cfg);
         pio_sm_set_enabled(p, sm, true);
@@ -148,6 +149,7 @@ void rom_init_programs()
         gpio_set_drive_strength(BASE_DATA_PIN + ofs, GPIO_DRIVE_STRENGTH_2MA);
         gpio_set_input_enabled(BASE_DATA_PIN + ofs, false);
         gpio_set_inover(BASE_DATA_PIN + ofs, GPIO_OVERRIDE_LOW);
+        gpio_set_slew_rate(BASE_DATA_PIN + ofs, GPIO_SLEW_RATE_FAST);
     }
 
     for( uint ofs = 0; ofs < N_OE_PINS; ofs++ )
@@ -158,13 +160,11 @@ void rom_init_programs()
         syscfg_hw->proc_in_sync_bypass |= 1 << (BASE_OE_PIN + ofs);
     }
 
-    for( uint ofs = 0; ofs < N_BUF_OE_PINS; ofs++ )
-    {
-        pio_gpio_init(prg_data_oe.pio(), BASE_BUF_OE_PIN + ofs);
-        gpio_set_drive_strength(BASE_BUF_OE_PIN + ofs, GPIO_DRIVE_STRENGTH_2MA);
-        gpio_set_input_enabled(BASE_BUF_OE_PIN + ofs, false);
-        gpio_set_inover(BASE_BUF_OE_PIN + ofs, GPIO_OVERRIDE_LOW);
-    }
+    pio_gpio_init(prg_data_oe.pio(), BUF_OE_PIN);
+    gpio_set_drive_strength(BUF_OE_PIN, GPIO_DRIVE_STRENGTH_2MA);
+    gpio_set_input_enabled(BUF_OE_PIN, false);
+    gpio_set_inover(BUF_OE_PIN, GPIO_OVERRIDE_LOW);
+    gpio_set_slew_rate(BUF_OE_PIN, GPIO_SLEW_RATE_FAST);
 
     pio_gpio_init(prg_tca.pio(), TCA_EXPANDER_PIN);
     gpio_set_input_enabled(TCA_EXPANDER_PIN, false);

@@ -15,9 +15,8 @@ static constexpr uint32_t N_ADDR_PINS = 18;
 static constexpr uint32_t BASE_ADDR_PIN = 0;
 static constexpr uint32_t ADDR_PIN_MASK = (( 1 << N_ADDR_PINS ) - 1) << BASE_ADDR_PIN;
 
-static constexpr uint32_t N_BUF_OE_PINS = 1;
-static constexpr uint32_t BASE_BUF_OE_PIN = 19;
-static constexpr uint32_t BUF_OE_PIN_MASK = (( 1 << N_BUF_OE_PINS ) - 1) << BASE_BUF_OE_PIN;
+static constexpr uint32_t BUF_OE_PIN = 19;
+static constexpr uint32_t BUF_OE_PIN_MASK = 1 << BUF_OE_PIN;
 
 static constexpr uint32_t TCA_EXPANDER_PIN = 18;
 static constexpr uint32_t TCA_EXPANDER_PIN_MASK = 1 << TCA_EXPANDER_PIN;
