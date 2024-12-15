@@ -6,25 +6,44 @@
 .wrap
 
 ; Control pin direction and buffer based on /OE and /CS
-.program output_enable_buffer
+.program output_enable_pindir_slow
 .wrap_target
     ; enable output
+    set pins, 0          ; set the x245 /OE input low
     mov osr, ~null       ; fill OSR with 1's
     out pindirs, 8       ; set all data pins to output
-    set pins, 0          ; set the x245 /OE input low
 wait_disable:
     mov osr, pins        ; read /OE and /CS pins
     out x, 2             ; move the values into x
     jmp !x wait_disable  ; If both are low, keep checking
     ; disable output
+    set pins, 1          ; set the x245 /OE input high
     mov osr, null        ; clear OSR
     out pindirs, 8       ; disable all data pins
-    set pins, 1          ; set the x245 /OE input high
 wait_enable:
     mov osr, pins        ; read /OE and /CS pins
     out x, 2             ; move the values into x
     jmp x-- wait_enable  ; If either are high, keep checking 
 .wrap
+
+
+.program output_enable_fast
+.origin 0
+.side_set 1
+    mov pc, pins side 0
+    mov pc, pins side 1
+    mov pc, pins side 1
+    mov pc, pins side 1
+
+
+.program pindir_fast
+.origin 0
+.side_set 4 pindirs
+    mov pc, pins side 0xf
+    mov pc, pins side 0
+    mov pc, pins side 0
+    mov pc, pins side 0
+
 
 ; Report activity to CPU
 .program output_enable_report
@@ -49,3 +68,6 @@ wait_change:
 .wrap_target
     out pins, 1
 .wrap
+
+; vim:ft=pioasm
+

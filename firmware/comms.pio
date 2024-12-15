@@ -66,3 +66,7 @@ dummy_jump2:
     mov x, pins
     jmp x!=y normal_loop ; if address doesn't match go back to normal loop
 .wrap
+
+
+; vim:ft=pioasm
+
