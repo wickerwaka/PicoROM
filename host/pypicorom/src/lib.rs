@@ -1,5 +1,6 @@
 use std::thread::sleep;
 use std::time::{Duration, Instant};
+use std::collections::HashMap;
 
 use picolink::*;
 use pyo3::create_exception;
@@ -72,6 +73,29 @@ impl PicoROM {
         self.comms_inactive()?;
 
         Ok(self.link.identify()?)
+    }
+
+    /// Get all parameters as a dict
+    fn parameters(&mut self) -> PyResult<HashMap<String,String>> {
+        let parameters = self.link.get_parameters()?;
+        let mut param_map = HashMap::new();
+
+        for p in parameters {
+            let value = self.link.get_parameter(&p)?;
+            param_map.insert(p, value);
+        }
+
+        Ok(param_map)
+    }
+
+    /// Get a single named parameter
+    fn get_parameter(&mut self, name: String) -> PyResult<String> {
+        Ok(self.link.get_parameter(&name)?)
+    }
+
+    /// Set a single named parameter
+    fn set_parameter(&mut self, name: String, value: String) -> PyResult<String> {
+        Ok(self.link.set_parameter(&name, &value)?)
     }
 
     /// Upload ROM data

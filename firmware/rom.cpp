@@ -14,7 +14,7 @@ static void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) 
 {
     register uint32_t r0 __asm__("r0") = (uint32_t)rom_data;
     register uint32_t r1 __asm__("r1") = ADDR_MASK;
-    register uint32_t r2 __asm__("r2") = (uint32_t)&prg_data_bus.pio()->txf[prg_data_bus.sm];
+    register uint32_t r2 __asm__("r2") = (uint32_t)&prg_data_output.pio()->txf[prg_data_output.sm];
 
     __asm__ volatile (
         "ldr r5, =0xd0000004 \n\t"
@@ -34,9 +34,9 @@ static void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) 
 
 static void rom_pio_init_output_program()
 {
-    if (prg_data_bus.valid())
+    if (prg_data_output.valid())
     {
-        PRG_LOCAL(prg_data_bus, p, sm, offset, cfg);
+        PRG_LOCAL(prg_data_output, p, sm, offset, cfg);
         // Set the output direction
         pio_sm_set_consecutive_pindirs(p, sm, BASE_DATA_PIN, N_DATA_PINS, true);
 
@@ -50,9 +50,9 @@ static void rom_pio_init_output_program()
 
 static void rom_pio_init_output_enable_program()
 {
-    if (prg_data_oe.valid())
+    if (prg_set_output_enable.valid())
     {
-        PRG_LOCAL(prg_data_oe, p, sm, offset, cfg);
+        PRG_LOCAL(prg_set_output_enable, p, sm, offset, cfg);
 
         // set oe pin directions, data pin direction will be set by the state machine
         pio_sm_set_consecutive_pindirs(p, sm, BASE_OE_PIN, N_OE_PINS, false);
@@ -75,9 +75,9 @@ static void rom_pio_init_output_enable_program()
 
 static void rom_pio_init_pindirs_program()
 {
-    if (prg_data_pindir_lo.valid())
+    if (prg_set_pindir_lo.valid())
     {
-        PRG_LOCAL(prg_data_pindir_lo, p, sm, offset, cfg);
+        PRG_LOCAL(prg_set_pindir_lo, p, sm, offset, cfg);
 
         // OE pins as input
         sm_config_set_in_pins(&cfg, BASE_OE_PIN);
@@ -87,9 +87,9 @@ static void rom_pio_init_pindirs_program()
         pio_sm_set_enabled(p, sm, true);
     }
 
-    if (prg_data_pindir_hi.valid())
+    if (prg_set_pindir_hi.valid())
     {
-        PRG_LOCAL(prg_data_pindir_hi, p, sm, offset, cfg);
+        PRG_LOCAL(prg_set_pindir_hi, p, sm, offset, cfg);
 
         // OE pins as input
         sm_config_set_in_pins(&cfg, BASE_OE_PIN);
@@ -103,9 +103,9 @@ static void rom_pio_init_pindirs_program()
 
 static void rom_pio_init_output_enable_report_program()
 {
-    if (prg_data_report.valid())
+    if (prg_report_data_access.valid())
     {
-        PRG_LOCAL(prg_data_report, p, sm, offset, cfg);
+        PRG_LOCAL(prg_report_data_access, p, sm, offset, cfg);
 
         // This program looks at all input pins
         sm_config_set_in_pins(&cfg, 0);
@@ -122,9 +122,9 @@ static void rom_pio_init_output_enable_report_program()
 
 static void rom_pio_init_tca_program()
 {
-    if (prg_tca.valid())
+    if (prg_write_tca_bits.valid())
     {
-        PRG_LOCAL(prg_tca, p, sm, offset, cfg);
+        PRG_LOCAL(prg_write_tca_bits, p, sm, offset, cfg);
 
         // Enable output and set pin high
         pio_sm_set_pindirs_with_mask(p, sm, 0xffffffff, TCA_EXPANDER_PIN_MASK);
@@ -144,7 +144,7 @@ void rom_init_programs()
     // Assign data and oe pins to pio
     for( uint ofs = 0; ofs < N_DATA_PINS; ofs++ )
     {
-        pio_gpio_init(prg_data_bus.pio(), BASE_DATA_PIN + ofs);
+        pio_gpio_init(prg_data_output.pio(), BASE_DATA_PIN + ofs);
         gpio_set_dir(BASE_DATA_PIN + ofs, true);
         gpio_set_drive_strength(BASE_DATA_PIN + ofs, GPIO_DRIVE_STRENGTH_2MA);
         gpio_set_input_enabled(BASE_DATA_PIN + ofs, false);
@@ -160,13 +160,13 @@ void rom_init_programs()
         syscfg_hw->proc_in_sync_bypass |= 1 << (BASE_OE_PIN + ofs);
     }
 
-    pio_gpio_init(prg_data_oe.pio(), BUF_OE_PIN);
+    pio_gpio_init(prg_set_output_enable.pio(), BUF_OE_PIN);
     gpio_set_drive_strength(BUF_OE_PIN, GPIO_DRIVE_STRENGTH_2MA);
     gpio_set_input_enabled(BUF_OE_PIN, false);
     gpio_set_inover(BUF_OE_PIN, GPIO_OVERRIDE_LOW);
     gpio_set_slew_rate(BUF_OE_PIN, GPIO_SLEW_RATE_FAST);
 
-    pio_gpio_init(prg_tca.pio(), TCA_EXPANDER_PIN);
+    pio_gpio_init(prg_write_tca_bits.pio(), TCA_EXPANDER_PIN);
     gpio_set_input_enabled(TCA_EXPANDER_PIN, false);
     gpio_set_inover(TCA_EXPANDER_PIN, GPIO_OVERRIDE_LOW);
     gpio_set_drive_strength(TCA_EXPANDER_PIN, GPIO_DRIVE_STRENGTH_2MA);
@@ -202,9 +202,9 @@ void rom_service_stop()
 
 bool rom_check_oe()
 {
-    if( pio_interrupt_get(prg_data_report.pio(), prg_data_report.sm) )
+    if( pio_interrupt_get(prg_report_data_access.pio(), prg_report_data_access.sm) )
     {
-        pio_interrupt_clear(prg_data_report.pio(), prg_data_report.sm);
+        pio_interrupt_clear(prg_report_data_access.pio(), prg_report_data_access.sm);
         return true;
     }
     return false;
@@ -214,7 +214,7 @@ static uint8_t tca_pins_state = 0x0;
 void tca_set_pins(uint8_t pins)
 {
     uint32_t bitstream = 0b1000001010 | ((pins & 0x1f) << 4);
-    prg_tca.pio()->txf[prg_tca.sm] = bitstream;
+    prg_write_tca_bits.pio()->txf[prg_write_tca_bits.sm] = bitstream;
     tca_pins_state = pins; 
 }
 
