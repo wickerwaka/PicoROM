@@ -2,12 +2,22 @@
 #define FLASH_H 1
 
 #include <stdint.h>
+#include <stddef.h>
+
+enum class ResetLevel : uint8_t
+{
+    Low,
+    High,
+    Z
+};
 
 struct Config
 {
     uint32_t version;
-    char name[32];
-
+    char name[16];
+    char rom_name[16];
+    ResetLevel initial_reset;
+    ResetLevel default_reset;
     uint32_t addr_mask;
 };
 

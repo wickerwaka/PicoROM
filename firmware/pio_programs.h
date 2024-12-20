@@ -43,14 +43,14 @@ struct PIOProgram
     int o = prg.offset; \
     pio_sm_config c = prg.config();
 
-extern PIOProgram prg_comms_read;
-extern PIOProgram prg_comms_write;
-extern PIOProgram prg_tca;
-extern PIOProgram prg_data_bus;
-extern PIOProgram prg_data_oe;
-extern PIOProgram prg_data_pindir_hi;
-extern PIOProgram prg_data_pindir_lo;
-extern PIOProgram prg_data_report;
+extern PIOProgram prg_comms_detect;
+extern PIOProgram prg_comms_clock;
+extern PIOProgram prg_write_tca_bits;
+extern PIOProgram prg_data_output;
+extern PIOProgram prg_set_output_enable;
+extern PIOProgram prg_set_pindir_hi;
+extern PIOProgram prg_set_pindir_lo;
+extern PIOProgram prg_report_data_access;
 
 bool pio_programs_init();
 

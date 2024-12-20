@@ -1,6 +1,6 @@
 ; 17 instructions
 ; y set by cpu
-.program detect_access
+.program comms_detect
 start:
     ; loop until oe/cs goes low 
     mov osr, pins ; move into osr for shifting
@@ -32,7 +32,7 @@ commit:
 
 ; 15 instructions
 ; matching address in y, set by cpu
-.program detect_clock
+.program comms_clock
 normal_loop:
     wait 1 pin 17 ; wait for raising clock edge
     

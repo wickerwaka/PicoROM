@@ -30,6 +30,10 @@ void usb_send(const void *data, size_t len)
     activity_count++;
 }
 
+void pl_send_packet(const Packet *pkt)
+{
+    usb_send(pkt, pkt->size + 2);
+}
 
 void pl_send_null(PacketType type)
 {
