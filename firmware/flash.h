@@ -1,8 +1,8 @@
-#if !defined( FLASH_H )
+#if !defined(FLASH_H)
 #define FLASH_H 1
 
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 
 enum class ResetLevel : uint8_t
 {

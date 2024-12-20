@@ -1,14 +1,14 @@
-#include <stdint.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <string.h>
 
 char *strcpyz(char *dest, size_t dest_size, const char *src)
 {
-	size_t n = dest_size - 1;
-	strncpy(dest, src, n);
-	dest[n] = '\0';
+    size_t n = dest_size - 1;
+    strncpy(dest, src, n);
+    dest[n] = '\0';
 
-	return dest;
+    return dest;
 }
 
 bool streq(const char *a, const char *b)
@@ -72,5 +72,3 @@ uint32_t strtoul(const char *nptr)
     }
     return n;
 }
-
-

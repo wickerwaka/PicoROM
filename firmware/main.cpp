@@ -1,20 +1,19 @@
-#include <stdio.h>
-#include <unistd.h>
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
-#include "hardware/clocks.h"
 #include "hardware/structs/syscfg.h"
 #include "pico/bootrom.h"
+#include <stdio.h>
+#include <unistd.h>
 
 #include <tusb.h>
 
-#include "system.h"
-#include "pico_link.h"
-#include "rom.h"
-#include "flash.h"
 #include "comms.h"
+#include "flash.h"
+#include "pico_link.h"
 #include "pio_programs.h"
+#include "rom.h"
 #include "str_util.h"
+#include "system.h"
 
 
 // TODO
@@ -28,10 +27,10 @@ void configure_address_pins(uint32_t mask)
     mask &= ADDR_MASK;
 
     // configure address lines
-    for( uint ofs = 0; ofs < N_ADDR_PINS; ofs++ )
+    for (uint ofs = 0; ofs < N_ADDR_PINS; ofs++)
     {
         uint gpio = BASE_ADDR_PIN + ofs;
-        
+
         gpio_init(gpio);
         gpio_set_pulls(gpio, false, true);
         gpio_set_input_hysteresis_enabled(gpio, false);
@@ -115,7 +114,7 @@ ResetLevel current_reset = ResetLevel::Z;
 
 void reset_set(ResetLevel level)
 {
-    switch(level)
+    switch (level)
     {
         case ResetLevel::Low:
             tca_set_pin(TCA_RESET_VALUE_PIN, false);
@@ -138,7 +137,7 @@ void reset_set(ResetLevel level)
 
 void reset_to_string(ResetLevel level, char *s, size_t sz)
 {
-    switch(level)
+    switch (level)
     {
         case ResetLevel::Low:
             strcpyz(s, sz, "low");
@@ -180,8 +179,7 @@ uint32_t system_status = 0;
 
 static Config config;
 
-static const char *parameter_names[] =
-{
+static const char *parameter_names[] = {
     "name",
     "rom_name",
     "addr_mask",
@@ -290,12 +288,12 @@ bool get_parameter(const char *name, char *value, size_t value_size)
     }
     else if (streq(name, "build_config"))
     {
-        strcpyz(value, value_size, PICOROM_CONFIG_NAME );
+        strcpyz(value, value_size, PICOROM_CONFIG_NAME);
         return true;
     }
     else if (streq(name, "build_version"))
     {
-        strcpyz(value, value_size, PICOROM_FIRMWARE_VERSION );
+        strcpyz(value, value_size, PICOROM_FIRMWARE_VERSION);
         return true;
     }
 
@@ -309,15 +307,15 @@ int main()
 
     flash_init_config(&config);
 
-    if( pio_programs_init() )
+    if (pio_programs_init())
     {
         system_status |= STATUS_PIO_INIT;
     }
-    
+
     rom_init_programs();
 
     reset_set(config.initial_reset);
-    
+
     flash_load_time = flash_load_rom();
 
     reset_set(config.default_reset);
@@ -346,7 +344,7 @@ int main()
         while (pl_is_connected())
         {
             uint32_t addr = sio_hw->gpio_in & config.addr_mask;
-            if( !comms_update(nullptr, 0, 5000) )
+            if (!comms_update(nullptr, 0, 5000))
             {
                 pl_send_error("Comms Update Timeout", 0, 0);
             }
@@ -355,7 +353,7 @@ int main()
 
             if (req)
             {
-                switch((PacketType)req->type)
+                switch ((PacketType)req->type)
                 {
                     case PacketType::SetPointer:
                     {
@@ -417,7 +415,7 @@ int main()
 
                     case PacketType::CommsData:
                     {
-                        if( !comms_update(req->payload, req->size, 5000) )
+                        if (!comms_update(req->payload, req->size, 5000))
                         {
                             pl_send_error("Comms send timeout", 0, 0);
                         }
@@ -483,7 +481,7 @@ int main()
                         else
                         {
                             const char **p = parameter_names;
-                            while(p)
+                            while (p)
                             {
                                 if (!strcmp(*p, (char *)req->payload))
                                 {
@@ -524,5 +522,3 @@ int main()
         }
     }
 }
-
-

@@ -1,7 +1,7 @@
 #include <cstdlib>
+#include <stdarg.h>
 #include <string.h>
 #include <strings.h>
-#include <stdarg.h>
 
 #include "hardware/dma.h"
 #include "hardware/flash.h"
@@ -11,8 +11,8 @@
 #include "pico/unique_id.h"
 
 #include "flash.h"
-#include "system.h"
 #include "rom.h"
+#include "system.h"
 
 static constexpr uint FLASH_ROM_OFFSET = FLASH_SIZE - ROM_SIZE;
 static constexpr uint FLASH_CFG_OFFSET = FLASH_ROM_OFFSET - FLASH_SECTOR_SIZE;
@@ -25,7 +25,8 @@ static_assert(sizeof(Config) <= FLASH_PAGE_SIZE);
 
 
 void __no_inline_not_in_flash_func(flash_bulk_read)(uint32_t *rxbuf, uint32_t flash_offs, size_t len,
-                                                 uint dma_chan) {
+                                                    uint dma_chan)
+{
     // SSI must be disabled to set transfer size. If software is executing
     // from flash right now then it's about to have a bad time
     ssi_hw->ssienr = 0;
@@ -36,18 +37,18 @@ void __no_inline_not_in_flash_func(flash_bulk_read)(uint32_t *rxbuf, uint32_t fl
 
     // Configure and start the DMA. Note we are avoiding the dma_*() functions
     // as we can't guarantee they'll be inlined
-    dma_hw->ch[dma_chan].read_addr = (uint32_t) &ssi_hw->dr0;
-    dma_hw->ch[dma_chan].write_addr = (uint32_t) rxbuf;
+    dma_hw->ch[dma_chan].read_addr = (uint32_t)&ssi_hw->dr0;
+    dma_hw->ch[dma_chan].write_addr = (uint32_t)rxbuf;
     dma_hw->ch[dma_chan].transfer_count = len;
     // Must enable DMA byteswap because non-XIP 32-bit flash transfers are
     // big-endian on SSI (we added a hardware tweak to make XIP sensible)
     dma_hw->ch[dma_chan].ctrl_trig =
-            DMA_CH0_CTRL_TRIG_BSWAP_BITS |
-            DREQ_XIP_SSIRX << DMA_CH0_CTRL_TRIG_TREQ_SEL_LSB |
-            dma_chan << DMA_CH0_CTRL_TRIG_CHAIN_TO_LSB |
-            DMA_CH0_CTRL_TRIG_INCR_WRITE_BITS |
-            DMA_CH0_CTRL_TRIG_DATA_SIZE_VALUE_SIZE_WORD << DMA_CH0_CTRL_TRIG_DATA_SIZE_LSB |
-            DMA_CH0_CTRL_TRIG_EN_BITS;
+          DMA_CH0_CTRL_TRIG_BSWAP_BITS |
+          DREQ_XIP_SSIRX << DMA_CH0_CTRL_TRIG_TREQ_SEL_LSB |
+          dma_chan << DMA_CH0_CTRL_TRIG_CHAIN_TO_LSB |
+          DMA_CH0_CTRL_TRIG_INCR_WRITE_BITS |
+          DMA_CH0_CTRL_TRIG_DATA_SIZE_VALUE_SIZE_WORD << DMA_CH0_CTRL_TRIG_DATA_SIZE_LSB |
+          DMA_CH0_CTRL_TRIG_EN_BITS;
 
     // Now DMA is waiting, kick off the SSI transfer (mode continuation bits in LSBs)
     ssi_hw->dr0 = (flash_offs << 8u) | 0xa0u;
@@ -64,7 +65,7 @@ void __no_inline_not_in_flash_func(flash_bulk_read)(uint32_t *rxbuf, uint32_t fl
 
 void flash_save_config(const Config *config)
 {
-    if( !memcmp(config, flash_config, sizeof(Config))) return;
+    if (!memcmp(config, flash_config, sizeof(Config))) return;
 
     rom_service_stop();
     uint32_t ints = save_and_disable_interrupts();
@@ -110,11 +111,10 @@ uint32_t flash_load_rom()
     uint32_t ints = save_and_disable_interrupts();
     flash_bulk_read((uint32_t *)rom_get_buffer(), FLASH_ROM_OFFSET, ROM_SIZE / 4, DMA_CH_FLASH);
     restore_interrupts(ints);
-    
+
     //memcpy(rom_get_buffer(), flash_rom_data, ROM_SIZE);
-    
+
     uint32_t flash_load_time = time_us_32() - start_time;
 
     return flash_load_time;
 }
-

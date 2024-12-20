@@ -1,11 +1,11 @@
-#include <hardware/irq.h>
 #include <hardware/dma.h>
+#include <hardware/irq.h>
 #include <string.h>
 
-#include "system.h"
 #include "comms.h"
 #include "pico_link.h"
 #include "pio_programs.h"
+#include "system.h"
 
 #include "hardware/pio.h"
 #include "pico/time.h"
@@ -20,7 +20,7 @@ uint8_t comms_in_empty_ack;
 struct CommsRegisters
 {
     uint8_t magic[4];
-    
+
     // only the least significant byte is relevant for these, using 32-bits to avoid potential atomic issues
     uint32_t active;
     uint32_t pending;
@@ -37,7 +37,7 @@ struct CommsRegisters
 
     uint32_t in_byte;
     uint8_t reserved2[256 - (1 * 4)];
-    
+
     uint8_t out_area[256];
 };
 
@@ -152,7 +152,7 @@ static void comms_end_programs()
     if (prg_comms_detect.valid())
     {
         PRG_LOCAL(prg_comms_detect, pio, sm, offset, cfg);
-    
+
         comms_reg->debug1 = 0xff01;
 
         pio_sm_set_enabled(pio, sm, false);
@@ -180,13 +180,13 @@ static void comms_end_programs()
 
 static void update_comms_out(uint8_t *outbytes, int *outcount, int max_outcount)
 {
-    while(comms_out_deferred_ack != comms_out_deferred_req)
+    while (comms_out_deferred_ack != comms_out_deferred_req)
     {
         comms_reg->out_seq++;
         comms_out_deferred_ack++;
     }
 
-    while( comms_out_fifo.count() > 0 )
+    while (comms_out_fifo.count() > 0)
     {
         outbytes[*outcount] = comms_out_fifo.pop();
         (*outcount)++;
@@ -214,7 +214,7 @@ void comms_begin_session(uint32_t addr, uint8_t *rom_base)
     comms_reg->in_seq = 0;
     comms_reg->out_seq = 0;
     memcpy(comms_reg->magic, "PICO", 4);
-    
+
     comms_start_programs(comms_reg_addr, comms_reg);
 
     comms_reg->active = 1;
@@ -225,7 +225,7 @@ void comms_end_session()
     if (comms_reg == nullptr) return;
 
     comms_end_programs();
-    
+
     comms_reg->active = 0;
     comms_reg = nullptr;
 }
@@ -240,7 +240,7 @@ bool comms_update(const uint8_t *data, uint32_t len, uint32_t timeout_ms)
     int outcount = 0;
 
     update_comms_out(outbytes, &outcount, sizeof(outbytes));
-    
+
     uint incount = 0;
     while (incount < len)
     {
@@ -257,14 +257,14 @@ bool comms_update(const uint8_t *data, uint32_t len, uint32_t timeout_ms)
         comms_in_fifo.push(data[incount]);
         incount++;
 
-        if(comms_in_empty_ack != comms_in_empty_req)
+        if (comms_in_empty_ack != comms_in_empty_req)
         {
             comms_reg->in_byte = comms_in_fifo.peek();
             comms_reg->in_seq++;
             comms_in_empty_ack++;
         }
     }
-    
+
     if (outcount > 0)
     {
         pl_send_payload(PacketType::CommsData, outbytes, outcount);
@@ -272,4 +272,3 @@ bool comms_update(const uint8_t *data, uint32_t len, uint32_t timeout_ms)
 
     return true;
 }
-

@@ -2,9 +2,9 @@
 #include "hardware/structs/syscfg.h"
 #include "pico/multicore.h"
 
+#include "pio_programs.h"
 #include "rom.h"
 #include "system.h"
-#include "pio_programs.h"
 #include <hardware/gpio.h>
 
 uint8_t *rom_data = (uint8_t *)0x21000000; // Start of 4 64kb sram banks
@@ -16,18 +16,17 @@ static void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) 
     register uint32_t r1 __asm__("r1") = ADDR_MASK;
     register uint32_t r2 __asm__("r2") = (uint32_t)&prg_data_output.pio()->txf[prg_data_output.sm];
 
-    __asm__ volatile (
-        "ldr r5, =0xd0000004 \n\t"
-        "loop: \n\t"
-        "ldr r3, [r5] \n\t" // 1
-        "and r3, r1 \n\t" // 1
-        "ldrb r3, [r0, r3] \n\t" // 2
-        "strb r3, [r2] \n\t" // 1
-        "b loop \n\t" // 2
-        : "+r" (r0), "+r" (r1), "+r" (r2)
-        :
-        : "r5", "cc", "memory"
-    );
+    __asm__ volatile(
+          "ldr r5, =0xd0000004 \n\t"
+          "loop: \n\t"
+          "ldr r3, [r5] \n\t" // 1
+          "and r3, r1 \n\t" // 1
+          "ldrb r3, [r0, r3] \n\t" // 2
+          "strb r3, [r2] \n\t" // 1
+          "b loop \n\t" // 2
+          : "+r"(r0), "+r"(r1), "+r"(r2)
+          :
+          : "r5", "cc", "memory");
 
     __builtin_unreachable();
 }
@@ -67,7 +66,7 @@ static void rom_pio_init_output_enable_program()
 
         // We set the BUF_OE pin using the SET op
         sm_config_set_set_pins(&cfg, BUF_OE_PIN, 1);
-        
+
         pio_sm_init(p, sm, offset, &cfg);
         pio_sm_set_enabled(p, sm, true);
     }
@@ -111,8 +110,8 @@ static void rom_pio_init_output_enable_report_program()
         sm_config_set_in_pins(&cfg, 0);
 
         // Disable interrupts, we manually check the flag and clear it
-        pio_set_irq0_source_enabled(p, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
-        pio_set_irq1_source_enabled(p, (enum pio_interrupt_source) ((uint) pis_interrupt0 + sm), false);
+        pio_set_irq0_source_enabled(p, (enum pio_interrupt_source)((uint)pis_interrupt0 + sm), false);
+        pio_set_irq1_source_enabled(p, (enum pio_interrupt_source)((uint)pis_interrupt0 + sm), false);
         pio_interrupt_clear(p, sm);
 
         pio_sm_init(p, sm, offset, &cfg);
@@ -132,7 +131,7 @@ static void rom_pio_init_tca_program()
 
         sm_config_set_out_pins(&cfg, TCA_EXPANDER_PIN, 1);
         sm_config_set_clkdiv(&cfg, 1000); // divide down to TCA rate
-        sm_config_set_out_shift(&cfg, true, true, 10); // 4-bits of preample, 5-bits of data, 1-end bit 
+        sm_config_set_out_shift(&cfg, true, true, 10); // 4-bits of preample, 5-bits of data, 1-end bit
 
         pio_sm_init(p, sm, offset, &cfg);
         pio_sm_set_enabled(p, sm, true);
@@ -142,7 +141,7 @@ static void rom_pio_init_tca_program()
 void rom_init_programs()
 {
     // Assign data and oe pins to pio
-    for( uint ofs = 0; ofs < N_DATA_PINS; ofs++ )
+    for (uint ofs = 0; ofs < N_DATA_PINS; ofs++)
     {
         pio_gpio_init(prg_data_output.pio(), BASE_DATA_PIN + ofs);
         gpio_set_dir(BASE_DATA_PIN + ofs, true);
@@ -152,7 +151,7 @@ void rom_init_programs()
         gpio_set_slew_rate(BASE_DATA_PIN + ofs, GPIO_SLEW_RATE_FAST);
     }
 
-    for( uint ofs = 0; ofs < N_OE_PINS; ofs++ )
+    for (uint ofs = 0; ofs < N_OE_PINS; ofs++)
     {
         gpio_init(BASE_OE_PIN + ofs);
         gpio_set_dir(BASE_OE_PIN + ofs, false);
@@ -202,7 +201,7 @@ void rom_service_stop()
 
 bool rom_check_oe()
 {
-    if( pio_interrupt_get(prg_report_data_access.pio(), prg_report_data_access.sm) )
+    if (pio_interrupt_get(prg_report_data_access.pio(), prg_report_data_access.sm))
     {
         pio_interrupt_clear(prg_report_data_access.pio(), prg_report_data_access.sm);
         return true;
@@ -215,7 +214,7 @@ void tca_set_pins(uint8_t pins)
 {
     uint32_t bitstream = 0b1000001010 | ((pins & 0x1f) << 4);
     prg_write_tca_bits.pio()->txf[prg_write_tca_bits.sm] = bitstream;
-    tca_pins_state = pins; 
+    tca_pins_state = pins;
 }
 
 void tca_set_pin(int pin, bool en)
@@ -225,10 +224,9 @@ void tca_set_pin(int pin, bool en)
         new_state |= (1 << pin);
     else
         new_state &= ~(1 << pin);
-    
+
     if (new_state != tca_pins_state)
     {
         tca_set_pins(new_state);
     }
 }
-

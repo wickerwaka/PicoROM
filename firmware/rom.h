@@ -1,4 +1,4 @@
-#if !defined( ROM_H )
+#if !defined(ROM_H)
 #define ROM_H 1
 
 #include "hardware/pio.h"

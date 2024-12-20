@@ -2,8 +2,8 @@
 
 #include "pico/stdlib.h"
 #include <string.h>
-#include <unistd.h>
 #include <tusb.h>
+#include <unistd.h>
 
 
 static uint8_t incoming_buffer[sizeof(Packet)];
@@ -86,7 +86,7 @@ void pl_send_error(const char *s, uint32_t v0, uint32_t v1)
 void pl_wait_for_connection()
 {
     // Wait for connection
-    while(!tud_cdc_connected())
+    while (!tud_cdc_connected())
     {
         tud_task();
         sleep_ms(1);
@@ -131,7 +131,7 @@ const Packet *pl_poll()
             return pkt;
         }
     }
-    
+
     return nullptr;
 }
 

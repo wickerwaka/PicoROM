@@ -17,7 +17,7 @@ struct PIOProgram
         pio_index = PIO_NUM(pio0);
         config_func = nullptr;
     }
-    
+
     bool valid() const
     {
         return offset >= 0;

@@ -1,8 +1,8 @@
 #if !defined(COMMS_H)
 #define COMMS_H 1
 
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #include "hardware/sync.h"
 

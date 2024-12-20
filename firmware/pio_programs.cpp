@@ -1,7 +1,7 @@
 #include "pio_programs.h"
 
-#include "data_bus.pio.h"
 #include "comms.pio.h"
+#include "data_bus.pio.h"
 #include <hardware/pio.h>
 
 PIOProgram prg_comms_detect;
@@ -57,5 +57,3 @@ bool pio_programs_init()
 
     return true;
 }
-
-
