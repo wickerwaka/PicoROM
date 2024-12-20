@@ -30,6 +30,7 @@ enum PacketKind {
     CommsData = 82,
 
     Identify = 0xf8,
+    Bootsel = 0xf9,
     Error = 0xfe,
     Debug = 0xff,
 }
@@ -52,6 +53,7 @@ pub enum ReqPacket {
     CommsEnd,
     CommsData(Vec<u8>),
     Identify,
+    Bootsel,
     ParameterQuery(Option<String>),
     ParameterGet(String),
     ParameterSet(String,String),
@@ -77,6 +79,7 @@ impl ReqPacket {
             ReqPacket::CommsEnd => (PacketKind::CommsEnd, vec![]),
             ReqPacket::CommsData(data) => (PacketKind::CommsData, data),
             ReqPacket::Identify => (PacketKind::Identify, vec![]),
+            ReqPacket::Bootsel => (PacketKind::Bootsel, vec![]),
             ReqPacket::ParameterQuery(None) => (PacketKind::ParameterQuery, vec![]),
             ReqPacket::ParameterQuery(Some(x)) => (PacketKind::ParameterQuery, zstring(x)),
             ReqPacket::ParameterGet(param) => (PacketKind::ParameterGet, zstring(param)),
@@ -434,6 +437,11 @@ impl PicoLink {
 
     pub fn identify(&mut self) -> Result<()> {
         self.send(ReqPacket::Identify)?;
+        Ok(())
+    }
+
+    pub fn usb_boot(&mut self) -> Result<()> {
+        self.send(ReqPacket::Bootsel)?;
         Ok(())
     }
 

@@ -1,13 +1,10 @@
 #include <stdio.h>
 #include <unistd.h>
-#include "pico/stdlib.h"
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "hardware/clocks.h"
-#include "hardware/flash.h"
 #include "hardware/structs/syscfg.h"
-#include "pico/binary_info.h"
-#include "pico/unique_id.h"
+#include "pico/bootrom.h"
 
 #include <tusb.h>
 
@@ -194,6 +191,7 @@ static const char *parameter_names[] =
     "status",
     "startup_time",
     "build_config",
+    "build_version",
     nullptr
 };
 
@@ -295,6 +293,12 @@ bool get_parameter(const char *name, char *value, size_t value_size)
         strcpyz(value, value_size, PICOROM_CONFIG_NAME );
         return true;
     }
+    else if (streq(name, "build_version"))
+    {
+        strcpyz(value, value_size, PICOROM_FIRMWARE_VERSION );
+        return true;
+    }
+
 
     return false;
 }
@@ -500,6 +504,12 @@ int main()
                     case PacketType::Identify:
                     {
                         identify_request += 5;
+                        break;
+                    }
+
+                    case PacketType::Bootsel:
+                    {
+                        rom_reset_usb_boot(-1, 0);
                         break;
                     }
 

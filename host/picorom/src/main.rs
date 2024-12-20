@@ -107,6 +107,11 @@ enum Commands {
         /// Parameter value
         value: String
     },
+
+    /// Reboot the device into USB mode
+    USBBoot {
+        name: String
+    },
 }
 
 fn main() -> Result<()> {
@@ -202,6 +207,12 @@ fn main() -> Result<()> {
             let mut pico = find_pico(&name)?;
             let newvalue = pico.set_parameter(&param, &value)?;
             println!("{}={}", param, newvalue);
+        },
+
+        Commands::USBBoot { name } => {
+            let mut pico = find_pico(&name)?;
+            println!("Requesting USB boot");
+            pico.usb_boot()?;
         },
     }
 
