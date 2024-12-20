@@ -41,8 +41,8 @@ jobs:
         with:
           name: firmware
           path: |
-            build/PicoROM.elf
-            build/PicoROM.uf2
+            build/PicoROM*.elf
+            build/PicoROM*.uf2
           if-no-files-found: error
 
   release:

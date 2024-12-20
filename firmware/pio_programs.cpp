@@ -4,15 +4,15 @@
 #include "comms.pio.h"
 #include <hardware/pio.h>
 
+PIOProgram prg_comms_detect;
+PIOProgram prg_comms_clock;
+PIOProgram prg_write_tca_bits;
+PIOProgram prg_data_output;
+PIOProgram prg_set_output_enable;
+PIOProgram prg_set_pindir_hi;
+PIOProgram prg_set_pindir_lo;
+PIOProgram prg_report_data_access;
 
-PIOProgram prg_comms_read;
-PIOProgram prg_comms_write;
-PIOProgram prg_tca;
-PIOProgram prg_data_bus;
-PIOProgram prg_data_oe;
-PIOProgram prg_data_pindir_hi;
-PIOProgram prg_data_pindir_lo;
-PIOProgram prg_data_report;
 
 #define add_program(p, s, name, prg) \
     do \
@@ -30,13 +30,13 @@ void pio_programs_reset()
     pio_clear_instruction_memory(pio0);
     pio_clear_instruction_memory(pio1);
 
-    prg_comms_read.reset();
-    prg_comms_write.reset();
-    prg_tca.reset();
-    prg_data_bus.reset();
-    prg_data_oe.reset();
-    prg_data_pindir_hi.reset();
-    prg_data_pindir_lo.reset();
+    prg_comms_detect.reset();
+    prg_comms_clock.reset();
+    prg_write_tca_bits.reset();
+    prg_data_output.reset();
+    prg_set_output_enable.reset();
+    prg_set_pindir_hi.reset();
+    prg_set_pindir_lo.reset();
 }
 
 
@@ -44,16 +44,16 @@ bool pio_programs_init()
 {
     pio_programs_reset();
 
-    add_program(pio0, 0, pindir_fast, prg_data_pindir_lo);
-    prg_data_pindir_hi = prg_data_pindir_lo;
-    prg_data_pindir_hi.sm = 1;
-    add_program(pio0, 2, output_enable_report, prg_data_report);
-    add_program(pio0, 3, output, prg_data_bus);
+    add_program(pio0, 0, set_pindir, prg_set_pindir_lo);
+    prg_set_pindir_hi = prg_set_pindir_lo;
+    prg_set_pindir_hi.sm = 1;
+    add_program(pio0, 2, comms_detect, prg_comms_detect);
+    add_program(pio0, 3, data_output, prg_data_output);
 
-    add_program(pio1, 0, output_enable_fast, prg_data_oe);
-    add_program(pio1, 1, detect_read, prg_comms_read);
-    add_program(pio1, 2, detect_write, prg_comms_write);
-    add_program(pio1, 3, tca5405, prg_tca);
+    add_program(pio1, 0, set_output_enable, prg_set_output_enable);
+    add_program(pio1, 1, report_data_access, prg_report_data_access);
+    add_program(pio1, 2, comms_clock, prg_comms_clock);
+    add_program(pio1, 3, write_tca_bits, prg_write_tca_bits);
 
     return true;
 }

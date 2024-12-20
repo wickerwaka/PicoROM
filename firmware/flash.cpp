@@ -1,4 +1,7 @@
+#include <cstdlib>
 #include <string.h>
+#include <strings.h>
+#include <stdarg.h>
 
 #include "hardware/dma.h"
 #include "hardware/flash.h"
@@ -14,7 +17,7 @@
 static constexpr uint FLASH_ROM_OFFSET = FLASH_SIZE - ROM_SIZE;
 static constexpr uint FLASH_CFG_OFFSET = FLASH_ROM_OFFSET - FLASH_SECTOR_SIZE;
 
-static constexpr uint CONFIG_VERSION = 0x00010008;
+static constexpr uint CONFIG_VERSION = 0x00010009;
 
 const uint8_t *flash_rom_data = (uint8_t *)(XIP_BASE + FLASH_ROM_OFFSET);
 const Config *flash_config = (Config *)(XIP_BASE + FLASH_CFG_OFFSET);
@@ -82,6 +85,8 @@ void flash_init_config(Config *config)
 
     config->addr_mask = ADDR_MASK;
     config->version = CONFIG_VERSION;
+    config->default_reset = ResetLevel::Z;
+    config->initial_reset = ResetLevel::Z;
     pico_get_unique_board_id_string(config->name, sizeof(config->name));
 
     flash_save_config(config);
@@ -103,7 +108,7 @@ uint32_t flash_load_rom()
     uint32_t start_time = time_us_32();
 
     uint32_t ints = save_and_disable_interrupts();
-    flash_bulk_read((uint32_t *)rom_get_buffer(), FLASH_ROM_OFFSET, ROM_SIZE / 4, 0);
+    flash_bulk_read((uint32_t *)rom_get_buffer(), FLASH_ROM_OFFSET, ROM_SIZE / 4, DMA_CH_FLASH);
     restore_interrupts(ints);
     
     //memcpy(rom_get_buffer(), flash_rom_data, ROM_SIZE);
@@ -112,3 +117,4 @@ uint32_t flash_load_rom()
 
     return flash_load_time;
 }
+

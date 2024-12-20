@@ -6,10 +6,6 @@
 
 enum class PacketType : uint8_t
 {
-    IdentReq = 0,
-    IdentResp = 1,
-    IdentSet = 2,
-
     SetPointer = 3,
     GetPointer = 4,
     CurPointer = 5,
@@ -17,19 +13,21 @@ enum class PacketType : uint8_t
     Read = 7,
     ReadData = 8,
 
-    SetMask = 9,
-    GetMask = 10,
-    CurMask = 11,
-
     CommitFlash = 12,
     CommitDone = 13,
-    Reset = 14,
+
+    SetParameter = 20,
+    GetParameter = 21,
+    Parameter = 22,
+    ParameterError = 23,
+    QueryParameter = 24,
 
     CommsStart = 80,
     CommsEnd = 81,
     CommsData = 82,
 
     Identify = 0xf8,
+    Bootsel = 0xf9,
     Error = 0xfe,
     Debug = 0xff
 };
@@ -49,6 +47,7 @@ void pl_send_string(PacketType type, const char *s);
 void pl_send_payload(PacketType type, const void *data, size_t len);
 void pl_send_debug(const char *s, uint32_t v0, uint32_t v1);
 void pl_send_error(const char *s, uint32_t v0, uint32_t v1);
+void pl_send_packet(const Packet *pkt);
 
 void pl_wait_for_connection();
 bool pl_is_connected();

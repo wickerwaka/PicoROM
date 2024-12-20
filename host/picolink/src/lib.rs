@@ -9,10 +9,6 @@ use num_traits::FromPrimitive;
 #[repr(u8)]
 #[derive(FromPrimitive, Debug)]
 enum PacketKind {
-    IdentReq = 0,
-    IdentResp = 1,
-    IdentSet = 2,
-
     PointerSet = 3,
     PointerGet = 4,
     PointerCur = 5,
@@ -20,26 +16,27 @@ enum PacketKind {
     Read = 7,
     ReadData = 8,
 
-    MaskSet = 9,
-    MaskGet = 10,
-    MaskCur = 11,
-
     CommitFlash = 12,
     CommitDone = 13,
 
-    Reset = 14,
+    ParameterSet = 20,
+    ParameterGet = 21,
+    Parameter = 22,
+    ParameterError = 23,
+    ParameterQuery = 24,
 
     CommsStart = 80,
     CommsEnd = 81,
     CommsData = 82,
 
     Identify = 0xf8,
+    Bootsel = 0xf9,
     Error = 0xfe,
     Debug = 0xff,
 }
 
 #[derive(Clone, Debug)]
-pub enum ResetKind {
+pub enum ResetLevel {
     High,
     Low,
     Z
@@ -47,12 +44,8 @@ pub enum ResetKind {
 
 #[derive(Clone, Debug)]
 pub enum ReqPacket {
-    Ident,
-    IdentSet(String),
     PointerSet(u32),
     PointerGet,
-    MaskSet(u32),
-    MaskGet,
     Write(Vec<u8>),
     Read,
     CommitFlash,
@@ -60,20 +53,25 @@ pub enum ReqPacket {
     CommsEnd,
     CommsData(Vec<u8>),
     Identify,
-    Reset(ResetKind)
+    Bootsel,
+    ParameterQuery(Option<String>),
+    ParameterGet(String),
+    ParameterSet(String,String),
+}
+
+fn zstring(s: String) -> Vec<u8> {
+    let mut v = s.as_bytes().to_vec();
+    v.push(0u8);
+    v
 }
 
 impl ReqPacket {
     fn encode(self) -> Result<Vec<u8>> {
         let (kind, payload) = match self.clone() {
-            ReqPacket::Ident => (PacketKind::IdentReq, vec![]),
-            ReqPacket::IdentSet(name) => (PacketKind::IdentSet, name.as_bytes().to_vec()),
             ReqPacket::PointerSet(offset) => {
                 (PacketKind::PointerSet, offset.to_le_bytes().to_vec())
             }
             ReqPacket::PointerGet => (PacketKind::PointerGet, vec![]),
-            ReqPacket::MaskSet(mask) => (PacketKind::MaskSet, mask.to_le_bytes().to_vec()),
-            ReqPacket::MaskGet => (PacketKind::MaskGet, vec![]),
             ReqPacket::Write(data) => (PacketKind::Write, data),
             ReqPacket::Read => (PacketKind::Read, vec![]),
             ReqPacket::CommitFlash => (PacketKind::CommitFlash, vec![]),
@@ -81,9 +79,11 @@ impl ReqPacket {
             ReqPacket::CommsEnd => (PacketKind::CommsEnd, vec![]),
             ReqPacket::CommsData(data) => (PacketKind::CommsData, data),
             ReqPacket::Identify => (PacketKind::Identify, vec![]),
-            ReqPacket::Reset(ResetKind::Low) => (PacketKind::Reset, vec![b'L']),
-            ReqPacket::Reset(ResetKind::High) => (PacketKind::Reset, vec![b'H']),
-            ReqPacket::Reset(ResetKind::Z) => (PacketKind::Reset, vec![b'Z']),
+            ReqPacket::Bootsel => (PacketKind::Bootsel, vec![]),
+            ReqPacket::ParameterQuery(None) => (PacketKind::ParameterQuery, vec![]),
+            ReqPacket::ParameterQuery(Some(x)) => (PacketKind::ParameterQuery, zstring(x)),
+            ReqPacket::ParameterGet(param) => (PacketKind::ParameterGet, zstring(param)),
+            ReqPacket::ParameterSet(param,value) => (PacketKind::ParameterSet, zstring(format!("{},{}", param, value)))
         };
 
         if payload.len() > 30 {
@@ -100,11 +100,12 @@ impl ReqPacket {
 
 #[derive(Clone, Debug)]
 pub enum RespPacket {
-    Ident(String),
     PointerCur(u32),
     ReadData(Vec<u8>),
     CommitDone,
     CommsData(Vec<u8>),
+    Parameter(String),
+    ParameterError,
 
     Error(String, u32, u32),
     Debug(String, u32, u32),
@@ -139,8 +140,8 @@ impl PicoLink {
         }
 
         Ok(PicoLink {
-            port: port,
-            debug: debug,
+            port,
+            debug,
         })
     }
 
@@ -207,9 +208,6 @@ impl PicoLink {
         //println!("<<< {:?} {} {:?}", pkt.kind, pkt.size, payload);
 
         match pkt.kind {
-            PacketKind::IdentResp => Ok(Some(RespPacket::Ident(
-                String::from_utf8_lossy(&payload).to_string(),
-            ))),
             PacketKind::Debug => {
                 if payload.len() >= 8 {
                     let v0 = u32::from_le_bytes(payload[0..4].try_into()?);
@@ -237,6 +235,11 @@ impl PicoLink {
             PacketKind::ReadData => Ok(Some(RespPacket::ReadData(payload.to_vec()))),
             PacketKind::CommitDone => Ok(Some(RespPacket::CommitDone)),
             PacketKind::CommsData => Ok(Some(RespPacket::CommsData(payload.to_vec()))),
+            PacketKind::ParameterError => Ok(Some(RespPacket::ParameterError)),
+            PacketKind::Parameter => Ok(Some(RespPacket::Parameter(
+                String::from_utf8_lossy(&payload).to_string(),
+            ))),
+ 
             x => Err(anyhow::format_err!("Unexpected packet kind: {:?}", x)),
         }
     }
@@ -308,16 +311,11 @@ impl PicoLink {
     }
 
     pub fn get_ident(&mut self) -> Result<String> {
-        self.send(ReqPacket::Ident)?;
-        self.recv_until(|pkt| match pkt {
-            RespPacket::Ident(x) => Some(x),
-            _ => None,
-        })
+        self.get_parameter("name")
     }
 
     pub fn set_ident(&mut self, name: &str) -> Result<()> {
-        self.send(ReqPacket::IdentSet(name.to_string()))?;
-        let name_check = self.get_ident()?;
+        let name_check = self.set_parameter("name", name)?;
         if name != name_check {
             Err(anyhow!(
                 "Rename failed. Expected name '{}' but PicoROM returned '{}'",
@@ -327,6 +325,50 @@ impl PicoLink {
         } else {
             Ok(())
         }
+    }
+
+    pub fn get_parameter(&mut self, name: &str) -> Result<String> {
+        self.send(ReqPacket::ParameterGet(name.to_string()))?;
+        self.recv_until(|pkt| match pkt {
+            RespPacket::Parameter(x) => Some(Ok(x)),
+            RespPacket::ParameterError => Some(Err(anyhow!(
+                "Could not get parameter '{}'", name))),
+            _ => None,
+        })?
+    }
+
+    pub fn get_parameters(&mut self) -> Result<Vec<String>> {
+        let mut prev = None;
+        
+        let mut parameters = Vec::new();
+
+        loop {
+            self.send(ReqPacket::ParameterQuery(prev))?;
+            let parameter = self.recv_until(|pkt| match pkt {
+                RespPacket::Parameter(x) => Some(Ok(x)),
+                RespPacket::ParameterError => Some(Err(anyhow!(
+                    "Could not get parameters"))),
+                _ => None,
+            })?;
+            let parameter = parameter?;
+            if parameter.len() > 0 {
+                prev = Some(parameter.clone());
+                parameters.push(parameter);
+            } else {
+                return Ok(parameters);
+            }
+        }
+    }
+
+
+    pub fn set_parameter(&mut self, name: &str, value: &str) -> Result<String> {
+        self.send(ReqPacket::ParameterSet(name.to_string(), value.to_string()))?;
+        self.recv_until(|pkt| match pkt {
+            RespPacket::Parameter(x) => Some(Ok(x)),
+            RespPacket::ParameterError => Some(Err(anyhow!(
+                "Could not set parameter '{}'", name))),
+            _ => None,
+        })?
     }
 
     pub fn upload<F>(&mut self, data: &[u8], addr_mask: u32, f: F) -> Result<()>
@@ -351,7 +393,7 @@ impl PicoLink {
             return Err(anyhow!("Upload did not complete."));
         }
 
-        self.send(ReqPacket::MaskSet(addr_mask))?;
+        self.set_parameter("addr_mask", &format!("0x{:x}", addr_mask))?;
 
         Ok(())
     }
@@ -398,8 +440,18 @@ impl PicoLink {
         Ok(())
     }
 
-    pub fn reset(&mut self, kind: ResetKind) -> Result<()> {
-        self.send(ReqPacket::Reset(kind))?;
+    pub fn usb_boot(&mut self) -> Result<()> {
+        self.send(ReqPacket::Bootsel)?;
+        Ok(())
+    }
+
+    pub fn reset(&mut self, level: ResetLevel) -> Result<()> {
+        let rst = match level {
+            ResetLevel::Low => "low",
+            ResetLevel::High => "high",
+            ResetLevel::Z => "z"
+        };
+        self.set_parameter("reset", rst)?;
         Ok(())
     }
 
@@ -456,7 +508,7 @@ pub fn enumerate_picos() -> Result<HashMap<String, PicoLink>> {
     for p in enumerate_ports()?.iter() {
         let link = PicoLink::open(p, false);
         if let Ok(mut link) = link {
-            if let Ok(ident) = link.get_ident() {
+            if let Ok(ident) = link.get_parameter("name") {
                 found.insert(ident, link);
             }
         }

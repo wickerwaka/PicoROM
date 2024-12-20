@@ -1,13 +1,10 @@
 #include <stdio.h>
 #include <unistd.h>
-#include "pico/stdlib.h"
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
 #include "hardware/clocks.h"
-#include "hardware/flash.h"
 #include "hardware/structs/syscfg.h"
-#include "pico/binary_info.h"
-#include "pico/unique_id.h"
+#include "pico/bootrom.h"
 
 #include <tusb.h>
 
@@ -17,8 +14,12 @@
 #include "flash.h"
 #include "comms.h"
 #include "pio_programs.h"
+#include "str_util.h"
 
-bi_decl(bi_program_feature("Reset"));
+
+// TODO
+// Change addr mask to config
+//
 
 uint32_t rom_offset = 0;
 
@@ -110,23 +111,216 @@ bool activity_timer_callback(repeating_timer_t * /*unused*/)
     return true;
 }
 
-uint32_t flash_load_time = 0;
+ResetLevel current_reset = ResetLevel::Z;
 
+void reset_set(ResetLevel level)
+{
+    switch(level)
+    {
+        case ResetLevel::Low:
+            tca_set_pin(TCA_RESET_VALUE_PIN, false);
+            tca_set_pin(TCA_RESET_PIN, true);
+            current_reset = ResetLevel::Low;
+            break;
+
+        case ResetLevel::High:
+            tca_set_pin(TCA_RESET_VALUE_PIN, true);
+            tca_set_pin(TCA_RESET_PIN, true);
+            current_reset = ResetLevel::High;
+            break;
+
+        default:
+            tca_set_pin(TCA_RESET_PIN, false);
+            current_reset = ResetLevel::Z;
+            break;
+    }
+}
+
+void reset_to_string(ResetLevel level, char *s, size_t sz)
+{
+    switch(level)
+    {
+        case ResetLevel::Low:
+            strcpyz(s, sz, "low");
+            break;
+
+        case ResetLevel::High:
+            strcpyz(s, sz, "high");
+            break;
+
+        default:
+            strcpyz(s, sz, "z");
+            break;
+    }
+}
+
+bool reset_from_string(const char *s, ResetLevel *level)
+{
+    if (streq(s, "low") || streq(s, "l"))
+    {
+        *level = ResetLevel::Low;
+        return true;
+    }
+    else if (streq(s, "high") || streq(s, "h"))
+    {
+        *level = ResetLevel::High;
+        return true;
+    }
+    else if (streq(s, "z"))
+    {
+        *level = ResetLevel::Z;
+        return true;
+    }
+
+    return false;
+}
+
+uint32_t flash_load_time = 0;
 uint32_t system_status = 0;
+
+static Config config;
+
+static const char *parameter_names[] =
+{
+    "name",
+    "rom_name",
+    "addr_mask",
+    "initial_reset",
+    "default_reset",
+    "reset",
+    "status",
+    "startup_time",
+    "build_config",
+    "build_version",
+    nullptr
+};
+
+bool set_parameter(const char *name, const char *value)
+{
+    if (streq(name, "addr_mask"))
+    {
+        config.addr_mask = strtoul(value) & ADDR_MASK;
+        configure_address_pins(config.addr_mask);
+        return true;
+    }
+    else if (streq(name, "name"))
+    {
+        strcpyz(config.name, sizeof(config.name), value);
+        flash_save_config(&config);
+        return true;
+    }
+    else if (streq(name, "rom_name"))
+    {
+        strcpyz(config.rom_name, sizeof(config.name), value);
+        return true;
+    }
+    else if (streq(name, "initial_reset"))
+    {
+        if (reset_from_string(value, &config.initial_reset))
+        {
+            flash_save_config(&config);
+            return true;
+        }
+    }
+    else if (streq(name, "default_reset"))
+    {
+        if (reset_from_string(value, &config.default_reset))
+        {
+            flash_save_config(&config);
+            return true;
+        }
+    }
+    else if (streq(name, "reset"))
+    {
+        ResetLevel level;
+        if (reset_from_string(value, &level))
+        {
+            reset_set(level);
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+    return false;
+}
+
+bool get_parameter(const char *name, char *value, size_t value_size)
+{
+    if (streq(name, "addr_mask"))
+    {
+        snprintf(value, value_size, "0x%08x", config.addr_mask);
+        return true;
+    }
+    else if (streq(name, "name"))
+    {
+        strcpyz(value, value_size, config.name);
+        return true;
+    }
+    else if (streq(name, "rom_name"))
+    {
+        strcpyz(value, value_size, config.rom_name);
+        return true;
+    }
+    else if (streq(name, "status"))
+    {
+        snprintf(value, value_size, "0x%08x", system_status);
+        return true;
+    }
+    else if (streq(name, "startup_time"))
+    {
+        snprintf(value, value_size, "%d", flash_load_time);
+        return true;
+    }
+    else if (streq(name, "initial_reset"))
+    {
+        reset_to_string(config.initial_reset, value, value_size);
+        return true;
+    }
+    else if (streq(name, "default_reset"))
+    {
+        reset_to_string(config.default_reset, value, value_size);
+        return true;
+    }
+    else if (streq(name, "reset"))
+    {
+        reset_to_string(current_reset, value, value_size);
+        return true;
+    }
+    else if (streq(name, "build_config"))
+    {
+        strcpyz(value, value_size, PICOROM_CONFIG_NAME );
+        return true;
+    }
+    else if (streq(name, "build_version"))
+    {
+        strcpyz(value, value_size, PICOROM_FIRMWARE_VERSION );
+        return true;
+    }
+
+
+    return false;
+}
 
 int main()
 {
-    static Config config; // static because it can't be on the stack otherwise it will be at the end of memory and will fault when copying to flash memory
-
     set_sys_clock_khz(270000, true);
 
     flash_init_config(&config);
-    flash_load_time = flash_load_rom();
 
     if( pio_programs_init() )
     {
         system_status |= STATUS_PIO_INIT;
     }
+    
+    rom_init_programs();
+
+    reset_set(config.initial_reset);
+    
+    flash_load_time = flash_load_rom();
+
+    reset_set(config.default_reset);
 
     tusb_init();
 
@@ -135,8 +329,6 @@ int main()
     identify_ack = identify_request = 0;
 
     add_repeating_timer_ms(10, activity_timer_callback, nullptr, &activity_timer);
-
-    rom_init_programs();
 
     rom_service_start();
 
@@ -149,7 +341,6 @@ int main()
         pl_wait_for_connection();
 
         pl_send_debug("Connected", 1, 2);
-        pl_send_debug("Flash Load Time", flash_load_time, system_status);
 
         // Loop while connected
         while (pl_is_connected())
@@ -166,20 +357,6 @@ int main()
             {
                 switch((PacketType)req->type)
                 {
-                    case PacketType::IdentReq:
-                    {
-                        pl_send_string(PacketType::IdentResp, config.name);
-                        break;
-                    }
-
-                    case PacketType::IdentSet:
-                    {
-                        memcpy(config.name, req->payload, req->size);
-                        config.name[req->size] = '\0';
-                        flash_save_config(&config);
-                        break;
-                    }
-
                     case PacketType::SetPointer:
                     {
                         memcpy(&rom_offset, req->payload, sizeof(uint32_t));
@@ -217,6 +394,7 @@ int main()
                     case PacketType::CommitFlash:
                     {
                         flash_save_rom();
+                        flash_save_config(&config);
                         pl_send_null(PacketType::CommitDone);
                         break;
                     }
@@ -246,18 +424,80 @@ int main()
                         break;
                     }
 
-                    case PacketType::SetMask:
+                    case PacketType::SetParameter:
                     {
-                        uint32_t mask;
-                        memcpy(&mask, req->payload, 4);
-                        config.addr_mask = mask;
-                        configure_address_pins(mask);
+                        char *split = (char *)memchr(req->payload, ',', req->size);
+                        if (split != nullptr)
+                        {
+                            *split = '\0';
+                            if (set_parameter((char *)req->payload, split + 1))
+                            {
+                                Packet pkt;
+                                if (get_parameter((const char *)req->payload, (char *)pkt.payload, sizeof(pkt.payload)))
+                                {
+                                    pkt.size = strlen((char *)pkt.payload);
+                                    pkt.type = (uint8_t)PacketType::Parameter;
+                                    pl_send_packet(&pkt);
+                                }
+                                else
+                                {
+                                    pl_send_null(PacketType::ParameterError);
+                                }
+                                break;
+                            }
+                            else
+                            {
+                                pl_send_null(PacketType::ParameterError);
+                            }
+                        }
+                        else
+                        {
+                            pl_send_null(PacketType::ParameterError);
+                        }
                         break;
                     }
 
-                    case PacketType::GetMask:
+                    case PacketType::GetParameter:
                     {
-                        pl_send_payload(PacketType::CurMask, &config.addr_mask, 4);
+                        Packet pkt;
+                        if (get_parameter((const char *)req->payload, (char *)pkt.payload, sizeof(pkt.payload)))
+                        {
+                            pkt.size = strlen((char *)pkt.payload);
+                            pkt.type = (uint8_t)PacketType::Parameter;
+                        }
+                        else
+                        {
+                            pkt.size = 0;
+                            pkt.type = (uint8_t)PacketType::ParameterError;
+                        }
+                        pl_send_packet(&pkt);
+                        break;
+                    }
+
+                    case PacketType::QueryParameter:
+                    {
+                        if (req->size == 0)
+                        {
+                            pl_send_string(PacketType::Parameter, parameter_names[0]);
+                        }
+                        else
+                        {
+                            const char **p = parameter_names;
+                            while(p)
+                            {
+                                if (!strcmp(*p, (char *)req->payload))
+                                {
+                                    p++;
+                                    break;
+                                }
+                                p++;
+                            }
+
+                            if (p)
+                                pl_send_string(PacketType::Parameter, *p);
+                            else
+                                pl_send_null(PacketType::Parameter);
+                        }
                         break;
                     }
 
@@ -267,24 +507,10 @@ int main()
                         break;
                     }
 
-                    case PacketType::Reset:
+                    case PacketType::Bootsel:
                     {
-                        switch(req->payload[0])
-                        {
-                            case 'L':
-                                tca_set_pin(TCA_RESET_VALUE_PIN, false);
-                                tca_set_pin(TCA_RESET_PIN, true);
-                                break;
-
-                            case 'H':
-                                tca_set_pin(TCA_RESET_VALUE_PIN, true);
-                                tca_set_pin(TCA_RESET_PIN, true);
-                                break;
-
-                            default:
-                                tca_set_pin(TCA_RESET_PIN, false);
-                                break;
-                        }
+                        rom_reset_usb_boot(-1, 0);
+                        break;
                     }
 
                     default:
@@ -298,3 +524,5 @@ int main()
         }
     }
 }
+
+

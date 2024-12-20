@@ -1,56 +1,70 @@
-.program detect_write
-    ; initialize y from fifo
-    pull block
-    mov y, osr
-
+; 17 instructions
+; y set by cpu
+.program comms_detect
 start:
-    ; loop until upper address bits matches mask 
-    mov osr, pins
-    out null, 8 ; drop first 8 bits
-    out x, 14 ; a8-a18, buf_oe, oe, ce
+    ; loop until oe/cs goes low 
+    mov osr, pins ; move into osr for shifting
+    out null, 9 ; skip address, outputs
+    out x, 8
     jmp x!=y start
+    out null, 3
+    out x, 2 ; oe, cs
+    jmp x-- start ; loop if oe/cs is not low
 
     ; validate that the address this matches, go back to start
-    mov osr, pins
-    out isr, 8 ; push lower 8 bits into ise
-    out x, 14
+    mov osr, pins ; move saved isr into osr
+    out isr, 9 ; save lower bits
+    out x, 8 ; check if upper matches
     jmp x!=y start
 
-    ; push 8 bits into fifo
-    push noblock
-
-    ; loop until address doesn't match mask
+    ; loop oe/cs goes high
 .wrap_target 
     mov osr, pins
-    out null, 8
-    out x, 14
-    jmp x!=y start
+    out null, 9
+    out x, 8 ; addr
+    jmp x!=y commit
 .wrap
 
-
-.program detect_read
-    ; initialize y from fifo
-    pull block
-    mov y, osr
-
-start:
-    ; loop until upper matches 
-    mov osr, pins
-    out x, 22 ; a0-a18, buf_oe, oe, ce
-    jmp x!=y start
-
-    ; validate that the address this matches, go back to start
-    mov osr, pins
-    out x, 22
-    jmp x!=y start
-
+commit:
+    ; push 8 bits into fifo
     push noblock
+    jmp start
 
-    ; loop until address doesn't match mask
-.wrap_target 
-    mov osr, pins
-    out x, 22
-    jmp x!=y start
+; 15 instructions
+; matching address in y, set by cpu
+.program comms_clock
+normal_loop:
+    wait 1 pin 17 ; wait for raising clock edge
+    
+    ; do increment
+    mov x, ~isr ; negate isr into x
+    jmp x-- dummy_jump1 ; decrement (increment)
+dummy_jump1:
+    wait 0 pin 17 ; wait for falling edge
+
+    mov isr, ~x ; negate x into isr
+    
+    ; check if addr matches
+    mov x, pins
+    jmp x!=y normal_loop ; if address doesn't match
+    
+    push noblock ; push ISR and clear it
+
+    ; loop until access ends
+.wrap_target
+loop_no_access:
+    wait 1 pin 17 ; wait for raising clock edge
+
+    ; do increment
+    mov x, ~isr ; negate isr into x
+    jmp x-- dummy_jump2 ; decrement (increment)
+dummy_jump2:
+    wait 0 pin 17 ; wait for falling edge
+
+    mov isr, ~x ; negate x into isr
+
+    mov x, pins
+    jmp x!=y normal_loop ; if address doesn't match go back to normal loop
 .wrap
 
 

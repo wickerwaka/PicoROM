@@ -1,6 +1,5 @@
 use anyhow::{anyhow, Result};
-use clap::builder::PossibleValue;
-use clap::{Parser, Subcommand, ValueEnum};
+use clap::{Parser, Subcommand};
 use indicatif;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
@@ -29,31 +28,6 @@ fn read_file(name: &Path, rom_size: RomSize) -> Result<Vec<u8>> {
     data.extend(iter::repeat(0u8).take(diff));
 
     Ok(data.repeat(RomSize::MBit(2).bytes() / rom_size.bytes()))
-}
-
-#[derive(Clone, Debug, Copy)]
-pub enum ResetKind {
-    Low,
-    High,
-    Z,
-}
-
-impl ValueEnum for ResetKind {
-    fn value_variants<'a>() -> &'a [Self] {
-        &[
-            ResetKind::Low,
-            ResetKind::High,
-            ResetKind::Z
-        ]
-    }
-
-    fn to_possible_value(&self) -> Option<clap::builder::PossibleValue> {
-        match self {
-            ResetKind::High => Some(PossibleValue::new("high")),
-            ResetKind::Low => Some(PossibleValue::new("low")),
-            ResetKind::Z => Some(PossibleValue::new("z")),
-        }
-    }
 }
 
 #[derive(Debug, Parser)] // requires `derive` feature
@@ -103,13 +77,41 @@ enum Commands {
         store: bool,
     },
 
+    /// Set the level of the reset pin
     Reset {
         /// PicoROM device name.
         name: String,
 
-        /// Reset Output
-        kind: ResetKind,
-    }
+        /// Reset level
+        #[arg(value_parser = clap::builder::PossibleValuesParser::new(["high", "low", "z"]))]
+        level: String,
+    },
+
+    /// Get the value of a parameter
+    Get {
+        /// PicoROM device name.
+        name: String,
+
+        /// Parameter name
+        param: Option<String>,
+    },
+
+    /// Set a parameter to a new value
+    Set {
+        /// PicoROM device name.
+        name: String,
+
+        /// Parameter name
+        param: String,
+
+        /// Parameter value
+        value: String
+    },
+
+    /// Reboot the device into USB mode
+    USBBoot {
+        name: String
+    },
 }
 
 fn main() -> Result<()> {
@@ -167,6 +169,9 @@ fn main() -> Result<()> {
                 );
             pico.upload(&data, size.mask(), |x| progress.inc(x as u64))?;
             progress.finish_with_message("Done.");
+            if let Some(filename) = source.file_name() {
+                pico.set_parameter("rom_name", filename.to_string_lossy().as_ref())?;
+            }
             if store {
                 let spinner = ProgressBar::new_spinner()
                     .with_prefix("Storing to Flash")
@@ -180,17 +185,35 @@ fn main() -> Result<()> {
                 spinner.finish_with_message("Done.");
             }
         }
-        Commands::Reset { name, kind } => {
+        Commands::Reset { name, level } => {
             let mut pico = find_pico(&name)?;
-            let lib_kind = match kind {
-                ResetKind::High => picolink::ResetKind::High,
-                ResetKind::Low => picolink::ResetKind::Low,
-                ResetKind::Z => picolink::ResetKind::Z,
-            };
+            pico.set_parameter("reset", &level)?;
+            println!("Setting '{}' reset pin to: {}", name, level);
+        },
+        Commands::Get { name, param } => {
+            let mut pico = find_pico(&name)?;
+            if let Some(param) = param {
+                let value = pico.get_parameter(&param)?;
+                println!("{}={}", param, value);
+            } else {
+                let params = pico.get_parameters()?;
+                for p in params {
+                    let value = pico.get_parameter(&p)?;
+                    println!("{}={}", p, value);
+                }   
+            }
+        },
+        Commands::Set { name, param, value } => {
+            let mut pico = find_pico(&name)?;
+            let newvalue = pico.set_parameter(&param, &value)?;
+            println!("{}={}", param, newvalue);
+        },
 
-            pico.reset(lib_kind)?;
-            println!("Setting '{}' reset pin to: {:?}", name, kind);
-        }
+        Commands::USBBoot { name } => {
+            let mut pico = find_pico(&name)?;
+            println!("Requesting USB boot");
+            pico.usb_boot()?;
+        },
     }
 
     Ok(())
