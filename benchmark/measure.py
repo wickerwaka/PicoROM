@@ -69,5 +69,7 @@ for x in time_delta:
 
 print(bins)
 
-plt.hist(time_delta, bins=[x for x in range(30, 100, 4)], align="left")
+plt.hist(time_delta, bins=[x for x in range(30, 80, 2)], align="left")
+plt.xlabel("Access Time (ns)")
+plt.ylabel("Occurances")
 plt.show()
