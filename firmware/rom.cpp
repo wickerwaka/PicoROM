@@ -19,7 +19,7 @@ static void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) 
     __asm__ volatile(
           "ldr r5, =0xd0000004 \n\t"
           "loop:               \n\t" //                         Cycles  Loop1 Loop2
-          "ldr r3, [r5]        \n\t" // Read GPIO in r3         1       1     8    
+          "ldr r3, [r5]        \n\t" // Read GPIO in r3         1       1     8
           "and r3, r1          \n\t" // AND with ADDR_MASK      1       2     9
           "ldrb r3, [r0, r3]   \n\t" // Read from rom_data      2       4     11
           "strb r3, [r2]       \n\t" // Write to FIFO           1       5     12
