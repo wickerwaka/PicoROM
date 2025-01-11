@@ -498,7 +498,7 @@ fn enumerate_ports() -> Result<Vec<String>> {
         match &p.port_type {
             serialport::SerialPortType::UsbPort(info) => {
                 if info.vid == 0x2e8a && info.pid == 0x000a {
-                    ports.push(p.port_name.clone().replace("sys/class/tty", "dev"));
+                    ports.push(p.port_name.clone());
                 }
             }
             _ => {}
