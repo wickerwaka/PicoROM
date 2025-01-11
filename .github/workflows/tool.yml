@@ -66,7 +66,7 @@ jobs:
           mkdir artifacts
           cp target/${{ matrix.target }}/release/picorom artifacts/picorom-${{ matrix.target }}
         if: ${{ matrix.host != 'windows-latest' }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: picorom
           path: artifacts/*
@@ -78,7 +78,7 @@ jobs:
     if: "startsWith(github.ref, 'refs/tags/')"
     needs: [build]
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: picorom
       - name: Attach picorom
