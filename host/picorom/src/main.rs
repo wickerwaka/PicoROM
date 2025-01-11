@@ -105,13 +105,11 @@ enum Commands {
         param: String,
 
         /// Parameter value
-        value: String
+        value: String,
     },
 
     /// Reboot the device into USB mode
-    USBBoot {
-        name: String
-    },
+    USBBoot { name: String },
 }
 
 fn main() -> Result<()> {
@@ -122,8 +120,8 @@ fn main() -> Result<()> {
             let found = enumerate_picos()?;
             if found.len() > 0 {
                 println!("Available PicoROMs:");
-                for k in found.keys() {
-                    println!("  {}", k);
+                for (k, v) in found.iter() {
+                    println!("  {:16} [{}]", k, v.path);
                 }
             } else {
                 println!("No PicoROMs found.");
@@ -189,7 +187,7 @@ fn main() -> Result<()> {
             let mut pico = find_pico(&name)?;
             pico.set_parameter("reset", &level)?;
             println!("Setting '{}' reset pin to: {}", name, level);
-        },
+        }
         Commands::Get { name, param } => {
             let mut pico = find_pico(&name)?;
             if let Some(param) = param {
@@ -200,20 +198,20 @@ fn main() -> Result<()> {
                 for p in params {
                     let value = pico.get_parameter(&p)?;
                     println!("{}={}", p, value);
-                }   
+                }
             }
-        },
+        }
         Commands::Set { name, param, value } => {
             let mut pico = find_pico(&name)?;
             let newvalue = pico.set_parameter(&param, &value)?;
             println!("{}={}", param, newvalue);
-        },
+        }
 
         Commands::USBBoot { name } => {
             let mut pico = find_pico(&name)?;
             println!("Requesting USB boot");
             pico.usb_boot()?;
-        },
+        }
     }
 
     Ok(())

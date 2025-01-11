@@ -1,8 +1,12 @@
 use anyhow::{anyhow, Result};
 use serialport::SerialPort;
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufRead, BufReader, BufWriter, Read, Write};
+use std::path::PathBuf;
 use std::{thread::sleep, time::Duration, time::Instant};
 
+use dirs::cache_dir;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
@@ -39,7 +43,7 @@ enum PacketKind {
 pub enum ResetLevel {
     High,
     Low,
-    Z
+    Z,
 }
 
 #[derive(Clone, Debug)]
@@ -56,7 +60,7 @@ pub enum ReqPacket {
     Bootsel,
     ParameterQuery(Option<String>),
     ParameterGet(String),
-    ParameterSet(String,String),
+    ParameterSet(String, String),
 }
 
 fn zstring(s: String) -> Vec<u8> {
@@ -83,7 +87,10 @@ impl ReqPacket {
             ReqPacket::ParameterQuery(None) => (PacketKind::ParameterQuery, vec![]),
             ReqPacket::ParameterQuery(Some(x)) => (PacketKind::ParameterQuery, zstring(x)),
             ReqPacket::ParameterGet(param) => (PacketKind::ParameterGet, zstring(param)),
-            ReqPacket::ParameterSet(param,value) => (PacketKind::ParameterSet, zstring(format!("{},{}", param, value)))
+            ReqPacket::ParameterSet(param, value) => (
+                PacketKind::ParameterSet,
+                zstring(format!("{},{}", param, value)),
+            ),
         };
 
         if payload.len() > 30 {
@@ -114,6 +121,7 @@ pub enum RespPacket {
 pub struct PicoLink {
     port: Box<dyn SerialPort>,
     debug: bool,
+    pub path: String,
 }
 
 struct RawPacket {
@@ -125,7 +133,7 @@ struct RawPacket {
 impl PicoLink {
     pub fn open(port_path: &str, debug: bool) -> Result<PicoLink> {
         let mut port = serialport::new(port_path, 9600)
-            .timeout(std::time::Duration::from_millis(1000))
+            .timeout(std::time::Duration::from_millis(500))
             .open()?;
 
         let expected = "PicoROM Hello".as_bytes();
@@ -142,6 +150,7 @@ impl PicoLink {
         Ok(PicoLink {
             port,
             debug,
+            path: port_path.to_string(),
         })
     }
 
@@ -239,7 +248,7 @@ impl PicoLink {
             PacketKind::Parameter => Ok(Some(RespPacket::Parameter(
                 String::from_utf8_lossy(&payload).to_string(),
             ))),
- 
+
             x => Err(anyhow::format_err!("Unexpected packet kind: {:?}", x)),
         }
     }
@@ -331,23 +340,21 @@ impl PicoLink {
         self.send(ReqPacket::ParameterGet(name.to_string()))?;
         self.recv_until(|pkt| match pkt {
             RespPacket::Parameter(x) => Some(Ok(x)),
-            RespPacket::ParameterError => Some(Err(anyhow!(
-                "Could not get parameter '{}'", name))),
+            RespPacket::ParameterError => Some(Err(anyhow!("Could not get parameter '{}'", name))),
             _ => None,
         })?
     }
 
     pub fn get_parameters(&mut self) -> Result<Vec<String>> {
         let mut prev = None;
-        
+
         let mut parameters = Vec::new();
 
         loop {
             self.send(ReqPacket::ParameterQuery(prev))?;
             let parameter = self.recv_until(|pkt| match pkt {
                 RespPacket::Parameter(x) => Some(Ok(x)),
-                RespPacket::ParameterError => Some(Err(anyhow!(
-                    "Could not get parameters"))),
+                RespPacket::ParameterError => Some(Err(anyhow!("Could not get parameters"))),
                 _ => None,
             })?;
             let parameter = parameter?;
@@ -360,13 +367,11 @@ impl PicoLink {
         }
     }
 
-
     pub fn set_parameter(&mut self, name: &str, value: &str) -> Result<String> {
         self.send(ReqPacket::ParameterSet(name.to_string(), value.to_string()))?;
         self.recv_until(|pkt| match pkt {
             RespPacket::Parameter(x) => Some(Ok(x)),
-            RespPacket::ParameterError => Some(Err(anyhow!(
-                "Could not set parameter '{}'", name))),
+            RespPacket::ParameterError => Some(Err(anyhow!("Could not set parameter '{}'", name))),
             _ => None,
         })?
     }
@@ -449,7 +454,7 @@ impl PicoLink {
         let rst = match level {
             ResetLevel::Low => "low",
             ResetLevel::High => "high",
-            ResetLevel::Z => "z"
+            ResetLevel::Z => "z",
         };
         self.set_parameter("reset", rst)?;
         Ok(())
@@ -503,21 +508,72 @@ fn enumerate_ports() -> Result<Vec<String>> {
     Ok(ports)
 }
 
+fn get_cache_path() -> Option<PathBuf> {
+    cache_dir().map(|x| x.join("picorom_enum"))
+}
+
+fn write_cache_file(entries: HashMap<String, String>) -> Result<()> {
+    if let Some(cache_path) = get_cache_path() {
+        let fs = File::create(cache_path)?;
+        let mut writer = BufWriter::new(fs);
+        for (ident, path) in entries.iter() {
+            writeln!(writer, "{},{}", path, ident)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn read_cache_file() -> Result<HashMap<String, String>> {
+    let mut entries = HashMap::new();
+
+    if let Some(cache_path) = get_cache_path() {
+        let fs = File::open(cache_path)?;
+        let reader = BufReader::new(fs);
+        for line in reader.lines() {
+            let line = line?;
+            if let Some((path, ident)) = line.split_once(',') {
+                entries.insert(ident.to_string(), path.to_string());
+            }
+        }
+    }
+
+    Ok(entries)
+}
+
 pub fn enumerate_picos() -> Result<HashMap<String, PicoLink>> {
+    let mut cache_data = HashMap::new();
     let mut found = HashMap::new();
     for p in enumerate_ports()?.iter() {
         let link = PicoLink::open(p, false);
         if let Ok(mut link) = link {
             if let Ok(ident) = link.get_parameter("name") {
+                cache_data.insert(ident.clone(), p.to_string());
                 found.insert(ident, link);
             }
         }
     }
 
+    write_cache_file(cache_data).unwrap(); // don't care if it fails
+
     Ok(found)
 }
 
 pub fn find_pico(name: &str) -> Result<PicoLink> {
+    // Check cache first
+    let cached_paths = read_cache_file().unwrap_or_default();
+    if let Some(path) = cached_paths.get(name) {
+        if let Ok(mut link) = PicoLink::open(path, false) {
+            if let Ok(ident) = link.get_parameter("name") {
+                if ident == name {
+                    println!("Found in cache");
+                    return Ok(link);
+                }
+            }
+        }
+    }
+
+    // If it wasn't found in the cache then do a full enumeration
     let mut found = enumerate_picos()?;
 
     if let Some(pico) = found.remove(name) {
