@@ -37,7 +37,7 @@ jobs:
           export PICO_SDK_PATH=../pico-sdk
           cmake ../firmware
           make
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: firmware
           path: |
@@ -51,7 +51,7 @@ jobs:
     if: "startsWith(github.ref, 'refs/tags/')"
     needs: [build]
     steps:
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: firmware
       - name: Attach firmware
