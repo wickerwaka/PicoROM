@@ -16,9 +16,12 @@
 #include "system.h"
 
 
-// TODO
-// Change addr mask to config
-//
+// Dummy atexit implementation because some SDK/newlib versions don't strip
+// atexit and it uses several 100bytes of RAM
+int __wrap_atexit(void *)
+{
+    return 0;
+}
 
 uint32_t rom_offset = 0;
 

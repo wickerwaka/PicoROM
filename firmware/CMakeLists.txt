@@ -46,6 +46,7 @@ foreach(BUILD_CONFIG 2MBit 1MBit_Clock)
         hardware_pio
         hardware_dma    
         pico_unique_id
+        -Wl,--wrap=atexit
     )
 
     target_compile_definitions(${TARGET} PRIVATE
