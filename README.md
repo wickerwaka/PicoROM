@@ -60,12 +60,15 @@ Uploading ROM [################################################################]
 The PicoROM has an external reset pin that can be used to drive the reset signal of whatever hardware you are working with. The reset pin state is set using the `picorom reset` command. It is a tri-state output so the signal can either be +5V/high (`high`), low/ground (`low`) or high-impedance (`z`). The `reset` command can be used as part of a build script to reset a system when a new ROM image is uploaded.
 
 ```make
-upload: cpu_low.bin cpu_high.bin
-    picorom reset cpu_low high
+# picorom makefile target to trigger reset and upload ROM image
+picorom: cpu_low.bin cpu_high.bin
+    picorom reset cpu_low low
     picorom upload cpu_low cpu_low.bin
     picorom upload cpu_high cpu_high.bin
     picorom reset cpu_low z
 ```
+
+![Upload example](docs/upload.gif)
 
 How you interface with reset hardware on each system is going to differ and it may not be possible to override the systems reset signal in all cases. The reset pin on the PicoROM does not only have to be used for system resets, it can be treated as a generic controllable output.
 
@@ -98,4 +101,7 @@ If you are upgrading a device that already has at least firmware version 1.7 ins
 If your PicoROM has gotten into some kind of broken state you can force it into USB boot mode by bridging the `USB` and `GND` connections on the unsoldered header next the the RP2040 and then powering the device on. It's pretty small and hard to see but a small bit of wire should fit in there and make enough contact.
 
 ![USB Boot header location](docs/usb_boot.jpg)
+
+Once the firmware has been copied over, power-cycle the PicoROM and then run `picorom list` to ensure it is present. You can use `picorom get` to query the current firmware version to ensure the installation or upgrade was successful.
+
 
