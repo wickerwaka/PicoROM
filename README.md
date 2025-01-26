@@ -72,7 +72,9 @@ How you interface with reset hardware on each system is going to differ and it m
 ### Standalone
 The PicoROM draws its power from either the USB-C connection or from the 5V VCC input at pin 32. This means that the PicoROM can function like a regular standalone ROM chip without any USB connection. There are is a caveat though. At startup the ROM data needs to be read from flash memory and copied into the static RAM of the RP2040. This process takes approximately 8ms and any ROM accesses will be ignored until it completes. This process itself won't start until the RP2040 itself has powered up and determined that its supply voltage is stable, so there may be additional delays caused by that. Some systems have reset control circuitry that delays full startup of the system until the supply voltage has been stable for a certain amount of time. If this delay is longer than 8ms then a PicoROM will probably function fine.
 
-![Air Assault M107 running standalone with four PicoROMs](docs/standalone.jpg)
+| ![Air Assault M107 running standalone with four PicoROMs](docs/standalone.jpg) |
+|:-:|
+| *Air Assault M107 running standalone with four PicoROMs* |
 
 The reset signal can be used to mitigate this problem in some cases. You can specify a reset value that will be asserted while the initial copy is happening by setting the `initial_reset` parameter.
 
@@ -89,4 +91,11 @@ The worst case access time in 70ns. That is measured as the time from when an ad
 The delay from the output and chip enable signals being assert to the data bus becoming active is less variable and has been measured to have a worse case of 40ns. This is usually referred to as "Output Enable to Output Delay" in datasheets. The inverse, the delay from output/chip enable deasserted to the data bus going high-impedance, has not been measured but it is assumed to be the same.
 
 ## Installation
+To use a PicoROM you will need the `picorom` command line application and the PicoROM firmware, both are available as part of a [release](https://github.com/wickerwaka/PicoROM/releases/latest). The `picorom` application is pre-built for Windows, MacOS (ARM and Intel) and Linux (ARMv7 and Intel). In the unlikely case that you platform is not supported you can try building it from source. Copy the correct version of the application into a location that is in your path and rename it to just `picorom` (or `picorom.exe` for Windows users.) The firmware is a `.uf2` file named something like `PicoROM-2MBit-VERSION.uf2`. There are several ways that the firmware file can be loaded onto a PicoROM, but they all involved getting the device into USB boot mode. At the point it will appear as a USB mass storage device and all you need to do is copy the `.uf2` file to it.
+
+If you are upgrading a device that already has at least firmware version 1.7 installed then you can use the `picorom usb-boot` command to reboot it into USB boot mode and then copy the firmware file to it. You can also use the RP2040 `picotool` to reboot and upload the firmware image. I won't cover that here but you can find instructions on the [picotool github page](https://github.com/raspberrypi/picotool).
+
+If your PicoROM has gotten into some kind of broken state you can force it into USB boot mode by bridging the `USB` and `GND` connections on the unsoldered header next the the RP2040 and then powering the device on. It's pretty small and hard to see but a small bit of wire should fit in there and make enough contact.
+
+![USB Boot header location](docs/usb_boot.jpg)
 
