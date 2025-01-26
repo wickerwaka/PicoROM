@@ -3,6 +3,8 @@
 # PicoROM
 PicoROM is an 8-bit ROM emulator in a DIP-32 compatible form factor. It's main use case (the reason I made it) is for rapid iteration when experimenting with arcade hardware. The PicoROM can emulate ROMs up to 2MBit (256Kbytes) in size and access times of 70ns. Its size allows it to fit into almost any ROM socket regardless of how crowded the board might be.
 
+![Header Image](docs/use_collage.jpg)
+
 Feature Summary
 - DIP-32 form factor
 - 2MBit (256KByte) storage
@@ -69,6 +71,8 @@ How you interface with reset hardware on each system is going to differ and it m
 
 ### Standalone
 The PicoROM draws it's power from either the USB-C connection or from the 5V VCC input at pin 32. This means that the PicoROM can function like a regular standalone ROM chip without any USB connection. There are is a caveat though. At startup the ROM data needs to be read from flash memory and copied into the static RAM of the RP2040. This process takes approximately 8ms and any ROM accesses will be ignored until it completes. This process itself won't start until the RP2040 itself has powered up and determined that it's supply voltage is stable, so there may be additional delays caused by that. Some systems have reset control circuitry that delays full startup of the system until the supply voltage has been stable for a certain amount of time. If this delay is longer than 8ms then a PicoROM will probably function fine.
+
+![Air Assault M107 running standalone with four PicoROMs](docs/standalone.jpg)
 
 The reset signal can be used to mitigate this problem in some cases. You can specify a reset value that will be asserted while the initial copy is happening by setting the `initial_reset` parameter.
 
