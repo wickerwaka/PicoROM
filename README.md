@@ -1,7 +1,7 @@
 ![Header Image](docs/header.jpg)
 
 # PicoROM
-PicoROM is an 8-bit ROM emulator in a DIP-32 compatible form factor. It's main use case (the reason I made it) is for rapid iteration when experimenting with arcade hardware. The PicoROM can emulate ROMs up to 2MBit (256Kbytes) in size and access times of 70ns. Its size allows it to fit into almost any ROM socket regardless of how crowded the board might be.
+PicoROM is an 8-bit ROM emulator in a DIP-32 compatible form factor. Its main use case (the reason I made it) is for rapid iteration when experimenting with arcade hardware. The PicoROM can emulate ROMs up to 2MBit (256Kbytes) in size and access times of 70ns. Its size allows it to fit into almost any ROM socket regardless of how crowded the board might be.
 
 ![Header Image](docs/use_collage.jpg)
 
@@ -37,7 +37,7 @@ foo:~ $ picorom upload cpu_low cpu_low.bin
 Uploading ROM [################################################################] Done.
 ```
 
-Once the upload is complete (which should only take about a second) the PicoROM will start returning this data for any access requests it receives on it's address pins. The uploaded data is stored in RAM on the PicoROM so if the device is powered off the data will be lost. You can also store a copy of the data into flash memory, from there it will be loaded into RAM whenever the device starts up. You can do this by either passing the `-s` parameter to the `upload` command or by running the `commit` command. The commit command will copy whatever is currently in RAM into flash memory.
+Once the upload is complete (which should only take about a second) the PicoROM will start returning this data for any access requests it receives on its address pins. The uploaded data is stored in RAM on the PicoROM so if the device is powered off the data will be lost. You can also store a copy of the data into flash memory, from there it will be loaded into RAM whenever the device starts up. You can do this by either passing the `-s` parameter to the `upload` command or by running the `commit` command. The commit command will copy whatever is currently in RAM into flash memory.
 
 ```console
 foo:~ $ picorom upload cpu_low cpu_low.bin -s
@@ -70,7 +70,7 @@ upload: cpu_low.bin cpu_high.bin
 How you interface with reset hardware on each system is going to differ and it may not be possible to override the systems reset signal in all cases. The reset pin on the PicoROM does not only have to be used for system resets, it can be treated as a generic controllable output.
 
 ### Standalone
-The PicoROM draws it's power from either the USB-C connection or from the 5V VCC input at pin 32. This means that the PicoROM can function like a regular standalone ROM chip without any USB connection. There are is a caveat though. At startup the ROM data needs to be read from flash memory and copied into the static RAM of the RP2040. This process takes approximately 8ms and any ROM accesses will be ignored until it completes. This process itself won't start until the RP2040 itself has powered up and determined that it's supply voltage is stable, so there may be additional delays caused by that. Some systems have reset control circuitry that delays full startup of the system until the supply voltage has been stable for a certain amount of time. If this delay is longer than 8ms then a PicoROM will probably function fine.
+The PicoROM draws its power from either the USB-C connection or from the 5V VCC input at pin 32. This means that the PicoROM can function like a regular standalone ROM chip without any USB connection. There are is a caveat though. At startup the ROM data needs to be read from flash memory and copied into the static RAM of the RP2040. This process takes approximately 8ms and any ROM accesses will be ignored until it completes. This process itself won't start until the RP2040 itself has powered up and determined that its supply voltage is stable, so there may be additional delays caused by that. Some systems have reset control circuitry that delays full startup of the system until the supply voltage has been stable for a certain amount of time. If this delay is longer than 8ms then a PicoROM will probably function fine.
 
 ![Air Assault M107 running standalone with four PicoROMs](docs/standalone.jpg)
 
