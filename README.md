@@ -14,35 +14,42 @@ Each PicoROM device has a name that is used to identify it when running commands
 
 ```console
 foo:~ $ picorom list
-dot do
-dot dot
+Available PicoROMs:
+  E66138528361BB3  [/dev/cu.usbmodem101]
+  E661385490CD014  [/dev/cu.usbmodem102]
 ```
 
 PicoROMs use a unique hardware ID from their flash memory as their default name. I usually name the PicoROMs based on how they are currently being used. An arcade board might have two ROMs for the main CPU, one for the lower 8-bits and one for the upper, so you could name the PicoROMs `cpu_low` and `cpu_high`. You can then target those PicoROMs in your makefiles or other scripts. You can change a PicoROMs name using the `picorom rename` command. 
 
 ```console
-foo:~ $ picorom rename E434324324 cpu_low
+foo:~ $ picorom rename E66138528361BB3 cpu_low
+Renamed 'E66138528361BB3' to 'cpu_low'
 ```
 
 Most `picorom` commands take the form of `picorom <COMMAND> <NAME> <ARGUMENTS...>` where `<NAME>` is the name of the device you are targetting. The single most important and useful `picorom` command is `upload` which uploads a binary image to the PicoROM.
 
 ```console
 foo:~ $ picorom upload cpu_low cpu_low.bin
+Uploading ROM [################################################################] Done.
 ```
 
 Once the upload is complete (which should only take about a second) the PicoROM will start returning this data for any access requests it receives on it's address pins. The uploaded data is stored in RAM on the PicoROM so if the device is powered off the data will be lost. You can also store a copy of the data into flash memory, from there it will be loaded into RAM whenever the device starts up. You can do this by either passing the `-s` parameter to the `upload` command or by running the `commit` command. The commit command will copy whatever is currently in RAM into flash memory.
 
 ```console
 foo:~ $ picorom upload cpu_low cpu_low.bin -s
-
+Uploading ROM [################################################################] Done.
+Storing to Flash - Done.
 
 foo:~ $ picorom commit cpu_low
+Storing to Flash - Done.
+
 ```
 
 The PicoROM operates in 2Mbit mode by default. So if you upload a smaller image, 1MBit for instance, then that will only occupy half the ROM space and the other half will be undefined. You can instruct the PicoROM to emulate smaller ROM sizes by passing a size parameter to the `upload` command.
 
 ```console
 foo:~ $ picorom upload cpu_low cpu_low_1mbit.bin 1MBit
+Uploading ROM [################################################################] Done.
 ```
 
 ### Reset Control
@@ -65,6 +72,7 @@ The reset signal can be used to mitigate this problem in some cases. You can spe
 
 ```console
 foo:~ $ picorom set cpu_low initial_reset high
+initial_reset=high
 ```
 
 
