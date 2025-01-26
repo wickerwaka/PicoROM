@@ -3,7 +3,7 @@ include(pico_sdk_import.cmake)
 project(rom_emulator C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
-set(VERSION 2.0)
+set(VERSION 1.7)
 string(REPLACE . _ FILENAME_VERSION ${VERSION})
 
 pico_sdk_init()
@@ -15,7 +15,7 @@ target_compile_definitions(boot_div4 PRIVATE PICO_FLASH_SPI_CLKDIV=4)
 
 foreach(BUILD_CONFIG 2MBit 1MBit_Clock)
     set(TARGET PicoROM-${BUILD_CONFIG}-${FILENAME_VERSION})
-    add_executable(${TARGET}
+    add_executable(${TARGET} EXCLUDE_FROM_ALL
         main.cpp
         flash.cpp
         pico_link.cpp
@@ -70,4 +70,4 @@ target_compile_definitions(PicoROM-1MBit_Clock-${FILENAME_VERSION} PRIVATE
     FEATURE_CLOCK=1
 )
 
-
+set_target_properties(PicoROM-2MBit-${FILENAME_VERSION} PROPERTIES EXCLUDE_FROM_ALL FALSE)
