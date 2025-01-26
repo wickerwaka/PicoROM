@@ -118,6 +118,7 @@ pub enum RespPacket {
     Debug(String, u32, u32),
 }
 
+#[derive(Debug)]
 pub struct PicoLink {
     port: Box<dyn SerialPort>,
     debug: bool,
@@ -132,8 +133,8 @@ struct RawPacket {
 
 impl PicoLink {
     pub fn open(port_path: &str, debug: bool) -> Result<PicoLink> {
-        let mut port = serialport::new(port_path, 9600)
-            .timeout(std::time::Duration::from_millis(500))
+        let mut port = serialport::new(port_path, 0)
+            .timeout(std::time::Duration::from_millis(1000))
             .open()?;
 
         let expected = "PicoROM Hello".as_bytes();
@@ -566,7 +567,6 @@ pub fn find_pico(name: &str) -> Result<PicoLink> {
         if let Ok(mut link) = PicoLink::open(path, false) {
             if let Ok(ident) = link.get_parameter("name") {
                 if ident == name {
-                    println!("Found in cache");
                     return Ok(link);
                 }
             }
