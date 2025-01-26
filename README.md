@@ -77,6 +77,12 @@ foo:~ $ picorom set cpu_low initial_reset high
 initial_reset=high
 ```
 
+## Performance
+The worst case access time in 70ns. That is measured as the time from when an address is asserted on the address bus to the time that the data is available on the data bus. In datasheets for ROMs and EPROMs this is often referred to as "Address to Output Delay." The PicoROM is a synchronous device running an instruction loop there is variablity in the access time depending on where in the loop the software is when an address is asserted.
+
+![Access time histogram](docs/270mhz_access_time.png)
+
+The delay from the output and chip enable signals being assert to the data bus becoming active is less variable and has been measured to have a worse case of 40ns. This is usually referred to as "Output Enable to Output Delay" in datasheets. The inverse, the delay from output/chip enable deasserted to the data bus going high-impedance, has not been measured but it is assumed to be the same.
 
 ## Installation
 
