@@ -133,14 +133,15 @@ struct RawPacket {
 
 impl PicoLink {
     pub fn open(port_path: &str, debug: bool) -> Result<PicoLink> {
-        let mut port = serialport::new(port_path, 0)
+        let baud_rate = if cfg!(target_os = "macos") { 0 } else { 9600 };
+
+        let mut port = serialport::new(port_path, baud_rate)
             .timeout(std::time::Duration::from_millis(1000))
+            .dtr_on_open(true)
             .open()?;
 
         let expected = "PicoROM Hello".as_bytes();
         let mut preamble = Vec::new();
-
-        port.write_data_terminal_ready(true)?;
 
         while preamble.len() < expected.len() && !preamble.ends_with(&expected) {
             let mut buf = [0u8];
