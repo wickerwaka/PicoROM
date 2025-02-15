@@ -12,6 +12,8 @@ Feature Summary
 - USB or board powered
 - Reset line
 
+Fully assembled versions available for purchase from [Tindie.](https://www.tindie.com/products/pbretro/picorom/)
+
 ## Operation
 A PicoROM is controlled by the `picorom` tool on a PC via the USB connection. The `picorom` tool allows you to list PicoROMs attached to the system, rename them, set parameters and (most important of all) upload ROM data.
 Each PicoROM device has a name that is used to identify it when running commands. It is not uncommon to have multiple devices connected at once and want to send different data to each one. Arcade boards often have multiple ROMs to both increase the total memory size, to increase the bus width or both. You can get a list of the PicoROMs currently connected using the `picorom list` command:
