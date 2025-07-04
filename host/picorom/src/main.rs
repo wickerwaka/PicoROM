@@ -63,6 +63,15 @@ enum Commands {
         new: String,
     },
 
+    /// Swap the names of two PicoROM devices.
+    NameSwap {
+        /// First device name.
+        first: String,
+        /// Second device name.
+        second: String,
+    },
+
+
     /// Upload a ROM image to a PicoROM
     Upload {
         /// PicoROM device name.
@@ -149,6 +158,14 @@ fn main() -> Result<()> {
             let mut pico = find_pico(&current)?;
             pico.set_ident(&new)?;
             println!("Renamed '{}' to '{}'", current, new);
+        }
+        Commands::NameSwap { first, second } => {
+            let mut pico_a = find_pico(&first)?;
+            let mut pico_b = find_pico(&second)?;
+            pico_a.set_ident(&second)?;
+            pico_b.set_ident(&first)?;
+            println!("Renamed '{}' to '{}'", first, second);
+            println!("Renamed '{}' to '{}'", second, first);
         }
         Commands::Upload {
             name,

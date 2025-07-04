@@ -16,6 +16,23 @@ static void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) 
     register uint32_t r1 __asm__("r1") = ADDR_MASK;
     register uint32_t r2 __asm__("r2") = (uint32_t)&prg_data_output.pio()->txf[prg_data_output.sm];
 
+#if defined(FEATURE_STABLE_ADDRESS)
+    __asm__ volatile(
+          "ldr r5, =0xd0000004 \n\t"
+          "loop:               \n\t" //                         Cycles  Loop1 Loop2
+          "ldr r3, [r5]        \n\t" // Read GPIO in r3         1       1     12
+          "and r3, r1          \n\t" // AND with ADDR_MASK      1       2     13
+          "ldr r4, [r5]        \n\t" // Read GPIO in r4         1       3     14
+          "and r4, r1          \n\t" // AND with ADDR_MASK      1       4     15
+          "cmp r4, r3          \n\t" //                         1       5     16
+          "bne loop            \n\t" //                         1       6     17
+          "ldrb r3, [r0, r3]   \n\t" // Read from rom_data      2       8     19
+          "strb r3, [r2]       \n\t" // Write to FIFO           1       9     20
+          "b loop              \n\t" // Loop                    2       11
+          : "+r"(r0), "+r"(r1), "+r"(r2)
+          :
+          : "r4", "r5", "cc", "memory");
+#else
     __asm__ volatile(
           "ldr r5, =0xd0000004 \n\t"
           "loop:               \n\t" //                         Cycles  Loop1 Loop2
@@ -27,7 +44,7 @@ static void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) 
           : "+r"(r0), "+r"(r1), "+r"(r2)
           :
           : "r5", "cc", "memory");
-
+#endif
     __builtin_unreachable();
 }
 
