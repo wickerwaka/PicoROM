@@ -14635,7 +14635,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C51118"
+		(property "MPN" "C23380830"
 			(at 100.33 46.99 0)
 			(effects
 				(font
@@ -15016,6 +15016,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C21404"
+			(at 365.76 196.85 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "92a9e7ff-c23b-4eb6-9b2a-58e535836389")
 		)
@@ -15132,7 +15141,7 @@
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
-		(dnp no)
+		(dnp yes)
 		(uuid "2a9d9ba7-8e06-47fa-86f3-13ca7b24374b")
 		(property "Reference" "J4"
 			(at 397.51 19.812 0)
@@ -15903,7 +15912,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "LED_SMD:LED_0603_1608Metric"
+		(property "Footprint" "LED_SMD:LED_0402_1005Metric"
 			(at 271.78 146.05 0)
 			(effects
 				(font
@@ -15930,7 +15939,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C2922668"
+		(property "MPN" "C434449"
 			(at 271.78 146.05 0)
 			(effects
 				(font
@@ -16815,6 +16824,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C21404"
+			(at 365.76 234.95 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "92a9e7ff-c23b-4eb6-9b2a-58e53583638a")
 		)
@@ -17356,7 +17374,7 @@
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
-		(dnp no)
+		(dnp yes)
 		(uuid "8d8e69c6-f0c4-428f-a411-08de957543ed")
 		(property "Reference" "J3"
 			(at 347.98 19.558 0)
@@ -17516,6 +17534,15 @@
 				(hide yes)
 			)
 		)
+		(property "MPN" "C21404"
+			(at 364.49 153.67 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
 		(pin "2"
 			(uuid "92a9e7ff-c23b-4eb6-9b2a-58e53583638b")
 		)
@@ -17577,7 +17604,7 @@
 				(justify right)
 			)
 		)
-		(property "Footprint" "LED_SMD:LED_0603_1608Metric"
+		(property "Footprint" "LED_SMD:LED_0402_1005Metric"
 			(at 260.35 146.05 0)
 			(effects
 				(font
@@ -17604,7 +17631,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C510027"
+		(property "MPN" "C25503345"
 			(at 260.35 146.05 0)
 			(effects
 				(font
@@ -17976,7 +18003,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C548916"
+		(property "MPN" "C2676234"
 			(at 69.85 247.65 0)
 			(effects
 				(font
@@ -18404,7 +18431,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C548916"
+		(property "MPN" "C2676234"
 			(at 110.49 247.65 0)
 			(effects
 				(font
@@ -18536,7 +18563,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C458263"
+		(property "MPN" "C548858"
 			(at 270.51 247.65 0)
 			(effects
 				(font
@@ -18633,7 +18660,7 @@
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
-		(dnp no)
+		(dnp yes)
 		(fields_autoplaced yes)
 		(uuid "a3e99137-7db7-4835-bbf3-c77f7d3ef40e")
 		(property "Reference" "J2"
@@ -19439,7 +19466,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C548916"
+		(property "MPN" "C2676234"
 			(at 154.94 247.65 0)
 			(effects
 				(font
