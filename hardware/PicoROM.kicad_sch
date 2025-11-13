@@ -7918,6 +7918,16 @@
 	)
 	(wire
 		(pts
+			(xy 290.83 127) (xy 290.83 132.08)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "8609d728-3fb7-4d54-80df-7f84abda57d5")
+	)
+	(wire
+		(pts
 			(xy 22.86 223.52) (xy 34.29 223.52)
 		)
 		(stroke
@@ -8818,6 +8828,16 @@
 	)
 	(wire
 		(pts
+			(xy 248.92 139.7) (xy 248.92 146.05)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "ca3dd225-e939-407c-8b27-b21e8476194c")
+	)
+	(wire
+		(pts
 			(xy 285.75 224.79) (xy 285.75 226.06)
 		)
 		(stroke
@@ -8885,6 +8905,16 @@
 			(type default)
 		)
 		(uuid "cd03f79c-60dd-4316-85d6-b7a9109b4eb5")
+	)
+	(wire
+		(pts
+			(xy 290.83 139.7) (xy 290.83 153.67)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "cdc1b0f1-3d2a-46cd-81f3-a2d8f1986cda")
 	)
 	(wire
 		(pts
@@ -9115,6 +9145,16 @@
 			(type default)
 		)
 		(uuid "dc4aae2c-d281-4a5c-9bd0-4dc57d46d488")
+	)
+	(wire
+		(pts
+			(xy 248.92 129.54) (xy 248.92 132.08)
+		)
+		(stroke
+			(width 0)
+			(type default)
+		)
+		(uuid "dd2db1f3-5924-4fc7-80a2-f1fc9816585a")
 	)
 	(wire
 		(pts
@@ -10126,6 +10166,16 @@
 		)
 		(uuid "5b487d24-0d0a-49e2-8899-e6cce4417ef8")
 	)
+	(label "~{BUF_OE}"
+		(at 248.92 146.05 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "5e016f05-ce6a-4362-89b8-e8a0b46535fd")
+	)
 	(label "PIN_A12"
 		(at 123.19 252.73 0)
 		(effects
@@ -10585,6 +10635,16 @@
 			(justify left bottom)
 		)
 		(uuid "a330fbfc-93e6-4cb7-b098-d788d46417b1")
+	)
+	(label "~{EXT_RESET_EN}"
+		(at 290.83 127 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "a48a1d48-1ad6-4b83-8575-fe6aa050b407")
 	)
 	(label "A15"
 		(at 245.11 149.86 180)
@@ -14517,6 +14577,71 @@
 		)
 	)
 	(symbol
+		(lib_id "power:+3V3")
+		(at 248.92 129.54 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "0a5466f7-feea-4eec-b941-bf4777693eca")
+		(property "Reference" "#PWR041"
+			(at 248.92 133.35 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "+3V3"
+			(at 249.301 125.1458 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 248.92 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 248.92 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 248.92 129.54 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "3af32ff5-0315-47ab-ae4d-c42934a306a3")
+		)
+		(instances
+			(project "PicoROM"
+				(path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
+					(reference "#PWR041")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "power:+5V")
 		(at 80.01 41.91 0)
 		(unit 1)
@@ -14897,6 +15022,82 @@
 		)
 	)
 	(symbol
+		(lib_id "Device:R")
+		(at 290.83 135.89 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "175ff918-9a60-4f55-97eb-192b6e7a02e0")
+		(property "Reference" "R29"
+			(at 296.0878 135.89 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "1k"
+			(at 293.7764 135.89 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0201_0603Metric"
+			(at 292.608 135.89 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 290.83 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 290.83 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C270335"
+			(at 290.83 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "0dadcc90-7f8e-4f41-93ee-45c7b303d256")
+		)
+		(pin "2"
+			(uuid "04e24877-9a19-4089-bfb3-f6bdf46d604b")
+		)
+		(instances
+			(project "PicoROM"
+				(path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
+					(reference "R29")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_name "GND_1")
 		(lib_id "power:GND")
 		(at 22.86 223.52 0)
@@ -15139,9 +15340,9 @@
 		(at 397.51 38.1 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
-		(dnp yes)
+		(dnp no)
 		(uuid "2a9d9ba7-8e06-47fa-86f3-13ca7b24374b")
 		(property "Reference" "J4"
 			(at 397.51 19.812 0)
@@ -16388,6 +16589,71 @@
 		)
 	)
 	(symbol
+		(lib_id "power:GND")
+		(at 290.83 153.67 0)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "74ef396a-d53b-4232-9f4c-dfb02d5c81ee")
+		(property "Reference" "#PWR033"
+			(at 290.83 160.02 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Value" "GND"
+			(at 290.957 158.0642 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" ""
+			(at 290.83 153.67 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" ""
+			(at 290.83 153.67 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 290.83 153.67 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "f087f0d9-e7e1-4176-9341-21287081acff")
+		)
+		(instances
+			(project "PicoROM"
+				(path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
+					(reference "#PWR033")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
 		(lib_id "Device:R")
 		(at 271.78 135.89 180)
 		(unit 1)
@@ -17372,9 +17638,9 @@
 		(mirror y)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
-		(dnp yes)
+		(dnp no)
 		(uuid "8d8e69c6-f0c4-428f-a411-08de957543ed")
 		(property "Reference" "J3"
 			(at 347.98 19.558 0)
@@ -18658,9 +18924,9 @@
 		(at 364.49 114.3 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
-		(dnp yes)
+		(dnp no)
 		(fields_autoplaced yes)
 		(uuid "a3e99137-7db7-4835-bbf3-c77f7d3ef40e")
 		(property "Reference" "J2"
@@ -19330,6 +19596,82 @@
 			(project "PicoROM"
 				(path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
 					(reference "#PWR027")
+					(unit 1)
+				)
+			)
+		)
+	)
+	(symbol
+		(lib_id "Device:R")
+		(at 248.92 135.89 180)
+		(unit 1)
+		(exclude_from_sim no)
+		(in_bom yes)
+		(on_board yes)
+		(dnp no)
+		(uuid "ca54d659-39ff-4ba2-adad-b5e93c60401a")
+		(property "Reference" "R30"
+			(at 254.1778 135.89 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Value" "1k"
+			(at 251.8664 135.89 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+			)
+		)
+		(property "Footprint" "Resistor_SMD:R_0201_0603Metric"
+			(at 250.698 135.89 90)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Datasheet" "~"
+			(at 248.92 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "Description" ""
+			(at 248.92 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(property "MPN" "C270335"
+			(at 248.92 135.89 0)
+			(effects
+				(font
+					(size 1.27 1.27)
+				)
+				(hide yes)
+			)
+		)
+		(pin "1"
+			(uuid "76d4eca1-406a-4e02-b043-99b2fdb7def7")
+		)
+		(pin "2"
+			(uuid "505947ea-bd6a-454b-a241-e64625ce6525")
+		)
+		(instances
+			(project "PicoROM"
+				(path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
+					(reference "R30")
 					(unit 1)
 				)
 			)
