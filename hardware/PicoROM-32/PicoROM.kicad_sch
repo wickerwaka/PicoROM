@@ -3670,7 +3670,7 @@
 					)
 				)
 			)
-			(property "Footprint" "RP2040_minimal:RP2040-QFN-56"
+			(property "Footprint" "PicoROM:RP2040-QFN-56"
 				(at -19.05 0 0)
 				(effects
 					(font
@@ -10944,7 +10944,7 @@
 				)
 			)
 		)
-		(property "Footprint" "RP2040_minimal:RP2040-QFN-56"
+		(property "Footprint" "PicoROM:RP2040-QFN-56"
 			(at 179.07 144.78 0)
 			(effects
 				(font
@@ -14467,7 +14467,7 @@
 				)
 			)
 		)
-		(property "Footprint" "RP2040_minimal:X2QFN-8_L1.5-W1.5-P0.50-BL"
+		(property "Footprint" "PicoROM:X2QFN-8_L1.5-W1.5-P0.50-BL"
 			(at 328.93 133.35 0)
 			(effects
 				(font
@@ -16455,7 +16455,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "RP2040_minimal:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
+		(property "Footprint" "PicoROM:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
 			(at 69.85 238.76 0)
 			(effects
 				(font
@@ -16807,7 +16807,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "RP2040_minimal:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
+		(property "Footprint" "PicoROM:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
 			(at 110.49 238.76 0)
 			(effects
 				(font
@@ -16939,7 +16939,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "RP2040_minimal:DHVQFN24_L5.5-W3.5-P0.50-BL-EP"
+		(property "Footprint" "PicoROM:DHVQFN24_L5.5-W3.5-P0.50-BL-EP"
 			(at 269.24 255.27 0)
 			(effects
 				(font
@@ -17752,7 +17752,7 @@
 				(justify left)
 			)
 		)
-		(property "Footprint" "RP2040_minimal:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
+		(property "Footprint" "PicoROM:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
 			(at 154.94 238.76 0)
 			(effects
 				(font

@@ -4097,7 +4097,7 @@
 			)
 		)
 	)
-	(footprint "RP2040_minimal:RP2040-QFN-56"
+	(footprint "PicoROM:RP2040-QFN-56"
 		(layer "F.Cu")
 		(uuid "85be1bb5-61f0-4830-988f-157a5ca98fe2")
 		(at 95.693122 63.319035 -135)
@@ -4127,7 +4127,7 @@
 				)
 			)
 		)
-		(property "Footprint" "RP2040_minimal:RP2040-QFN-56"
+		(property "Footprint" "PicoROM:RP2040-QFN-56"
 			(at 0 0 -135)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -5615,7 +5615,7 @@
 				(xyz 0 0 0)
 			)
 		)
-		(model "3dshapes/USON-8_L2-W3-H0.6X0.5P.wrl"
+		(model "../3dshapes/USON-8_L2-W3-H0.6X0.5P.wrl"
 			(offset
 				(xyz 0 0 0)
 			)
@@ -6744,7 +6744,7 @@
 				(xyz 0 0 0)
 			)
 		)
-		(model "3dshapes/USB-C-SMD_GT-USB-7051A.wrl"
+		(model "../3dshapes/USB-C-SMD_GT-USB-7051A.wrl"
 			(offset
 				(xyz 0 0 6.3)
 			)
@@ -7951,7 +7951,7 @@
 			)
 		)
 	)
-	(footprint "RP2040_minimal:DHVQFN24_L5.5-W3.5-P0.50-BL-EP"
+	(footprint "PicoROM:DHVQFN24_L5.5-W3.5-P0.50-BL-EP"
 		(layer "F.Cu")
 		(uuid "b9b4ed1b-ce79-4208-bf6c-9f0e162ea8fd")
 		(at 87.295 67.9 -90)
@@ -7978,7 +7978,7 @@
 				)
 			)
 		)
-		(property "Footprint" "RP2040_minimal:DHVQFN24_L5.5-W3.5-P0.50-BL-EP"
+		(property "Footprint" "PicoROM:DHVQFN24_L5.5-W3.5-P0.50-BL-EP"
 			(at 0 0 90)
 			(layer "F.Fab")
 			(hide yes)
@@ -8398,7 +8398,7 @@
 			(layers "F.Cu" "F.Paste" "F.Mask")
 			(uuid "da0f4eb8-d0ab-4d3c-8b49-e4aa989cd4ff")
 		)
-		(model "3dshapes/DHVQFN24_L5.5-W3.5-H0.9-P0.50-BL-EP.wrl"
+		(model "../3dshapes/DHVQFN24_L5.5-W3.5-H0.9-P0.50-BL-EP.wrl"
 			(offset
 				(xyz 0 -0 -0)
 			)
@@ -10855,7 +10855,7 @@
 			)
 		)
 	)
-	(footprint "RP2040_minimal:X2QFN-8_L1.5-W1.5-P0.50-BL"
+	(footprint "PicoROM:X2QFN-8_L1.5-W1.5-P0.50-BL"
 		(layer "F.Cu")
 		(uuid "edbef16e-02dc-4446-8bd3-510b8e3cd2f3")
 		(at 105.06 59.8 180)
@@ -10882,7 +10882,7 @@
 				)
 			)
 		)
-		(property "Footprint" "RP2040_minimal:X2QFN-8_L1.5-W1.5-P0.50-BL"
+		(property "Footprint" "PicoROM:X2QFN-8_L1.5-W1.5-P0.50-BL"
 			(at 0 0 360)
 			(layer "F.Fab")
 			(hide yes)
@@ -11132,7 +11132,7 @@
 			(pintype "unspecified+no_connect")
 			(uuid "1ef0ee09-0616-413c-85cd-a941a3ddc5db")
 		)
-		(model "3dshapes/X2QFN-8_L1.5-W1.5-P0.50-BL.wrl"
+		(model "../3dshapes/X2QFN-8_L1.5-W1.5-P0.50-BL.wrl"
 			(offset
 				(xyz 0.01 0.02 -0)
 			)
@@ -12222,7 +12222,7 @@
 			)
 		)
 	)
-	(footprint "RP2040_minimal:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
+	(footprint "PicoROM:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
 		(layer "B.Cu")
 		(uuid "0ac92a85-b1c7-4a69-a710-8923b490f5a0")
 		(at 105.345 60.8375 180)
@@ -12251,7 +12251,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Footprint" "RP2040_minimal:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
+		(property "Footprint" "PicoROM:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
 			(at 0 0 0)
 			(layer "B.Fab")
 			(hide yes)
@@ -12620,7 +12620,7 @@
 			(layers "B.Cu" "B.Paste" "B.Mask")
 			(uuid "bdc4473f-1b84-445c-99ec-60b0e37ac3a4")
 		)
-		(model "3dshapes/V-QFN4525-20_L4.5-W2.5-P0.50-BL.wrl"
+		(model "../3dshapes/V-QFN4525-20_L4.5-W2.5-P0.50-BL.wrl"
 			(offset
 				(xyz 0 -0 -0)
 			)
@@ -12632,7 +12632,7 @@
 			)
 		)
 	)
-	(footprint "RP2040_minimal:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
+	(footprint "PicoROM:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
 		(layer "B.Cu")
 		(uuid "234874e2-2c01-4b44-99ce-4aaeb6770aa7")
 		(at 110.245 64.5 90)
@@ -12661,7 +12661,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Footprint" "RP2040_minimal:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
+		(property "Footprint" "PicoROM:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
 			(at 0 0 90)
 			(layer "B.Fab")
 			(hide yes)
@@ -13030,7 +13030,7 @@
 			(layers "B.Cu" "B.Paste" "B.Mask")
 			(uuid "a1495b0b-02df-42e0-8d9e-14560bca3fef")
 		)
-		(model "3dshapes/V-QFN4525-20_L4.5-W2.5-P0.50-BL.wrl"
+		(model "../3dshapes/V-QFN4525-20_L4.5-W2.5-P0.50-BL.wrl"
 			(offset
 				(xyz 0 -0 -0)
 			)
@@ -13804,7 +13804,7 @@
 			)
 		)
 	)
-	(footprint "RP2040_minimal:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
+	(footprint "PicoROM:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
 		(layer "B.Cu")
 		(uuid "5a2c060c-c9a4-4adf-b078-79ac1e5ce312")
 		(at 105.47 68.4)
@@ -13833,7 +13833,7 @@
 				(justify mirror)
 			)
 		)
-		(property "Footprint" "RP2040_minimal:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
+		(property "Footprint" "PicoROM:V-QFN4525-20_L4.5-W2.5-P0.50-BL"
 			(at 0 0 360)
 			(layer "B.Fab")
 			(hide yes)
@@ -14202,7 +14202,7 @@
 			(layers "B.Cu" "B.Paste" "B.Mask")
 			(uuid "1a50297f-4570-4d9c-bf24-595030a089f1")
 		)
-		(model "3dshapes/V-QFN4525-20_L4.5-W2.5-P0.50-BL.wrl"
+		(model "../3dshapes/V-QFN4525-20_L4.5-W2.5-P0.50-BL.wrl"
 			(offset
 				(xyz 0 -0 -0)
 			)
