@@ -124,6 +124,7 @@ static void rom_pio_init_output_enable_report_program()
     {
         PRG_LOCAL(prg_report_data_access, p, sm, offset, cfg);
 
+        // TODO - should we use BASE_OE_PIN here? 
         // This program looks at all input pins
         sm_config_set_in_pins(&cfg, 0);
 
@@ -137,6 +138,7 @@ static void rom_pio_init_output_enable_report_program()
     }
 }
 
+#if defined(FEATURE_TCA)
 static void rom_pio_init_tca_program()
 {
     if (prg_write_tca_bits.valid())
@@ -155,6 +157,7 @@ static void rom_pio_init_tca_program()
         pio_sm_set_enabled(p, sm, true);
     }
 }
+#endif
 
 void rom_init_programs()
 {
@@ -183,19 +186,37 @@ void rom_init_programs()
     gpio_set_inover(BUF_OE_PIN, GPIO_OVERRIDE_LOW);
     gpio_set_slew_rate(BUF_OE_PIN, GPIO_SLEW_RATE_FAST);
 
+#if defined(FEATURE_TCA)
     pio_gpio_init(prg_write_tca_bits.pio(), TCA_EXPANDER_PIN);
     gpio_set_input_enabled(TCA_EXPANDER_PIN, false);
     gpio_set_inover(TCA_EXPANDER_PIN, GPIO_OVERRIDE_LOW);
     gpio_set_drive_strength(TCA_EXPANDER_PIN, GPIO_DRIVE_STRENGTH_2MA);
+    rom_pio_init_tca_program();
+#endif
+
+#if 1
+    gpio_init(INFO_LED_PIN);
+    gpio_set_input_enabled(INFO_LED_PIN, false);
+    gpio_set_inover(INFO_LED_PIN, GPIO_OVERRIDE_LOW);
+    gpio_set_dir(INFO_LED_PIN, true);
+    gpio_put(INFO_LED_PIN, false);
+
+    gpio_init(BUF_DIR_PIN);
+    gpio_set_input_enabled(BUF_DIR_PIN, false);
+    gpio_set_inover(BUF_DIR_PIN, GPIO_OVERRIDE_LOW);
+    gpio_set_dir(BUF_DIR_PIN, true);
+    gpio_put(BUF_DIR_PIN, false);
+#endif
 
     rom_pio_init_output_program();
     rom_pio_init_pindirs_program();
     rom_pio_init_output_enable_program();
     rom_pio_init_output_enable_report_program();
-    rom_pio_init_tca_program();
 
+#if defined(FEATURE_TCA)
     tca_set_pins(0x00);
     tca_set_pins(0x00);
+#endif
 }
 
 uint8_t *rom_get_buffer()
@@ -227,6 +248,7 @@ bool rom_check_oe()
     return false;
 }
 
+#if defined(FEATURE_TCA)
 static uint8_t tca_pins_state = 0x0;
 void tca_set_pins(uint8_t pins)
 {
@@ -248,3 +270,4 @@ void tca_set_pin(int pin, bool en)
         tca_set_pins(new_state);
     }
 }
+#endif
