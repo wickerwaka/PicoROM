@@ -6,8 +6,8 @@
 	(paper "A3")
 	(title_block
 		(title "PicoROM-28 - ROM Emulator")
-		(date "2025-11-30")
-		(rev "1.1")
+		(date "2025-12-08")
+		(rev "1.2")
 		(company "Martin Donlon (@wickerwaka)")
 		(comment 1 "DIP-28 Form factor")
 		(comment 2 "Based on RP2040 minimal example")
@@ -8632,16 +8632,6 @@
 	)
 	(wire
 		(pts
-			(xy 248.92 139.7) (xy 248.92 146.05)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "ca3dd225-e939-407c-8b27-b21e8476194c")
-	)
-	(wire
-		(pts
 			(xy 285.75 224.79) (xy 285.75 226.06)
 		)
 		(stroke
@@ -8959,16 +8949,6 @@
 			(type default)
 		)
 		(uuid "dc4aae2c-d281-4a5c-9bd0-4dc57d46d488")
-	)
-	(wire
-		(pts
-			(xy 248.92 129.54) (xy 248.92 132.08)
-		)
-		(stroke
-			(width 0)
-			(type default)
-		)
-		(uuid "dd2db1f3-5924-4fc7-80a2-f1fc9816585a")
 	)
 	(wire
 		(pts
@@ -9939,16 +9919,6 @@
 			(justify left bottom)
 		)
 		(uuid "5b487d24-0d0a-49e2-8899-e6cce4417ef8")
-	)
-	(label "~{BUF_OE}"
-		(at 248.92 146.05 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "5e016f05-ce6a-4362-89b8-e8a0b46535fd")
 	)
 	(label "PIN_A12"
 		(at 123.19 252.73 0)
@@ -14124,71 +14094,6 @@
 		)
 	)
 	(symbol
-		(lib_id "power:+3V3")
-		(at 248.92 129.54 0)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "0a5466f7-feea-4eec-b941-bf4777693eca")
-		(property "Reference" "#PWR041"
-			(at 248.92 133.35 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Value" "+3V3_SYS"
-			(at 251.46 124.968 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" ""
-			(at 248.92 129.54 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" ""
-			(at 248.92 129.54 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 248.92 129.54 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "3af32ff5-0315-47ab-ae4d-c42934a306a3")
-		)
-		(instances
-			(project "PicoROM"
-				(path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
-					(reference "#PWR041")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
 		(lib_id "power:+5V")
 		(at 80.01 30.48 0)
 		(unit 1)
@@ -15742,7 +15647,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C273601"
+		(property "MPN" "C71911"
 			(at 334.01 146.05 0)
 			(effects
 				(font
@@ -18319,7 +18224,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C71911"
+		(property "MPN" "C434450"
 			(at 323.85 146.05 0)
 			(effects
 				(font
@@ -18799,82 +18704,6 @@
 			(project "PicoROM"
 				(path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
 					(reference "#PWR027")
-					(unit 1)
-				)
-			)
-		)
-	)
-	(symbol
-		(lib_id "Device:R")
-		(at 248.92 135.89 180)
-		(unit 1)
-		(exclude_from_sim no)
-		(in_bom yes)
-		(on_board yes)
-		(dnp no)
-		(uuid "ca54d659-39ff-4ba2-adad-b5e93c60401a")
-		(property "Reference" "R30"
-			(at 254.1778 135.89 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Value" "1k"
-			(at 251.8664 135.89 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-			)
-		)
-		(property "Footprint" "Resistor_SMD:R_0201_0603Metric"
-			(at 250.698 135.89 90)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Datasheet" "~"
-			(at 248.92 135.89 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "Description" ""
-			(at 248.92 135.89 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(property "MPN" "C270335"
-			(at 248.92 135.89 0)
-			(effects
-				(font
-					(size 1.27 1.27)
-				)
-				(hide yes)
-			)
-		)
-		(pin "1"
-			(uuid "76d4eca1-406a-4e02-b043-99b2fdb7def7")
-		)
-		(pin "2"
-			(uuid "505947ea-bd6a-454b-a241-e64625ce6525")
-		)
-		(instances
-			(project "PicoROM"
-				(path "/80b3b6c6-0243-45ce-ae74-084f6c52b208"
-					(reference "R30")
 					(unit 1)
 				)
 			)
