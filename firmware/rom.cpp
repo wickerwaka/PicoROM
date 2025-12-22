@@ -194,7 +194,7 @@ void rom_init_programs()
     rom_pio_init_tca_program();
 #endif
 
-#if 1
+#if defined(FEATURE_28P)
     gpio_init(INFO_LED_PIN);
     gpio_set_input_enabled(INFO_LED_PIN, false);
     gpio_set_inover(INFO_LED_PIN, GPIO_OVERRIDE_LOW);
@@ -206,6 +206,12 @@ void rom_init_programs()
     gpio_set_inover(BUF_DIR_PIN, GPIO_OVERRIDE_LOW);
     gpio_set_dir(BUF_DIR_PIN, true);
     gpio_put(BUF_DIR_PIN, false);
+
+    gpio_init(RESET_PIN);
+    gpio_set_input_enabled(RESET_PIN, false);
+    gpio_set_inover(RESET_PIN, GPIO_OVERRIDE_LOW);
+    gpio_set_dir(RESET_PIN, true);
+    gpio_put(RESET_PIN, false);
 #endif
 
     rom_pio_init_output_program();
