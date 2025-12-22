@@ -1,5 +1,6 @@
 #include "pio_programs.h"
 
+#include "system.h"
 #include "comms.pio.h"
 #include "data_bus.pio.h"
 #include <hardware/pio.h>
@@ -51,7 +52,12 @@ bool pio_programs_init()
     add_program(pio0, 3, data_output, prg_data_output);
 
     add_program(pio1, 0, set_output_enable, prg_set_output_enable);
-    add_program(pio1, 1, report_data_access, prg_report_data_access);
+
+    if (BASE_OE_PIN == 20)
+        add_program(pio1, 1, report_data_access_20, prg_report_data_access);
+    else
+        add_program(pio1, 1, report_data_access_24, prg_report_data_access);
+
     add_program(pio1, 2, comms_clock, prg_comms_clock);
     add_program(pio1, 3, write_tca_bits, prg_write_tca_bits);
 

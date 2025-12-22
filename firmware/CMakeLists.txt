@@ -8,7 +8,6 @@ string(REPLACE . _ FILENAME_VERSION ${VERSION})
 
 pico_sdk_init()
 
-
 pico_define_boot_stage2(boot_div4 ${PICO_DEFAULT_BOOT_STAGE2_FILE})
 target_compile_definitions(boot_div4 PRIVATE PICO_FLASH_SPI_CLKDIV=4)
 
@@ -66,13 +65,17 @@ foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit)
     pico_set_program_version(${TARGET} ${VERSION})
 endforeach()
 
+target_compile_definitions(PicoROM-2MBit-${FILENAME_VERSION} PRIVATE
+    BOARD_32P_TCA=1
+)
+
 target_compile_definitions(PicoROM-2MBit_100ns-${FILENAME_VERSION} PRIVATE
+    BOARD_32P_TCA=1
     FEATURE_STABLE_ADDRESS=1
 )
 
 target_compile_definitions(PicoROM-28P_512KBit-${FILENAME_VERSION} PRIVATE
-    FEATURE_28PIN=1
-    FEATURE_STABLE_ADDRESS=1
+    BOARD_28P=1
 )
 
 set_target_properties(PicoROM-2MBit-${FILENAME_VERSION} PROPERTIES EXCLUDE_FROM_ALL FALSE)
