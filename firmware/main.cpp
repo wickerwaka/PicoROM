@@ -104,9 +104,23 @@ bool activity_timer_callback(repeating_timer_t * /*unused*/)
         link_count = 0;
     }
 
+#if defined(BOARD_32P_TCA)
     tca_set_pin(TCA_LINK_PIN, link_count < link_duty);
     tca_set_pin(TCA_READ_PIN, activity_count < activity_duty);
-
+#else
+    if (link_count < link_duty)
+    {
+        gpio_put(INFO_LED_PIN, true);
+    }
+    else if (activity_count < activity_duty)
+    {
+        gpio_put(INFO_LED_PIN, true);
+    }
+    else
+    {
+        gpio_put(INFO_LED_PIN, false);
+    }
+#endif
     activity_count++;
     link_count++;
 
@@ -120,19 +134,31 @@ void reset_set(ResetLevel level)
     switch (level)
     {
         case ResetLevel::Low:
+#if defined(BOARD_32P_TCA)
             tca_set_pin(TCA_RESET_VALUE_PIN, false);
             tca_set_pin(TCA_RESET_PIN, true);
+#else
+            gpio_put(RESET_PIN, false);
+#endif
             current_reset = ResetLevel::Low;
             break;
 
         case ResetLevel::High:
+#if defined(BOARD_32P_TCA)
             tca_set_pin(TCA_RESET_VALUE_PIN, true);
             tca_set_pin(TCA_RESET_PIN, true);
+#else
+            gpio_put(RESET_PIN, false);
+#endif
             current_reset = ResetLevel::High;
             break;
 
         default:
+#if defined(BOARD_32P_TCA)
             tca_set_pin(TCA_RESET_PIN, false);
+#else
+            gpio_put(RESET_PIN, true);
+#endif
             current_reset = ResetLevel::Z;
             break;
     }

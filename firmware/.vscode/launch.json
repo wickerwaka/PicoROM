@@ -2,28 +2,20 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Pico Debug",
-            "cwd": "${workspaceRoot}",
+            "name": "Cortex Debug",
+            "cwd": "${workspaceFolder}",
             "executable": "${command:cmake.launchTargetPath}",
             "request": "launch",
             "type": "cortex-debug",
-            "servertype": "openocd",
-            // This may need to be arm-none-eabi-gdb depending on your system
-            "gdbPath" : "arm-none-eabi-gdb",
-            "device": "RP2040",
-            "configFiles": [
-                "interface/cmsis-dap.cfg",
-                "target/rp2040.cfg"
-            ],
-            "svdFile": "${env:PICO_SDK_PATH}/src/rp2040/hardware_regs/rp2040.svd",
-            "runToMain": true,
-            // Work around for stopping at main on restart
-            "postRestartCommands": [
-                "break main",
-                "continue"
-            ],
-            "searchDir": ["/Users/akawaka/Source/openocd/tcl"],
-            "serverArgs": [ "-c adapter speed 5000" ]
+            "runToEntryPoint": "main",
+            "servertype": "jlink",
+            "serverpath": "/Applications/SEGGER/JLink_V888/JLinkGDBServerCLExe",
+            "serverArgs": [],
+            "device": "RP2040_M0_0",
+            "interface": "swd",
+            "serialNumber": "", //If you have more than one J-Link probe, add the serial number here.
+            "svdFile": "${env:PICO_SDK_PATH}/src/rp2040/hardware_regs/RP2040.svd",
+            "armToolchainPath": "/opt/homebrew/bin/"
         }
     ]
 }
