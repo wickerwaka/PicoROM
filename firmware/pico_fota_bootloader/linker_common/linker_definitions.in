@@ -1,0 +1,85 @@
+/*
+ * Copyright (c) 2024 Jakub Zimnol
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in
+ * all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
+/*
+    +-------------------------------------------+  <-- __FLASH_START (0x10000000)
+    |              Bootloader (36k)             |
+    +-------------------------------------------+  <-- __FLASH_INFO_APP_HEADER
+    |             App Header (4 bytes)          |
+    +-------------------------------------------+  <-- __FLASH_INFO_DOWNLOAD_HEADER
+    |         Download Header (4 bytes)         |
+    +-------------------------------------------+  <-- __FLASH_INFO_IS_DOWNLOAD_SLOT_VALID
+    |      Is Download Slot Valid (4 bytes)     |
+    +-------------------------------------------+  <-- __FLASH_INFO_IS_FIRMWARE_SWAPPED
+    |       Is Firmware Swapped (4 bytes)       |
+    +-------------------------------------------+  <-- __FLASH_INFO_IS_AFTER_ROLLBACK
+    |        Is After Rollback (4 bytes)        |
+    +-------------------------------------------+  <-- __FLASH_INFO_SHOULD_ROLLBACK
+    |         Should Rollback (4 bytes)         |
+    +-------------------------------------------+
+    |            Padding (4072 bytes)           |
+    +-------------------------------------------+  <-- __FLASH_APP_START
+    |         Flash Application Slot            |
+    +-------------------------------------------+  <-- __FLASH_DOWNLOAD_SLOT_START
+    |           Flash Download Slot             |
+    +-------------------------------------------+
+    |   Filesystem Block (FILESYSTEM_SIZE)      |
+    |              (Optional)                   |
+    +-------------------------------------------+  <-- __FLASH_END (FLASH_SIZE)
+*/
+
+__FLASH_START = 0x10000000;
+__FILESYSTEM_SIZE = (FILESYSTEM_SIZE * 1024);
+__FLASH_SIZE = FLASH_SIZE - __FILESYSTEM_SIZE;
+__BOOTLOADER_LENGTH = 36k;
+
+__FLASH_INFO_START = __FLASH_START + __BOOTLOADER_LENGTH;
+__FLASH_INFO_LENGTH = 4k;
+
+__FLASH_INFO_APP_HEADER = __FLASH_INFO_START;
+__FLASH_INFO_DOWNLOAD_HEADER = __FLASH_INFO_APP_HEADER + 4;
+__FLASH_INFO_IS_DOWNLOAD_SLOT_VALID = __FLASH_INFO_DOWNLOAD_HEADER + 4;
+__FLASH_INFO_IS_FIRMWARE_SWAPPED = __FLASH_INFO_IS_DOWNLOAD_SLOT_VALID + 4;
+__FLASH_INFO_IS_AFTER_ROLLBACK = __FLASH_INFO_IS_FIRMWARE_SWAPPED + 4;
+__FLASH_INFO_SHOULD_ROLLBACK = __FLASH_INFO_IS_AFTER_ROLLBACK + 4;
+
+__FLASH_APP_START = __FLASH_INFO_START + __FLASH_INFO_LENGTH;
+
+/* (FLASH_SIZE - __BOOTLOADER_LENGTH - __FLASH_INFO_LENGTH - __FILESYSTEM_SIZE) / 2 */
+__FLASH_SWAP_SPACE_LENGTH = (__FLASH_SIZE - __BOOTLOADER_LENGTH - __FLASH_INFO_LENGTH) / 2;
+
+/*
+(max binary size) == (.text .rodata .big_const .binary_info) + (possible .data)
+so
+(.text .rodata .big_const .binary_info) == (max binary size) - (possible .data)
+
+We can declare the (possible .data) as the whole 256k, but that's not likely to
+happen. Assume 128k max, but can be easily lowered depending on the application.
+*/
+__FLASH_SLOT_LENGTH = __FLASH_SWAP_SPACE_LENGTH - 128k;
+__FLASH_DOWNLOAD_SLOT_START = __FLASH_APP_START + __FLASH_SWAP_SPACE_LENGTH;
+
+ASSERT(__FLASH_SWAP_SPACE_LENGTH == (__FLASH_SIZE - __BOOTLOADER_LENGTH - __FLASH_INFO_LENGTH) / 2,
+      "__FLASH_SWAP_SPACE_LENGTH has incorrect length")
+ASSERT((__FLASH_SWAP_SPACE_LENGTH%4k) == 0, "__FLASH_SWAP_SPACE_LENGTH should be multiple of 4k")
+ASSERT(__FLASH_SIZE >= __BOOTLOADER_LENGTH + __FLASH_INFO_LENGTH + 2*__FLASH_SWAP_SPACE_LENGTH,
+      "Flash partitions defined incorrectly");

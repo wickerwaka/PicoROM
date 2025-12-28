@@ -1,0 +1,6 @@
+#pragma once
+
+#define MBEDTLS_SHA256_C
+#define MBEDTLS_SHA256_SMALLER
+#define MBEDTLS_AES_C
+#define MBEDTLS_AES_FEWER_TABLES
