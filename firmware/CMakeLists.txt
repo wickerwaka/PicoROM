@@ -7,7 +7,13 @@ set(CMAKE_CXX_STANDARD 17)
 set(VERSION 1.7)
 string(REPLACE . _ FILENAME_VERSION ${VERSION})
 
+set(PFB_WITH_IMAGE_ENCRYPTION OFF)
+set(PFB_WITH_BOOTLOADER_LOGS OFF)
+set(PFB_RESERVED_FILESYSTEM_SIZE_KB 1024)
+
 pico_sdk_init()
+
+add_subdirectory(pico_fota_bootloader)
 
 pico_define_boot_stage2(boot_div4 ${PICO_DEFAULT_BOOT_STAGE2_FILE})
 target_compile_definitions(boot_div4 PRIVATE PICO_FLASH_SPI_CLKDIV=4)
@@ -35,7 +41,9 @@ foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit)
     pico_enable_stdio_usb(${TARGET} 1)
     pico_enable_stdio_uart(${TARGET} 0)
 
-    pico_set_linker_script(${TARGET} ${CMAKE_CURRENT_LIST_DIR}/memmap_firmware.ld)
+    #pico_set_linker_script(${TARGET} ${CMAKE_CURRENT_LIST_DIR}/memmap_firmware.ld)
+
+    pfb_compile_with_bootloader(${TARGET})
 
     pico_add_extra_outputs(${TARGET})
     target_link_libraries(${TARGET}
@@ -46,6 +54,7 @@ foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit)
         hardware_pio
         hardware_dma    
         pico_unique_id
+        pico_fota_bootloader_lib
         -Wl,--wrap=atexit
     )
 

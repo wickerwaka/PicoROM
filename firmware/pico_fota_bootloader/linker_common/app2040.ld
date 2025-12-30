@@ -1,13 +1,10 @@
-/* Based on pico-sdk/src/rp2_common/pico_crt0/rp2040/memmap_default.ld */
-
 INCLUDE linker_definitions.ld
 
 MEMORY
 {
     FLASH(rx) : ORIGIN = __FLASH_APP_START, LENGTH = __FLASH_SLOT_LENGTH
-    RAM(rwx) : ORIGIN =  0x20000000, LENGTH = 256k
-    SCRATCH_X(rwx) : ORIGIN = 0x20040000, LENGTH = 4k
-    SCRATCH_Y(rwx) : ORIGIN = 0x20041000, LENGTH = 4k
+    RAM(rwx) : ORIGIN = 0x20040000, LENGTH = 8k
+    BLOCK_RAM(rwx) : ORIGIN =  0x21000000, LENGTH = 256k
 }
 
 ENTRY(_entry_point)
@@ -43,27 +40,6 @@ SECTIONS
         *(SORT(.dtors.*))
         *(.dtors)
 
-        . = ALIGN(4);
-        /* preinit data */
-        PROVIDE_HIDDEN (__preinit_array_start = .);
-        KEEP(*(SORT(.preinit_array.*)))
-        KEEP(*(.preinit_array))
-        PROVIDE_HIDDEN (__preinit_array_end = .);
-
-        . = ALIGN(4);
-        /* init data */
-        PROVIDE_HIDDEN (__init_array_start = .);
-        KEEP(*(SORT(.init_array.*)))
-        KEEP(*(.init_array))
-        PROVIDE_HIDDEN (__init_array_end = .);
-
-        . = ALIGN(4);
-        /* finit data */
-        PROVIDE_HIDDEN (__fini_array_start = .);
-        *(SORT(.fini_array.*))
-        *(.fini_array)
-        PROVIDE_HIDDEN (__fini_array_end = .);
-
         *(.eh_frame*)
         . = ALIGN(4);
     } > FLASH
@@ -98,13 +74,8 @@ SECTIONS
     __binary_info_end = .;
     . = ALIGN(4);
 
-    .ram_vector_table (COPY): {
+   .ram_vector_table (NOLOAD): {
         *(.ram_vector_table)
-    } > RAM
-
-    .uninitialized_data (NOLOAD): {
-        . = ALIGN(4);
-        *(.uninitialized_data*)
     } > RAM
 
     .data : {
@@ -131,35 +102,49 @@ SECTIONS
         PROVIDE_HIDDEN (__mutex_array_end = .);
 
         . = ALIGN(4);
+        /* preinit data */
+        PROVIDE_HIDDEN (__preinit_array_start = .);
+        KEEP(*(SORT(.preinit_array.*)))
+        KEEP(*(.preinit_array))
+        PROVIDE_HIDDEN (__preinit_array_end = .);
+
+        . = ALIGN(4);
+        /* init data */
+        PROVIDE_HIDDEN (__init_array_start = .);
+        KEEP(*(SORT(.init_array.*)))
+        KEEP(*(.init_array))
+        PROVIDE_HIDDEN (__init_array_end = .);
+
+        . = ALIGN(4);
+        /* finit data */
+        PROVIDE_HIDDEN (__fini_array_start = .);
+        *(SORT(.fini_array.*))
+        *(.fini_array)
+        PROVIDE_HIDDEN (__fini_array_end = .);
+
         *(.jcr)
         . = ALIGN(4);
-    } > RAM AT> FLASH
-
-    .tdata : {
-        . = ALIGN(4);
-		*(.tdata .tdata.* .gnu.linkonce.td.*)
         /* All data end */
-        __tdata_end = .;
+        __data_end__ = .;
     } > RAM AT> FLASH
-    PROVIDE(__data_end__ = .);
-
     /* __etext is (for backwards compatibility) the name of the .data init source pointer (...) */
     __etext = LOADADDR(.data);
 
-    .tbss (NOLOAD) : {
+    .uninitialized_data (NOLOAD): {
         . = ALIGN(4);
-        __bss_start__ = .;
-        __tls_base = .;
-        *(.tbss .tbss.* .gnu.linkonce.tb.*)
-        *(.tcommon)
-
-        __tls_end = .;
+        *(.uninitialized_data*)
     } > RAM
 
-    .bss (NOLOAD) : {
-        . = ALIGN(4);
-        __tbss_end = .;
+    __scratch_x_start__ = .;
+    __scratch_x_end__ = .;
+    __scratch_x_source__ = .;
+    __scratch_y_start__ = .;
+    __scratch_y_end__ = .;
+    __scratch_y_source__ = .;
 
+    .bss  : {
+        . = ALIGN(4);
+        __bss_start__ = .;
         *(SORT_BY_ALIGNMENT(SORT_BY_NAME(.bss*)))
         *(COMMON)
         . = ALIGN(4);
@@ -171,27 +156,8 @@ SECTIONS
         __end__ = .;
         end = __end__;
         KEEP(*(.heap*))
+        __HeapLimit = .;
     } > RAM
-    /* historically on GCC sbrk was growing past __HeapLimit to __StackLimit, however
-       to be more compatible, we now set __HeapLimit explicitly to where the end of the heap is */
-    __HeapLimit = ORIGIN(RAM) + LENGTH(RAM);
-
-    /* Start and end symbols must be word-aligned */
-    .scratch_x : {
-        __scratch_x_start__ = .;
-        *(.scratch_x.*)
-        . = ALIGN(4);
-        __scratch_x_end__ = .;
-    } > SCRATCH_X AT > FLASH
-    __scratch_x_source__ = LOADADDR(.scratch_x);
-
-    .scratch_y : {
-        __scratch_y_start__ = .;
-        *(.scratch_y.*)
-        . = ALIGN(4);
-        __scratch_y_end__ = .;
-    } > SCRATCH_Y AT > FLASH
-    __scratch_y_source__ = LOADADDR(.scratch_y);
 
     /* .stack*_dummy section doesn't contains any symbols. It is only
      * used for linker to calculate size of stack sections, and assign
@@ -199,48 +165,28 @@ SECTIONS
      *
      * stack1 section may be empty/missing if platform_launch_core1 is not used */
 
-    /* by default we put core 0 stack at the end of scratch Y, so that if core 1
-     * stack is not used then all of SCRATCH_X is free.
-     */
     .stack1_dummy (NOLOAD):
     {
         *(.stack1*)
-    } > SCRATCH_X
+    } > RAM
+
     .stack_dummy (NOLOAD):
     {
+        __StackBottom = .;
         KEEP(*(.stack*))
-    } > SCRATCH_Y
+        __StackTop = .;
+    } > RAM
 
     .flash_end : {
-        KEEP(*(.embedded_end_block*))
-        /* Align binary size to 256 bytes */
-        . = . + 1;
-        . = ALIGN(256) - 1;
-        BYTE(0);
         PROVIDE(__flash_binary_end = .);
     } > FLASH
 
     /* stack limit is poorly named, but historically is maximum heap ptr */
     __StackLimit = ORIGIN(RAM) + LENGTH(RAM);
-    __StackOneTop = ORIGIN(SCRATCH_X) + LENGTH(SCRATCH_X);
-    __StackTop = ORIGIN(SCRATCH_Y) + LENGTH(SCRATCH_Y);
-    __StackOneBottom = __StackOneTop - SIZEOF(.stack1_dummy);
-    __StackBottom = __StackTop - SIZEOF(.stack_dummy);
     PROVIDE(__stack = __StackTop);
 
-    /* picolibc and LLVM */
-    PROVIDE (__heap_start = __end__);
-    PROVIDE (__heap_end = __HeapLimit);
-    PROVIDE( __tls_align = MAX(ALIGNOF(.tdata), ALIGNOF(.tbss)) );
-    PROVIDE( __tls_size_align = (__tls_size + __tls_align - 1) & ~(__tls_align - 1));
-    PROVIDE( __arm32_tls_tcb_offset = MAX(8, __tls_align) );
-
-    /* llvm-libc */
-    PROVIDE (_end = __end__);
-    PROVIDE (__llvm_libc_heap_limit = __HeapLimit);
-
     /* Check if data + heap + stack exceeds RAM limit */
-    ASSERT(__StackLimit >= __HeapLimit, "region RAM overflowed")
+    ASSERT(__StackTop <= __StackLimit, "region RAM overflowed")
 
     ASSERT( __binary_info_header_end - __logical_binary_start <= 256, "Binary info must be in first 256 bytes of the binary")
     /* todo assert on extra code */

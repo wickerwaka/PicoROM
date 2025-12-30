@@ -163,7 +163,9 @@ static void print_welcome_message(void) {
 }
 
 int main(void) {
+#ifdef PFB_WITH_BOOTLOADER_LOGS
     stdio_init_all();
+#endif // PFB_WITH_BOOTLOADER_LOGS
     sleep_ms(2000);
 
     print_welcome_message();

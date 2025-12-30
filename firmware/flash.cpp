@@ -14,8 +14,8 @@
 #include "rom.h"
 #include "system.h"
 
-static constexpr uint FLASH_ROM_OFFSET = FLASH_SIZE - ROM_SIZE;
-static constexpr uint FLASH_CFG_OFFSET = FLASH_ROM_OFFSET - FLASH_SECTOR_SIZE;
+static constexpr uint FLASH_CFG_OFFSET = FLASH_SIZE - FLASH_SECTOR_SIZE;
+static constexpr uint FLASH_ROM_OFFSET = FLASH_CFG_OFFSET - ROM_SIZE;
 
 static constexpr uint CONFIG_VERSION = 0x00010009;
 

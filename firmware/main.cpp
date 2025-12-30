@@ -332,7 +332,7 @@ bool get_parameter(const char *name, char *value, size_t value_size)
 
 int main()
 {
-    set_sys_clock_khz(270000, true);
+    //set_sys_clock_khz(270000, true);
 
     flash_init_config(&config);
 
