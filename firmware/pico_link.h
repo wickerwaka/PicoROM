@@ -21,6 +21,8 @@ enum class PacketType : uint8_t
     Parameter = 22,
     ParameterError = 23,
     QueryParameter = 24,
+    
+    OTACommit = 30,
 
     CommsStart = 80,
     CommsEnd = 81,

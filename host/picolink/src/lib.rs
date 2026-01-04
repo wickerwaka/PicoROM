@@ -29,6 +29,8 @@ enum PacketKind {
     ParameterError = 23,
     ParameterQuery = 24,
 
+    CommitOTA = 30,
+
     CommsStart = 80,
     CommsEnd = 81,
     CommsData = 82,
@@ -53,6 +55,7 @@ pub enum ReqPacket {
     Write(Vec<u8>),
     Read,
     CommitFlash,
+    CommitOTA(u32),
     CommsStart(u32),
     CommsEnd,
     CommsData(Vec<u8>),
@@ -79,6 +82,7 @@ impl ReqPacket {
             ReqPacket::Write(data) => (PacketKind::Write, data),
             ReqPacket::Read => (PacketKind::Read, vec![]),
             ReqPacket::CommitFlash => (PacketKind::CommitFlash, vec![]),
+            ReqPacket::CommitOTA(size) => (PacketKind::CommitOTA, size.to_le_bytes().to_vec()),
             ReqPacket::CommsStart(addr) => (PacketKind::CommsStart, addr.to_le_bytes().to_vec()),
             ReqPacket::CommsEnd => (PacketKind::CommsEnd, vec![]),
             ReqPacket::CommsData(data) => (PacketKind::CommsData, data),
@@ -159,10 +163,11 @@ impl PicoLink {
     pub fn send(&mut self, packet: ReqPacket) -> Result<()> {
         self.recv_flush()?;
 
+        if self.debug {
+            println!(">>> {:?}", packet);
+        }
+
         let data = packet.encode()?;
-
-        //println!(">>> {} {} {:?}", data[0], data[1], &data[2..]);
-
         self.port.write_all(&data)?;
         Ok(())
     }
@@ -216,9 +221,8 @@ impl PicoLink {
         let pkt = pkt.unwrap();
         let payload = &pkt.payload[0..pkt.size];
 
-        //println!("<<< {:?} {} {:?}", pkt.kind, pkt.size, payload);
-
-        match pkt.kind {
+        
+        let resp = match pkt.kind {
             PacketKind::Debug => {
                 if payload.len() >= 8 {
                     let v0 = u32::from_le_bytes(payload[0..4].try_into()?);
@@ -252,6 +256,15 @@ impl PicoLink {
             ))),
 
             x => Err(anyhow::format_err!("Unexpected packet kind: {:?}", x)),
+        }?;
+
+        if let Some(r) = resp {
+            if self.debug {
+                println!("<<< {:?}", r);
+            }
+            Ok(Some(r))
+        } else {
+            Ok(None)
         }
     }
 
@@ -442,6 +455,37 @@ impl PicoLink {
         )
     }
 
+    pub fn ota<F>(&mut self, data: &[u8], f: F) -> Result<()>
+    where
+        F: Fn(usize),
+    {
+        self.send(ReqPacket::PointerSet(0))?;
+
+        for chunk in data.chunks(30) {
+            f(chunk.len());
+            self.send(ReqPacket::Write(chunk.to_vec()))?;
+        }
+
+        self.send(ReqPacket::PointerGet)?;
+
+        let cur = self.recv_until(|x| match x {
+            RespPacket::PointerCur(x) => Some(x),
+            _ => None,
+        })?;
+
+        if cur != data.len() as u32 {
+            return Err(anyhow!("Upload did not complete."));
+        }
+
+        self.send(ReqPacket::CommitOTA(data.len() as u32))?;
+
+        loop {
+            self.recv_flush()?;
+        }
+
+        Ok(())
+    }
+
     pub fn identify(&mut self) -> Result<()> {
         self.send(ReqPacket::Identify)?;
         Ok(())
@@ -543,11 +587,11 @@ fn read_cache_file() -> Result<HashMap<String, String>> {
     Ok(entries)
 }
 
-pub fn enumerate_picos() -> Result<HashMap<String, PicoLink>> {
+pub fn enumerate_picos(debug: bool) -> Result<HashMap<String, PicoLink>> {
     let mut cache_data = HashMap::new();
     let mut found = HashMap::new();
     for p in enumerate_ports()?.iter() {
-        let link = PicoLink::open(p, false);
+        let link = PicoLink::open(p, debug);
         if let Ok(mut link) = link {
             if let Ok(ident) = link.get_parameter("name") {
                 cache_data.insert(ident.clone(), p.to_string());
@@ -561,11 +605,11 @@ pub fn enumerate_picos() -> Result<HashMap<String, PicoLink>> {
     Ok(found)
 }
 
-pub fn find_pico(name: &str) -> Result<PicoLink> {
+pub fn find_pico(name: &str, debug: bool) -> Result<PicoLink> {
     // Check cache first
     let cached_paths = read_cache_file().unwrap_or_default();
     if let Some(path) = cached_paths.get(name) {
-        if let Ok(mut link) = PicoLink::open(path, false) {
+        if let Ok(mut link) = PicoLink::open(path, debug) {
             if let Ok(ident) = link.get_parameter("name") {
                 if ident == name {
                     return Ok(link);
@@ -575,7 +619,7 @@ pub fn find_pico(name: &str) -> Result<PicoLink> {
     }
 
     // If it wasn't found in the cache then do a full enumeration
-    let mut found = enumerate_picos()?;
+    let mut found = enumerate_picos(debug)?;
 
     if let Some(pico) = found.remove(name) {
         Ok(pico)

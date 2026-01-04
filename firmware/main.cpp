@@ -15,6 +15,7 @@
 #include "str_util.h"
 #include "system.h"
 
+#include <pico_fota_bootloader/core.h>
 
 // Dummy atexit implementation because some SDK/newlib versions don't strip
 // atexit and it uses several 100bytes of RAM
@@ -359,6 +360,8 @@ int main()
 
     rom_service_start();
 
+    pfb_firmware_commit();
+
     while (true)
     {
         // Reset state
@@ -425,6 +428,32 @@ int main()
                         pl_send_null(PacketType::CommitDone);
                         break;
                     }
+
+                    case PacketType::OTACommit:
+                    {
+                        uint32_t size;
+                        memcpy(&size, req->payload, 4);
+
+                        uint32_t sp0 = (uint32_t)__builtin_frame_address(0);
+                        pl_send_debug("OTA Started", size, sp0);
+                        tud_task(); sleep_ms(1); tud_task();
+                        rom_service_stop();
+
+                        pl_send_debug("Pre", 0, 0);
+                        tud_task(); sleep_ms(1); tud_task();
+                        pfb_initialize_download_slot();
+                        pl_send_debug("Slot init", 0, 0);
+                        tud_task(); sleep_ms(1); tud_task();
+                        pfb_write_to_flash_aligned_256_bytes(rom_get_buffer(), 0, size);
+                        pl_send_debug("Flash written", 0, 0);
+                        tud_task(); sleep_ms(1); tud_task();
+                        pfb_mark_download_slot_as_valid();
+                        pl_send_debug("OTA Complete", 0, 0);
+                        tud_task(); sleep_ms(1); tud_task();
+                        pfb_perform_update();
+                        break;
+                    }
+
 
                     case PacketType::CommsStart:
                     {

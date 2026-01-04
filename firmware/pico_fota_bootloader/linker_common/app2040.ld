@@ -178,6 +178,11 @@ SECTIONS
     } > RAM
 
     .flash_end : {
+        KEEP(*(.embedded_end_block*))
+        /* Align binary size to 256 bytes */
+        . = . + 1;
+        . = ALIGN(256) - 1;
+        BYTE(0);
         PROVIDE(__flash_binary_end = .);
     } > FLASH
 

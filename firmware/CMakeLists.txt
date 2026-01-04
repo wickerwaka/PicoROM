@@ -4,11 +4,11 @@ include(pico-sdk/pico_sdk_init.cmake)
 project(PicoROM C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
-set(VERSION 1.7)
+set(VERSION 1.7.1)
 string(REPLACE . _ FILENAME_VERSION ${VERSION})
 
 set(PFB_WITH_IMAGE_ENCRYPTION OFF)
-set(PFB_WITH_BOOTLOADER_LOGS OFF)
+set(PFB_WITH_BOOTLOADER_LOGS ON)
 set(PFB_RESERVED_FILESYSTEM_SIZE_KB 1024)
 
 pico_sdk_init()
@@ -43,9 +43,9 @@ foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit)
 
     #pico_set_linker_script(${TARGET} ${CMAKE_CURRENT_LIST_DIR}/memmap_firmware.ld)
 
+    pico_add_extra_outputs(${TARGET})
     pfb_compile_with_bootloader(${TARGET})
 
-    pico_add_extra_outputs(${TARGET})
     target_link_libraries(${TARGET}
         pico_stdlib
         pico_multicore

@@ -154,6 +154,13 @@ function(pfb_compile_with_bootloader Target)
                 --aes-key ${PFB_AES_KEY_GLOBAL}
             COMMENT "Encrypting FOTA image using AES...")
     endif ()
+
+    add_dependencies(${TARGET} pico_fota_bootloader)
+    add_custom_command(
+        TARGET ${Target}
+        POST_BUILD
+        COMMAND cat pico_fota_bootloader/pico_fota_bootloader.uf2 $<TARGET_PROPERTY:${Target},NAME>.uf2 > $<TARGET_PROPERTY:${Target},NAME>_fota.uf2
+    )
 endfunction()
 
 ################################################################################

@@ -16,7 +16,7 @@ static inline void erase_flash_info_partition_isr_unsafe(void) {
 static void
 overwrite_4_bytes_in_flash_isr_unsafe(uint32_t dest_addr_with_xip_offset,
                                       uint32_t data) {
-    uint8_t data_arr_u8[FLASH_SECTOR_SIZE];
+    uint8_t data_arr_u8[FLASH_PAGE_SIZE];
     uint32_t *data_ptr_u32 = (uint32_t *) data_arr_u8;
     uint32_t erase_start_addr_with_xip_offset =
             PFB_ADDR_WITH_XIP_OFFSET_AS_U32(__FLASH_INFO_START);
@@ -25,7 +25,7 @@ overwrite_4_bytes_in_flash_isr_unsafe(uint32_t dest_addr_with_xip_offset,
 
     void *flash_info_start_addr =
             (void *) (PFB_ADDR_AS_U32(__FLASH_INFO_START));
-    memcpy(data_arr_u8, flash_info_start_addr, FLASH_SECTOR_SIZE);
+    memcpy(data_arr_u8, flash_info_start_addr, FLASH_PAGE_SIZE);
 
     size_t array_index =
             (dest_addr_with_xip_offset - erase_start_addr_with_xip_offset)
@@ -34,7 +34,7 @@ overwrite_4_bytes_in_flash_isr_unsafe(uint32_t dest_addr_with_xip_offset,
 
     erase_flash_info_partition_isr_unsafe();
     flash_range_program(erase_start_addr_with_xip_offset, data_arr_u8,
-                        FLASH_SECTOR_SIZE);
+                        FLASH_PAGE_SIZE);
 }
 
 static void overwrite_4_bytes_in_flash(uint32_t dest_addr, uint32_t data) {

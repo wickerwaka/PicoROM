@@ -36,6 +36,10 @@ fn read_file(name: &Path, rom_size: RomSize) -> Result<Vec<u8>> {
 struct Cli {
     #[command(subcommand)]
     command: Commands,
+
+    /// Enable debug output
+    #[arg(short, long)]
+    debug: bool,
 }
 
 #[derive(Debug, Subcommand)]
@@ -119,6 +123,15 @@ enum Commands {
 
     /// Reboot the device into USB mode
     USBBoot { name: String },
+
+    /// Upload new firmware
+    Firmware {
+        /// PicoROM device name.
+        name: String,
+        /// Path of file to upload.
+        source: PathBuf,
+    },
+
 }
 
 fn main() -> Result<()> {
@@ -126,7 +139,7 @@ fn main() -> Result<()> {
 
     match args.command {
         Commands::List => {
-            let found = enumerate_picos()?;
+            let found = enumerate_picos(args.debug)?;
             if found.len() > 0 {
                 println!("Available PicoROMs:");
                 for (k, v) in found.iter() {
@@ -137,12 +150,12 @@ fn main() -> Result<()> {
             }
         }
         Commands::Identify { name } => {
-            let mut pico = find_pico(&name)?;
+            let mut pico = find_pico(&name, args.debug)?;
             pico.identify()?;
             println!("Requested identification from '{}'", name);
         }
         Commands::Commit { name } => {
-            let mut pico = find_pico(&name)?;
+            let mut pico = find_pico(&name, args.debug)?;
             let spinner = ProgressBar::new_spinner()
                 .with_prefix("Storing to Flash")
                 .with_style(
@@ -155,13 +168,13 @@ fn main() -> Result<()> {
             spinner.finish_with_message("Done.");
         }
         Commands::Rename { current, new } => {
-            let mut pico = find_pico(&current)?;
+            let mut pico = find_pico(&current, args.debug)?;
             pico.set_ident(&new)?;
             println!("Renamed '{}' to '{}'", current, new);
         }
         Commands::NameSwap { first, second } => {
-            let mut pico_a = find_pico(&first)?;
-            let mut pico_b = find_pico(&second)?;
+            let mut pico_a = find_pico(&first, args.debug)?;
+            let mut pico_b = find_pico(&second, args.debug)?;
             pico_a.set_ident(&second)?;
             pico_b.set_ident(&first)?;
             println!("Renamed '{}' to '{}'", first, second);
@@ -173,7 +186,7 @@ fn main() -> Result<()> {
             size,
             store,
         } => {
-            let mut pico = find_pico(&name)?;
+            let mut pico = find_pico(&name, args.debug)?;
             let data = read_file(source.as_path(), size)?;
             let progress = ProgressBar::new(data.len() as u64)
                 .with_prefix("Uploading ROM")
@@ -200,13 +213,29 @@ fn main() -> Result<()> {
                 spinner.finish_with_message("Done.");
             }
         }
+        Commands::Firmware {
+            name,
+            source,
+        } => {
+            let mut pico = find_pico(&name, args.debug)?;
+            let data = fs::read(source)?;
+            let progress = ProgressBar::new(data.len() as u64)
+                .with_prefix("Uploading Firmware")
+                .with_style(
+                    ProgressStyle::with_template("{prefix:.bold} [{wide_bar:.cyan/blue}] {msg:10}")
+                        .unwrap()
+                        .progress_chars("#>-"),
+                );
+            pico.ota(&data, |x| progress.inc(x as u64))?;
+            progress.finish_with_message("Done.");
+        }
         Commands::Reset { name, level } => {
-            let mut pico = find_pico(&name)?;
+            let mut pico = find_pico(&name, args.debug)?;
             pico.set_parameter("reset", &level)?;
             println!("Setting '{}' reset pin to: {}", name, level);
         }
         Commands::Get { name, param } => {
-            let mut pico = find_pico(&name)?;
+            let mut pico = find_pico(&name, args.debug)?;
             if let Some(param) = param {
                 let value = pico.get_parameter(&param)?;
                 println!("{}={}", param, value);
@@ -219,13 +248,13 @@ fn main() -> Result<()> {
             }
         }
         Commands::Set { name, param, value } => {
-            let mut pico = find_pico(&name)?;
+            let mut pico = find_pico(&name, args.debug)?;
             let newvalue = pico.set_parameter(&param, &value)?;
             println!("{}={}", param, newvalue);
         }
 
         Commands::USBBoot { name } => {
-            let mut pico = find_pico(&name)?;
+            let mut pico = find_pico(&name, args.debug)?;
             println!("Requesting USB boot");
             pico.usb_boot()?;
         }

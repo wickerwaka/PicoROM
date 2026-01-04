@@ -144,6 +144,7 @@ static void jump_to_vtor(uint32_t vtor) {
 static bool is_application_slot_empty(void) {
     uint32_t reset_handler =
             *(volatile uint32_t *) (__flash_info_app_vtor + 0x04);
+    printf("Reset handler: %08X\n", reset_handler);
     return (reset_handler < 0x10000000 || reset_handler > 0x10200000);
 }
 
@@ -163,9 +164,7 @@ static void print_welcome_message(void) {
 }
 
 int main(void) {
-#ifdef PFB_WITH_BOOTLOADER_LOGS
     stdio_init_all();
-#endif // PFB_WITH_BOOTLOADER_LOGS
     sleep_ms(2000);
 
     print_welcome_message();
