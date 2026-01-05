@@ -357,10 +357,10 @@ int main()
     identify_ack = identify_request = 0;
 
     add_repeating_timer_ms(10, activity_timer_callback, nullptr, &activity_timer);
+    
+    pfb_firmware_commit();
 
     rom_service_start();
-
-    pfb_firmware_commit();
 
     while (true)
     {
