@@ -333,8 +333,6 @@ bool get_parameter(const char *name, char *value, size_t value_size)
 
 int main()
 {
-    //set_sys_clock_khz(270000, true);
-
     flash_init_config(&config);
 
     if (pio_programs_init())
@@ -348,8 +346,6 @@ int main()
 
     flash_load_time = flash_load_rom();
 
-    reset_set(config.default_reset);
-
     tusb_init();
 
     configure_address_pins(config.addr_mask);
@@ -361,6 +357,8 @@ int main()
     pfb_firmware_commit();
 
     rom_service_start();
+    
+    reset_set(config.default_reset);
 
     while (true)
     {
