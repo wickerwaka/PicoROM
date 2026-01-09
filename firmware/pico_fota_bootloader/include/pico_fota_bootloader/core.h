@@ -123,7 +123,7 @@ bool pfb_is_after_rollback(void);
  *         If @ref PFB_WITH_SHA256_HASHING is not defined, the function will
  *         always return 0.
  */
-int pfb_firmware_sha256_check(size_t firmware_size);
+int pfb_firmware_hash_check(size_t firmware_size);
 
 #ifdef __cplusplus
 }

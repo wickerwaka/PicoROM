@@ -120,6 +120,9 @@ static void comms_start_programs(uint32_t addr, CommsRegisters *regs)
 #if defined(FEATURE_CLOCK)
     if (prg_comms_clock.valid())
     {
+        dma_channel_claim(DMA_CH_CLOCK_PING);
+        dma_channel_claim(DMA_CH_CLOCK_PONG);
+
         pio_gpio_init(prg_comms_clock.pio(), CLOCK_PIN);
         gpio_set_dir(CLOCK_PIN, false);
         gpio_set_input_enabled(CLOCK_PIN, true);
@@ -174,6 +177,9 @@ static void comms_end_programs()
         pio_sm_clear_fifos(pio, sm);
         dma_channel_abort(DMA_CH_CLOCK_PING);
         dma_channel_abort(DMA_CH_CLOCK_PONG);
+
+        dma_channel_unclaim(DMA_CH_CLOCK_PING);
+        dma_channel_unclaim(DMA_CH_CLOCK_PONG);
     }
 #endif // FEATURE_CLOCK
 }

@@ -30,6 +30,7 @@ enum PacketKind {
     ParameterQuery = 24,
 
     CommitOTA = 30,
+    StatusOTA = 31,
 
     CommsStart = 80,
     CommsEnd = 81,
@@ -110,6 +111,13 @@ impl ReqPacket {
 }
 
 #[derive(Clone, Debug)]
+pub enum OTAStatusCode {
+    InProgress,
+    Complete,
+    Error
+}
+
+#[derive(Clone, Debug)]
 pub enum RespPacket {
     PointerCur(u32),
     ReadData(Vec<u8>),
@@ -117,6 +125,8 @@ pub enum RespPacket {
     CommsData(Vec<u8>),
     Parameter(String),
     ParameterError,
+
+    StatusOTA(OTAStatusCode, String),
 
     Error(String, u32, u32),
     Debug(String, u32, u32),
@@ -254,7 +264,19 @@ impl PicoLink {
             PacketKind::Parameter => Ok(Some(RespPacket::Parameter(
                 String::from_utf8_lossy(&payload).to_string(),
             ))),
-
+            PacketKind::StatusOTA => {
+                if payload.len() >= 1 {
+                    let code = match payload[0]  {
+                        0 => OTAStatusCode::InProgress,
+                        1 => OTAStatusCode::Complete,
+                        _ => OTAStatusCode::Error
+                    };
+                    let msg = String::from_utf8_lossy(&payload[1..]);
+                    Ok(Some(RespPacket::StatusOTA(code, msg.to_string())))
+                } else {
+                    Err(anyhow!("StatusOTA payload is too small: {}", payload.len()))
+                }
+            },
             x => Err(anyhow::format_err!("Unexpected packet kind: {:?}", x)),
         }?;
 
@@ -457,12 +479,12 @@ impl PicoLink {
 
     pub fn ota<F>(&mut self, data: &[u8], f: F) -> Result<()>
     where
-        F: Fn(usize),
+        F: Fn(String),
     {
         self.send(ReqPacket::PointerSet(0))?;
 
+        f("Uploading".to_string());
         for chunk in data.chunks(30) {
-            f(chunk.len());
             self.send(ReqPacket::Write(chunk.to_vec()))?;
         }
 
@@ -479,11 +501,17 @@ impl PicoLink {
 
         self.send(ReqPacket::CommitOTA(data.len() as u32))?;
 
-        loop {
-            self.recv_flush()?;
-        }
-
-        Ok(())
+        self.recv_until_with_timeout(|x| match x {
+            RespPacket::StatusOTA(code, msg) => {
+                f(msg.to_string());
+                match code {
+                    OTAStatusCode::Complete => Some(Ok(())),
+                    OTAStatusCode::InProgress => None,
+                    OTAStatusCode::Error => Some(Err(anyhow!("Failure during firmware update: {}", msg)))
+                }
+            },
+            _ => None
+        }, Duration::from_secs(30))?
     }
 
     pub fn identify(&mut self) -> Result<()> {

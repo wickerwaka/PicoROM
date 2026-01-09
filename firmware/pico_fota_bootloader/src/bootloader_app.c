@@ -165,7 +165,15 @@ static void print_welcome_message(void) {
 
 int main(void) {
     stdio_init_all();
-    sleep_ms(2000);
+#if 1
+    const int RESET_PIN = 28;
+    gpio_init(RESET_PIN);
+    gpio_set_dir(RESET_PIN, true);
+    gpio_put(RESET_PIN, true);
+    sleep_ms(1);
+    gpio_put(RESET_PIN, false);
+#endif
+    //sleep_ms(2000);
 
     print_welcome_message();
 

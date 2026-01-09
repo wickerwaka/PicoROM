@@ -204,7 +204,6 @@ bool reset_from_string(const char *s, ResetLevel *level)
     return false;
 }
 
-uint32_t flash_load_time = 0;
 uint32_t system_status = 0;
 
 static Config config;
@@ -217,9 +216,9 @@ static const char *parameter_names[] = {
     "default_reset",
     "reset",
     "status",
-    "startup_time",
     "build_config",
     "build_version",
+    "ota",
     nullptr
 };
 
@@ -296,11 +295,6 @@ bool get_parameter(const char *name, char *value, size_t value_size)
         snprintf(value, value_size, "0x%08x", system_status);
         return true;
     }
-    else if (streq(name, "startup_time"))
-    {
-        snprintf(value, value_size, "%d", flash_load_time);
-        return true;
-    }
     else if (streq(name, "initial_reset"))
     {
         reset_to_string(config.initial_reset, value, value_size);
@@ -326,13 +320,24 @@ bool get_parameter(const char *name, char *value, size_t value_size)
         strcpyz(value, value_size, PICOROM_FIRMWARE_VERSION);
         return true;
     }
-
+    else if (streq(name, "ota"))
+    {
+        strcpyz(value, value_size, "true");
+        return true;
+    }
 
     return false;
 }
 
 int main()
 {
+#if defined(BOARD_28P)
+    gpio_init(RESET_PIN);
+    gpio_set_dir(RESET_PIN, true);
+    gpio_put(RESET_PIN, true);
+    sleep_ms(1);
+    gpio_put(RESET_PIN, false);
+#endif
     flash_init_config(&config);
 
     if (pio_programs_init())
@@ -344,7 +349,7 @@ int main()
 
     reset_set(config.initial_reset);
 
-    flash_load_time = flash_load_rom();
+    flash_load_rom();
 
     tusb_init();
 
@@ -431,24 +436,24 @@ int main()
                     {
                         uint32_t size;
                         memcpy(&size, req->payload, 4);
-
-                        uint32_t sp0 = (uint32_t)__builtin_frame_address(0);
-                        pl_send_debug("OTA Started", size, sp0);
-                        tud_task(); sleep_ms(1); tud_task();
+                        pl_send_ota_status("Preparing", OTAStatusCode::InProgress);
                         rom_service_stop();
-
-                        pl_send_debug("Pre", 0, 0);
-                        tud_task(); sleep_ms(1); tud_task();
                         pfb_initialize_download_slot();
-                        pl_send_debug("Slot init", 0, 0);
-                        tud_task(); sleep_ms(1); tud_task();
+                        pl_send_ota_status("Storing", OTAStatusCode::InProgress);
                         pfb_write_to_flash_aligned_256_bytes(rom_get_buffer(), 0, size);
-                        pl_send_debug("Flash written", 0, 0);
-                        tud_task(); sleep_ms(1); tud_task();
-                        pfb_mark_download_slot_as_valid();
-                        pl_send_debug("OTA Complete", 0, 0);
-                        tud_task(); sleep_ms(1); tud_task();
-                        pfb_perform_update();
+                        pl_send_ota_status("Verifying", OTAStatusCode::InProgress);
+                        if (pfb_firmware_hash_check(size))
+                        {
+                            pl_send_ota_status("Hash Error", OTAStatusCode::Error);
+                            pfb_perform_update(); // reboot without flagging the slot as valid
+                        }
+                        else
+                        {
+                            pl_send_ota_status("Verified", OTAStatusCode::InProgress);
+                            pfb_mark_download_slot_as_valid();
+                            pl_send_ota_status("Restarting", OTAStatusCode::Complete);
+                            pfb_perform_update();
+                        }
                         break;
                     }
 

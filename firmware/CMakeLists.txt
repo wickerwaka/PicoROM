@@ -4,16 +4,28 @@ include(pico-sdk/pico_sdk_init.cmake)
 project(PicoROM C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
-set(VERSION 1.7.1)
+set(VERSION 1.8.0)
 string(REPLACE . _ FILENAME_VERSION ${VERSION})
 
 set(PFB_WITH_IMAGE_ENCRYPTION OFF)
-set(PFB_WITH_BOOTLOADER_LOGS ON)
+set(PFB_WITH_CRC32_HASHING ON)
+set(PFB_WITH_SHA256_HASHING OFF)
+set(PFB_WITH_BOOTLOADER_LOGS OFF)
 set(PFB_RESERVED_FILESYSTEM_SIZE_KB 1024)
 
 pico_sdk_init()
 
 add_subdirectory(pico_fota_bootloader)
+
+target_compile_definitions(pico_fota_bootloader PRIVATE
+    PLL_SYS_REFDIV=2
+    PLL_SYS_VCO_FREQ_HZ=1350000000
+    PLL_SYS_POSTDIV1=5
+    PLL_SYS_POSTDIV2=1
+    SYS_CLK_HZ=270000000
+)
+pico_set_program_name(pico_fota_bootloader PicoROM)
+pico_set_program_url(pico_fota_bootloader https://github.com/wickerwaka/PicoROM)
 
 foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit)
     set(TARGET PicoROM-${BUILD_CONFIG}-${FILENAME_VERSION})

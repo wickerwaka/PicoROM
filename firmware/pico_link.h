@@ -23,6 +23,7 @@ enum class PacketType : uint8_t
     QueryParameter = 24,
     
     OTACommit = 30,
+    OTAStatus = 31,
 
     CommsStart = 80,
     CommsEnd = 81,
@@ -32,6 +33,13 @@ enum class PacketType : uint8_t
     Bootsel = 0xf9,
     Error = 0xfe,
     Debug = 0xff
+};
+
+enum class OTAStatusCode : uint8_t
+{
+    InProgress,
+    Complete,
+    Error
 };
 
 static constexpr size_t MAX_PKT_PAYLOAD = 30;
@@ -50,6 +58,7 @@ void pl_send_payload(PacketType type, const void *data, size_t len);
 void pl_send_debug(const char *s, uint32_t v0, uint32_t v1);
 void pl_send_error(const char *s, uint32_t v0, uint32_t v1);
 void pl_send_packet(const Packet *pkt);
+void pl_send_ota_status(const char *s, OTAStatusCode code);
 
 void pl_wait_for_connection();
 bool pl_is_connected();

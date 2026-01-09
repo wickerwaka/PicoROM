@@ -83,6 +83,19 @@ void pl_send_error(const char *s, uint32_t v0, uint32_t v1)
     usb_send(&pkt, pkt.size + 2);
 }
 
+void pl_send_ota_status(const char *s, OTAStatusCode code)
+{
+    Packet pkt;
+    pkt.type = (uint8_t)PacketType::OTAStatus;
+    pkt.size = MIN(MAX_PKT_PAYLOAD, strlen(s) + sizeof(code));
+    memcpy(pkt.payload, &code, sizeof(code));
+    strncpy((char *)pkt.payload + sizeof(code), s, pkt.size - sizeof(code));
+    usb_send(&pkt, pkt.size + 2);
+
+    // work and delay to ensure messages get sent
+    tud_task(); sleep_ms(1); tud_task();
+}
+
 void pl_wait_for_connection()
 {
     // Wait for connection

@@ -47,6 +47,9 @@ endif()
 if ( NOT DEFINED PFB_WITH_SHA256_HASHING )
     option(PFB_WITH_SHA256_HASHING "Enables image SHA256 appending and checking" ON)
 endif()
+if ( NOT DEFINED PFB_WITH_CRC32_HASHING )
+    option(PFB_WITH_CRC32_HASHING "Enables image CRC32 checking" OFF)
+endif()
 if ( NOT PFB_RESERVED_FILESYSTEM_SIZE_KB )
     set(PFB_RESERVED_FILESYSTEM_SIZE_KB 0 CACHE STRING "EXPERIMENTAL: Size in KB reserved for the filesystem")
 endif()
@@ -97,8 +100,10 @@ target_link_libraries(pico_fota_bootloader_lib PUBLIC
                       hardware_watchdog
                       pico_stdlib
                       hardware_flash)
+if (PFB_WITH_SHA256_HASHING OR PFB_WITH_IMAGE_ENCRYPTION)
 target_link_libraries(pico_fota_bootloader_lib PRIVATE
                       pico_mbedtls)
+endif ()
 target_link_options(pico_fota_bootloader_lib PRIVATE
                     "-T${CMAKE_CURRENT_BINARY_DIR}/linker_definitions.ld")
 target_compile_options(pico_fota_bootloader_lib PRIVATE
@@ -113,6 +118,10 @@ endif ()
 if (PFB_WITH_SHA256_HASHING)
     target_compile_definitions(pico_fota_bootloader_lib PRIVATE PFB_WITH_SHA256_HASHING)
 endif ()
+if (PFB_WITH_CRC32_HASHING)
+    target_compile_definitions(pico_fota_bootloader_lib PRIVATE PFB_WITH_CRC32_HASHING)
+endif ()
+
 
 set(BOOTLOADER_DIR_GLOBAL ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
 

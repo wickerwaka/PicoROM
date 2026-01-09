@@ -1,5 +1,7 @@
 use anyhow::{anyhow, Result};
 use clap::{Parser, Subcommand};
+use dialoguer::Confirm;
+use dialoguer::{theme::ColorfulTheme, Select};
 use indicatif;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
@@ -10,6 +12,7 @@ use std::time::Duration;
 
 use picolink::*;
 
+mod firmware;
 mod rom_size;
 use crate::rom_size::*;
 
@@ -75,7 +78,6 @@ enum Commands {
         second: String,
     },
 
-
     /// Upload a ROM image to a PicoROM
     Upload {
         /// PicoROM device name.
@@ -128,10 +130,7 @@ enum Commands {
     Firmware {
         /// PicoROM device name.
         name: String,
-        /// Path of file to upload.
-        source: PathBuf,
     },
-
 }
 
 fn main() -> Result<()> {
@@ -213,21 +212,55 @@ fn main() -> Result<()> {
                 spinner.finish_with_message("Done.");
             }
         }
-        Commands::Firmware {
-            name,
-            source,
-        } => {
+        Commands::Firmware { name } => {
             let mut pico = find_pico(&name, args.debug)?;
-            let data = fs::read(source)?;
-            let progress = ProgressBar::new(data.len() as u64)
-                .with_prefix("Uploading Firmware")
-                .with_style(
-                    ProgressStyle::with_template("{prefix:.bold} [{wide_bar:.cyan/blue}] {msg:10}")
-                        .unwrap()
-                        .progress_chars("#>-"),
-                );
-            pico.ota(&data, |x| progress.inc(x as u64))?;
-            progress.finish_with_message("Done.");
+
+            if let Ok(param) = pico.get_parameter("ota") {
+                if param != "true" {
+                    return Err(anyhow!("Device does not support OA firmware updates."));
+                }
+            } else {
+                return Err(anyhow!("Device does not support OTA firmware updates."));
+            }
+
+            let version = pico.get_parameter("build_version")?;
+            let config = pico.get_parameter("build_config")?;
+
+            println!("Current firmware: {} (version {})", config, version);
+            let firmwares = firmware::enumerate_firmware()?;
+            let mut selections = vec![];
+            for firmware in firmwares.iter() {
+                selections.push(format!(
+                    "{} (version {})",
+                    firmware.config, firmware.version
+                ));
+            }
+
+            let selection = Select::with_theme(&ColorfulTheme::default())
+                .with_prompt("Select firmware version")
+                .items(selections)
+                .default(0)
+                .interact_opt()?;
+
+            if let Some(selection) = selection {
+                let confirm = Confirm::with_theme(&ColorfulTheme::default())
+                    .with_prompt(format!("Replace firmware on device {}", name))
+                    .default(false)
+                    .interact_opt()?;
+                if let Some(true) = confirm {
+                    let spinner = ProgressBar::new_spinner()
+                        .with_prefix("Updating firmware")
+                        .with_style(
+                            ProgressStyle::with_template("{prefix:.bold} {spinner} {msg}")
+                                .unwrap()
+                                .tick_chars(r"\|/--"),
+                        );
+                    spinner.enable_steady_tick(Duration::from_millis(250));
+                    let firmware_image = firmwares[selection].extract()?;
+                    pico.ota(&firmware_image, |x| { spinner.set_message(x) })?;
+                    spinner.finish_with_message("Done.");
+                }
+            }
         }
         Commands::Reset { name, level } => {
             let mut pico = find_pico(&name, args.debug)?;

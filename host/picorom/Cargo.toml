@@ -10,5 +10,8 @@ anyhow = "1"
 clap = { version = "4", features = ["derive", "string"] }
 clap-num = "1"
 indicatif = "0.17"
+dialoguer = "0.12.0"
+rawzip = "0.4.3"
+flate2 = "1.1.5"
 
 picolink = { path = "../picolink" }
