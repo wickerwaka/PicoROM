@@ -140,11 +140,13 @@ function(pfb_compile_with_bootloader Target)
         endif ()
     endif ()
 
-    add_custom_command(
-        TARGET ${Target}
-        POST_BUILD
-        COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${Target}>
-                                           $<TARGET_PROPERTY:${Target},NAME>_fota_image.bin)
+    if (PFB_WITH_SHA256_HASHING OR PFB_WITH_IMAGE_ENCRYPTION)
+        add_custom_command(
+            TARGET ${Target}
+            POST_BUILD
+            COMMAND ${CMAKE_OBJCOPY} -O binary $<TARGET_FILE:${Target}>
+                                               $<TARGET_PROPERTY:${Target},NAME>_fota_image.bin)
+    endif ()
 
     if (PFB_WITH_SHA256_HASHING)
         add_custom_command(
@@ -168,7 +170,7 @@ function(pfb_compile_with_bootloader Target)
     add_custom_command(
         TARGET ${Target}
         POST_BUILD
-        COMMAND cat pico_fota_bootloader/pico_fota_bootloader.uf2 $<TARGET_PROPERTY:${Target},NAME>.uf2 > $<TARGET_PROPERTY:${Target},NAME>_fota.uf2
+        COMMAND cat pico_fota_bootloader/pico_fota_bootloader.uf2 >> $<TARGET_PROPERTY:${Target},NAME>.uf2
     )
 endfunction()
 

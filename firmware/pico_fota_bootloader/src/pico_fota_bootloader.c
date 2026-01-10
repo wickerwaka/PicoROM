@@ -48,15 +48,19 @@
 mbedtls_aes_context m_aes_ctx;
 #endif // PFB_WITH_IMAGE_ENCRYPTION
 
+#ifdef PFB_WITH_SHA256_HASHING
 static void *get_image_sha256_address(size_t image_size) {
     return (void *) (PFB_ADDR_AS_U32(__FLASH_DOWNLOAD_SLOT_START) + image_size
                      - PFB_SHA256_DIGEST_SIZE);
 }
+#endif // PFB_WITH_SHA256_HASHING
 
+#ifdef PFB_WITH_CRC32_HASHING
 static void *get_image_crc32_address(size_t image_size) {
     return (void *) (PFB_ADDR_AS_U32(__FLASH_DOWNLOAD_SLOT_START) + image_size
                      - PFB_CRC32_DIGEST_SIZE);
 }
+#endif // PFB_WITH_CRC32_HASHING
 
 
 #ifdef PFB_WITH_IMAGE_ENCRYPTION
@@ -230,8 +234,7 @@ static const uint32_t crc_table[256] = {
 #define DO4(buf)  DO2(buf); DO2(buf);
 #define DO8(buf)  DO4(buf); DO4(buf);
 
-static uint32_t calc_crc32(const unsigned char *buffer, unsigned int len)
-{
+static uint32_t calc_crc32(const unsigned char *buffer, unsigned int len) {
 	uint32_t crc;
 	crc = 0;
 	crc = crc ^ 0xffffffffL;
