@@ -6,8 +6,8 @@
 	(paper "A3")
 	(title_block
 		(title "PicoROM-28 - ROM Emulator")
-		(date "2025-12-08")
-		(rev "1.2")
+		(date "2026-01-10")
+		(rev "1.8")
 		(company "Martin Donlon (@wickerwaka)")
 		(comment 1 "DIP-28 Form factor")
 		(comment 2 "Based on RP2040 minimal example")
@@ -15611,7 +15611,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "LED"
+		(property "Value" "Green"
 			(at 337.82 148.9075 90)
 			(effects
 				(font
@@ -15647,7 +15647,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C71911"
+		(property "MPN" "C74338"
 			(at 334.01 146.05 0)
 			(effects
 				(font
@@ -16901,7 +16901,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "LED"
+		(property "Value" "Yellow"
 			(at 317.5 148.9075 90)
 			(effects
 				(font
@@ -18188,7 +18188,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "LED"
+		(property "Value" "Yellow"
 			(at 327.66 148.9075 90)
 			(effects
 				(font

@@ -9,8 +9,8 @@
 	(paper "A5")
 	(title_block
 		(title "PicoROM-28 - ROM Emulator")
-		(date "2025-12-08")
-		(rev "1.2")
+		(date "2026-01-10")
+		(rev "1.8")
 		(company "Martin Donlon (@wickerwaka)")
 	)
 	(layers
@@ -293,7 +293,7 @@
 				)
 			)
 		)
-		(property "Value" "LED"
+		(property "Value" "Green"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(uuid "9a62db47-2025-4014-9d64-1d50f9791141")
@@ -328,7 +328,7 @@
 				)
 			)
 		)
-		(property "MPN" "C273601"
+		(property "MPN" "C74338"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -2195,7 +2195,7 @@
 				)
 			)
 		)
-		(property "Value" "LED"
+		(property "Value" "Yellow"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(uuid "08e74b46-70df-4efc-a12a-2dbb98b5ffa9")
@@ -2230,7 +2230,7 @@
 				)
 			)
 		)
-		(property "MPN" "C71911"
+		(property "MPN" "C434450"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -3507,7 +3507,7 @@
 				)
 			)
 		)
-		(property "Value" "LED"
+		(property "Value" "Yellow"
 			(at 0 1.17 90)
 			(layer "F.Fab")
 			(uuid "b4ec9777-a702-4435-9ee5-fcb3812efcd0")
@@ -17677,7 +17677,7 @@
 			(justify left top)
 		)
 	)
-	(gr_text "v1.1"
+	(gr_text "v1.8"
 		(at 108.82 68.125 0)
 		(layer "F.SilkS")
 		(uuid "aca7de54-2a18-47c4-bdc5-1a37bbfa2f94")
@@ -17781,7 +17781,7 @@
 			(justify left bottom)
 		)
 	)
-	(gr_text "Dec/2025 v1.1\n"
+	(gr_text "Jan/2026 v1.8\n"
 		(at 91.32 66.825 270)
 		(layer "B.SilkS")
 		(uuid "84625dce-bf50-4fa9-b98a-5f952cfa0ab1")
