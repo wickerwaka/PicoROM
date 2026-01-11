@@ -15037,7 +15037,7 @@
 		(at 397.51 35.56 0)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(uuid "2a9d9ba7-8e06-47fa-86f3-13ca7b24374b")
@@ -16115,7 +16115,7 @@
 		(fields_autoplaced yes)
 		(uuid "6927426f-f907-46d6-aa16-dded85a36f32")
 		(property "Reference" "D2"
-			(at 337.82 146.3675 90)
+			(at 337.82 146.3674 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16123,8 +16123,8 @@
 				(justify right)
 			)
 		)
-		(property "Value" "LED"
-			(at 337.82 148.9075 90)
+		(property "Value" "Green"
+			(at 337.82 148.9074 90)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -16159,7 +16159,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C71911"
+		(property "MPN" "C74338"
 			(at 334.01 146.05 0)
 			(effects
 				(font
@@ -17190,7 +17190,7 @@
 		(mirror y)
 		(unit 1)
 		(exclude_from_sim no)
-		(in_bom yes)
+		(in_bom no)
 		(on_board yes)
 		(dnp no)
 		(uuid "8d8e69c6-f0c4-428f-a411-08de957543ed")
@@ -17419,7 +17419,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "LED"
+		(property "Value" "Yellow"
 			(at 317.5 148.9075 90)
 			(effects
 				(font
@@ -18706,7 +18706,7 @@
 				(justify right)
 			)
 		)
-		(property "Value" "LED"
+		(property "Value" "Yellow"
 			(at 327.66 148.9075 90)
 			(effects
 				(font
