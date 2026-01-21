@@ -1,11 +1,12 @@
 #include "hardware/structs/bus_ctrl.h"
 #include "hardware/structs/syscfg.h"
+#include "hardware/gpio.h"
+#include "hardware/pwm.h"
 #include "pico/multicore.h"
 
 #include "pio_programs.h"
 #include "rom.h"
 #include "system.h"
-#include <hardware/gpio.h>
 
 uint8_t *rom_data = (uint8_t *)0x21000000; // Start of 4 64kb sram banks
 
@@ -124,9 +125,7 @@ static void rom_pio_init_output_enable_report_program()
     {
         PRG_LOCAL(prg_report_data_access, p, sm, offset, cfg);
 
-        // TODO - should we use BASE_OE_PIN here? 
-        // This program looks at all input pins
-        sm_config_set_in_pins(&cfg, 0);
+        sm_config_set_in_pins(&cfg, BASE_OE_PIN);
 
         // Disable interrupts, we manually check the flag and clear it
         pio_set_irq0_source_enabled(p, (enum pio_interrupt_source)((uint)pis_interrupt0 + sm), false);
@@ -193,23 +192,30 @@ void rom_init_programs()
     gpio_set_drive_strength(TCA_EXPANDER_PIN, GPIO_DRIVE_STRENGTH_2MA);
     rom_pio_init_tca_program();
 #else
-    gpio_init(INFO_LED_PIN);
+    gpio_set_function(INFO_LED_PIN, GPIO_FUNC_PWM);
     gpio_set_input_enabled(INFO_LED_PIN, false);
     gpio_set_inover(INFO_LED_PIN, GPIO_OVERRIDE_LOW);
     gpio_set_dir(INFO_LED_PIN, true);
-    gpio_put(INFO_LED_PIN, false);
 
-    gpio_init(BUF_DIR_PIN);
-    gpio_set_input_enabled(BUF_DIR_PIN, false);
-    gpio_set_inover(BUF_DIR_PIN, GPIO_OVERRIDE_LOW);
-    gpio_set_dir(BUF_DIR_PIN, true);
-    gpio_put(BUF_DIR_PIN, false);
+    uint slice_num = pwm_gpio_to_slice_num(INFO_LED_PIN);
+    pwm_set_wrap(slice_num, 254);
+    pwm_set_gpio_level(INFO_LED_PIN, 0);
+    pwm_set_enabled(slice_num, true);
 
     gpio_init(RESET_PIN);
     gpio_set_input_enabled(RESET_PIN, false);
     gpio_set_inover(RESET_PIN, GPIO_OVERRIDE_LOW);
     gpio_set_dir(RESET_PIN, true);
     gpio_put(RESET_PIN, false);
+
+#if defined(BOARD_28P)
+    gpio_init(BUF_DIR_PIN);
+    gpio_set_input_enabled(BUF_DIR_PIN, false);
+    gpio_set_inover(BUF_DIR_PIN, GPIO_OVERRIDE_LOW);
+    gpio_set_dir(BUF_DIR_PIN, true);
+    gpio_put(BUF_DIR_PIN, false);
+#endif
+
 #endif
 
     rom_pio_init_output_program();

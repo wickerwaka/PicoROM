@@ -1,5 +1,6 @@
 #include "hardware/clocks.h"
 #include "hardware/gpio.h"
+#include "hardware/pwm.h"
 #include "hardware/structs/syscfg.h"
 #include "pico/bootrom.h"
 #include <stdio.h>
@@ -110,15 +111,15 @@ bool activity_timer_callback(repeating_timer_t * /*unused*/)
 #else
     if (link_count < link_duty)
     {
-        gpio_put(INFO_LED_PIN, true);
+        pwm_set_gpio_level(INFO_LED_PIN, 64);
     }
     else if (activity_count < activity_duty)
     {
-        gpio_put(INFO_LED_PIN, true);
+        pwm_set_gpio_level(INFO_LED_PIN, 64);
     }
     else
     {
-        gpio_put(INFO_LED_PIN, false);
+        pwm_set_gpio_level(INFO_LED_PIN, 0);
     }
 #endif
     activity_count++;

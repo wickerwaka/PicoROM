@@ -16,6 +16,21 @@ static constexpr uint32_t TCA_EXPANDER_PIN = 18;
 
 static constexpr uint32_t ROM_SIZE = 0x40000;
 
+#elif defined(BOARD_32P)
+
+static constexpr uint32_t N_DATA_PINS = 8;
+static constexpr uint32_t N_ADDR_PINS = 18;
+static constexpr uint32_t N_OE_PINS = 1;
+
+static constexpr uint32_t BASE_DATA_PIN = 18;
+static constexpr uint32_t BASE_ADDR_PIN = 0;
+static constexpr uint32_t BASE_OE_PIN = 26;
+static constexpr uint32_t BUF_OE_PIN = 27;
+static constexpr uint32_t RESET_PIN = 28;
+static constexpr uint32_t INFO_LED_PIN = 29;
+
+static constexpr uint32_t ROM_SIZE = 0x40000;
+
 #elif defined(BOARD_28P)
 
 static constexpr uint32_t N_DATA_PINS = 8;

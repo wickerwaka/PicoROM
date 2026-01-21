@@ -9,7 +9,7 @@ string(REPLACE . _ FILENAME_VERSION ${VERSION})
 
 pico_sdk_init()
 
-foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit)
+foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit 32P_2MBit 32P_2MBit_100ns)
     set(TARGET PicoROM-${BUILD_CONFIG}-${FILENAME_VERSION})
     add_executable(${TARGET} EXCLUDE_FROM_ALL
         main.cpp
@@ -40,7 +40,8 @@ foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit)
         pico_bootrom
         hardware_flash
         hardware_pio
-        hardware_dma    
+        hardware_dma
+        hardware_pwm
         pico_unique_id
         -Wl,--wrap=atexit
     )
@@ -78,11 +79,23 @@ target_compile_definitions(PicoROM-2MBit_100ns-${FILENAME_VERSION} PRIVATE
     FEATURE_STABLE_ADDRESS=1
 )
 
+target_compile_definitions(PicoROM-32P_2MBit-${FILENAME_VERSION} PRIVATE
+    BOARD_32P=1
+)
+
+target_compile_definitions(PicoROM-32P_2MBit_100ns-${FILENAME_VERSION} PRIVATE
+    BOARD_32P=1
+    FEATURE_STABLE_ADDRESS=1
+)
+
+
 target_compile_definitions(PicoROM-28P_512KBit-${FILENAME_VERSION} PRIVATE
     BOARD_28P=1
 )
 
 set_target_properties(PicoROM-2MBit-${FILENAME_VERSION} PROPERTIES EXCLUDE_FROM_ALL FALSE)
 set_target_properties(PicoROM-2MBit_100ns-${FILENAME_VERSION} PROPERTIES EXCLUDE_FROM_ALL FALSE)
+set_target_properties(PicoROM-32P_2MBit-${FILENAME_VERSION} PROPERTIES EXCLUDE_FROM_ALL FALSE)
+set_target_properties(PicoROM-32P_2MBit_100ns-${FILENAME_VERSION} PROPERTIES EXCLUDE_FROM_ALL FALSE)
 set_target_properties(PicoROM-28P_512KBit-${FILENAME_VERSION} PROPERTIES EXCLUDE_FROM_ALL FALSE)
 

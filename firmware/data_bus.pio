@@ -7,6 +7,7 @@
 .wrap
 
 ; OR /OE and /CS and set the buffer OE
+; Also works with a single /OE input
 ; 4 ops
 .program set_output_enable
 .origin 0
@@ -17,6 +18,7 @@
     mov pc, pins side 1
 
 ; OR /OE and /CS and set 4 pindirs
+; Also works with a single /OE input
 ; 4 ops
 .program set_pindir
 .origin 0
@@ -28,30 +30,11 @@
 
 
 ; Report activity to CPU
-; 8 ops
-.program report_data_access_24
+; 7 ops
+.program report_data_access
 wait_oe:
     mov y, pins    ; read in all pins
     mov osr, y     ; move into the osr so we can shift them out
-    out null, 24   ; skip all the other pins
-    out x, 2       ; move OE in x 
-    jmp x-- wait_oe  ; if /OE or /CS are high, check again
-
-    irq nowait 0 rel ; tell the cpu
-
-.wrap_target
-wait_change:
-    mov x, pins    ; read all pins again
-    jmp x!=y wait_oe ; if any have changed, restart and check oe again
-.wrap
-
-; Report activity to CPU
-; 8 ops
-.program report_data_access_20
-wait_oe:
-    mov y, pins    ; read in all pins
-    mov osr, y     ; move into the osr so we can shift them out
-    out null, 20   ; skip all the other pins
     out x, 2       ; move OE in x 
     jmp x-- wait_oe  ; if /OE or /CS are high, check again
 
