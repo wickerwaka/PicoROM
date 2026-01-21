@@ -1289,7 +1289,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -8021,7 +8021,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 225)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -8230,7 +8230,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 225)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -8648,7 +8648,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -9730,7 +9730,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 315)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -9939,7 +9939,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -10361,7 +10361,7 @@
 				)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -12573,7 +12573,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 135)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -12788,7 +12788,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 135)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -13909,7 +13909,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -14337,7 +14337,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -15499,7 +15499,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 135)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -15929,7 +15929,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -16144,7 +16144,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 270)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -16845,7 +16845,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 315)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -17060,7 +17060,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -17275,7 +17275,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 0 0 315)
 			(unlocked yes)
 			(layer "B.Fab")

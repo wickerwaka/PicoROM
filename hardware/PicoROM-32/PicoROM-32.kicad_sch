@@ -10822,7 +10822,7 @@
 		(uuid "ab194184-0fd7-49df-a2f3-3ad533ff4ec1")
 	)
 	(label "~{PIN_CE}"
-		(at 214.63 234.95 0)
+		(at 214.63 240.03 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -11042,7 +11042,7 @@
 		(uuid "ccd4fc41-cf73-4f10-9990-8e5ea50541a5")
 	)
 	(label "~{PIN_OE}"
-		(at 214.63 240.03 0)
+		(at 214.63 234.95 0)
 		(effects
 			(font
 				(size 1.27 1.27)
@@ -12177,7 +12177,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 91.44 162.56 0)
 			(effects
 				(font
@@ -12797,7 +12797,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 223.52 66.04 0)
 			(effects
 				(font
@@ -12875,7 +12875,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 234.95 66.04 0)
 			(effects
 				(font
@@ -12953,7 +12953,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 246.38 66.04 0)
 			(effects
 				(font
@@ -13031,7 +13031,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 257.81 66.04 0)
 			(effects
 				(font
@@ -13109,7 +13109,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 269.24 66.04 0)
 			(effects
 				(font
@@ -13187,7 +13187,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 280.67 66.04 0)
 			(effects
 				(font
@@ -13265,7 +13265,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 292.1 66.04 0)
 			(effects
 				(font
@@ -13343,7 +13343,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 157.48 66.04 0)
 			(effects
 				(font
@@ -13421,7 +13421,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 168.91 66.04 0)
 			(effects
 				(font
@@ -14550,7 +14550,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 34.29 219.71 0)
 			(effects
 				(font
@@ -14694,7 +14694,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 57.15 219.71 0)
 			(effects
 				(font
@@ -15206,7 +15206,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 303.53 66.04 0)
 			(effects
 				(font
@@ -15658,16 +15658,16 @@
 	)
 	(symbol
 		(lib_id "74xGxx:74LVC1G32")
-		(at 199.39 237.49 180)
+		(at 199.39 237.49 0)
+		(mirror y)
 		(unit 1)
 		(exclude_from_sim no)
 		(in_bom yes)
 		(on_board yes)
 		(dnp no)
-		(fields_autoplaced yes)
 		(uuid "4ceeed7f-9dba-4749-9af3-efa78e991db7")
 		(property "Reference" "U7"
-			(at 202.5081 227.33 0)
+			(at 202.5081 247.65 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15676,7 +15676,7 @@
 			)
 		)
 		(property "Value" "74LVC1G32"
-			(at 202.5081 229.87 0)
+			(at 202.5081 245.11 0)
 			(effects
 				(font
 					(size 1.27 1.27)
@@ -15884,7 +15884,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 351.79 139.7 0)
 			(effects
 				(font
@@ -16715,7 +16715,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 22.86 219.71 0)
 			(effects
 				(font
@@ -16793,7 +16793,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 45.72 219.71 0)
 			(effects
 				(font
@@ -19415,7 +19415,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 257.81 222.25 0)
 			(effects
 				(font
@@ -19769,7 +19769,7 @@
 				(hide yes)
 			)
 		)
-		(property "MPN" "C1525"
+		(property "MPN" "C307380"
 			(at 285.75 222.25 0)
 			(effects
 				(font
