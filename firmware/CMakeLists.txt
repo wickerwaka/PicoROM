@@ -20,8 +20,11 @@ foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit 32P_2MBit 32P_2MBit_100ns)
         pio_programs.cpp
         str_util.cpp
         peripherals.cpp
+        usb_descriptors.c
+        reset_interface.c
     )
-    add_executable(${BUILD_CONFIG} ALIAS ${TARGET})
+    # Create alias target so "make 2MBit" works
+    add_custom_target(${BUILD_CONFIG} DEPENDS ${TARGET})
 
     pico_set_float_implementation(${TARGET} none)
     pico_set_double_implementation(${TARGET} none)
@@ -29,8 +32,12 @@ foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit 32P_2MBit 32P_2MBit_100ns)
     pico_generate_pio_header(${TARGET} ${CMAKE_CURRENT_LIST_DIR}/data_bus.pio)
     pico_generate_pio_header(${TARGET} ${CMAKE_CURRENT_LIST_DIR}/comms.pio)
 
-    pico_enable_stdio_usb(${TARGET} 1)
+    # Use custom USB implementation (not stdio_usb)
+    pico_enable_stdio_usb(${TARGET} 0)
     pico_enable_stdio_uart(${TARGET} 0)
+
+    # Include directory for our tusb_config.h
+    target_include_directories(${TARGET} PRIVATE ${CMAKE_CURRENT_LIST_DIR})
 
     pico_set_linker_script(${TARGET} ${CMAKE_CURRENT_LIST_DIR}/memmap_firmware.ld)
 
@@ -44,6 +51,8 @@ foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit 32P_2MBit 32P_2MBit_100ns)
         hardware_dma
         hardware_pwm
         pico_unique_id
+        tinyusb_device
+        pico_usb_reset_interface_headers
         -Wl,--wrap=atexit
     )
 
