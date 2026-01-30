@@ -19,13 +19,13 @@ void usb_send(const void *data, size_t len)
 
     while (remaining > 0)
     {
-        uint32_t sent = tud_cdc_write(ptr, remaining);
+        uint32_t sent = tud_vendor_write(ptr, remaining);
         ptr += sent;
         remaining -= sent;
         tud_task();
     }
 
-    tud_cdc_write_flush();
+    tud_vendor_write_flush();
 
     activity_count++;
 }
@@ -86,15 +86,14 @@ void pl_send_error(const char *s, uint32_t v0, uint32_t v1)
 void pl_wait_for_connection()
 {
     // Wait for connection
-    while (!tud_cdc_connected())
+    while (!tud_vendor_mounted())
     {
         tud_task();
         sleep_ms(1);
     }
 
     // Flush input
-    tud_cdc_read_flush();
-    tud_cdc_write_clear();
+    tud_vendor_read_flush();
 
     incoming_count = 0;
 
@@ -106,7 +105,7 @@ void pl_wait_for_connection()
 
 bool pl_is_connected()
 {
-    return tud_cdc_connected();
+    return tud_vendor_mounted();
 }
 
 const Packet *pl_poll()
@@ -114,12 +113,12 @@ const Packet *pl_poll()
     tud_task();
 
     uint32_t space = sizeof(incoming_buffer) - incoming_count;
-    uint32_t rx_avail = tud_cdc_available();
+    uint32_t rx_avail = tud_vendor_available();
 
     uint32_t read_size = MIN(rx_avail, space);
     if (read_size > 0)
     {
-        incoming_count += tud_cdc_read(incoming_buffer + incoming_count, read_size);
+        incoming_count += tud_vendor_read(incoming_buffer + incoming_count, read_size);
     }
 
     if (incoming_count >= 2)
