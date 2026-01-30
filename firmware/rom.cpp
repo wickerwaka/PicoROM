@@ -1,7 +1,6 @@
 #include "hardware/structs/bus_ctrl.h"
 #include "hardware/structs/syscfg.h"
 #include "hardware/gpio.h"
-#include "hardware/pwm.h"
 #include "pico/multicore.h"
 
 #include "pio_programs.h"
@@ -137,27 +136,6 @@ static void rom_pio_init_output_enable_report_program()
     }
 }
 
-#if defined(BOARD_32P_TCA)
-static void rom_pio_init_tca_program()
-{
-    if (prg_write_tca_bits.valid())
-    {
-        PRG_LOCAL(prg_write_tca_bits, p, sm, offset, cfg);
-
-        // Enable output and set pin high
-        pio_sm_set_pindirs_with_mask(p, sm, 0xffffffff, TCA_EXPANDER_PIN_MASK);
-        pio_sm_set_pins_with_mask(p, sm, 0xffffffff, TCA_EXPANDER_PIN_MASK);
-
-        sm_config_set_out_pins(&cfg, TCA_EXPANDER_PIN, 1);
-        sm_config_set_clkdiv(&cfg, 1000); // divide down to TCA rate
-        sm_config_set_out_shift(&cfg, true, true, 10); // 4-bits of preample, 5-bits of data, 1-end bit
-
-        pio_sm_init(p, sm, offset, &cfg);
-        pio_sm_set_enabled(p, sm, true);
-    }
-}
-#endif
-
 void rom_init_programs()
 {
     // Assign data and oe pins to pio
@@ -185,29 +163,6 @@ void rom_init_programs()
     gpio_set_inover(BUF_OE_PIN, GPIO_OVERRIDE_LOW);
     gpio_set_slew_rate(BUF_OE_PIN, GPIO_SLEW_RATE_FAST);
 
-#if defined(BOARD_32P_TCA)
-    pio_gpio_init(prg_write_tca_bits.pio(), TCA_EXPANDER_PIN);
-    gpio_set_input_enabled(TCA_EXPANDER_PIN, false);
-    gpio_set_inover(TCA_EXPANDER_PIN, GPIO_OVERRIDE_LOW);
-    gpio_set_drive_strength(TCA_EXPANDER_PIN, GPIO_DRIVE_STRENGTH_2MA);
-    rom_pio_init_tca_program();
-#else
-    gpio_set_function(INFO_LED_PIN, GPIO_FUNC_PWM);
-    gpio_set_input_enabled(INFO_LED_PIN, false);
-    gpio_set_inover(INFO_LED_PIN, GPIO_OVERRIDE_LOW);
-    gpio_set_dir(INFO_LED_PIN, true);
-
-    uint slice_num = pwm_gpio_to_slice_num(INFO_LED_PIN);
-    pwm_set_wrap(slice_num, 254);
-    pwm_set_gpio_level(INFO_LED_PIN, 0);
-    pwm_set_enabled(slice_num, true);
-
-    gpio_init(RESET_PIN);
-    gpio_set_input_enabled(RESET_PIN, false);
-    gpio_set_inover(RESET_PIN, GPIO_OVERRIDE_LOW);
-    gpio_set_dir(RESET_PIN, true);
-    gpio_put(RESET_PIN, false);
-
 #if defined(BOARD_28P)
     gpio_init(BUF_DIR_PIN);
     gpio_set_input_enabled(BUF_DIR_PIN, false);
@@ -216,17 +171,10 @@ void rom_init_programs()
     gpio_put(BUF_DIR_PIN, false);
 #endif
 
-#endif
-
     rom_pio_init_output_program();
     rom_pio_init_pindirs_program();
     rom_pio_init_output_enable_program();
     rom_pio_init_output_enable_report_program();
-
-#if defined(BOARD_32P_TCA)
-    tca_set_pins(0x00);
-    tca_set_pins(0x00);
-#endif
 }
 
 uint8_t *rom_get_buffer()
@@ -258,26 +206,4 @@ bool rom_check_oe()
     return false;
 }
 
-#if defined(BOARD_32P_TCA)
-static uint8_t tca_pins_state = 0x0;
-void tca_set_pins(uint8_t pins)
-{
-    uint32_t bitstream = 0b1000001010 | ((pins & 0x1f) << 4);
-    prg_write_tca_bits.pio()->txf[prg_write_tca_bits.sm] = bitstream;
-    tca_pins_state = pins;
-}
 
-void tca_set_pin(int pin, bool en)
-{
-    uint8_t new_state = tca_pins_state;
-    if (en)
-        new_state |= (1 << pin);
-    else
-        new_state &= ~(1 << pin);
-
-    if (new_state != tca_pins_state)
-    {
-        tca_set_pins(new_state);
-    }
-}
-#endif

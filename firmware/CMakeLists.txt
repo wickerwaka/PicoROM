@@ -19,6 +19,7 @@ foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit 32P_2MBit 32P_2MBit_100ns)
         comms.cpp
         pio_programs.cpp
         str_util.cpp
+        peripherals.cpp
     )
     add_executable(${BUILD_CONFIG} ALIAS ${TARGET})
 

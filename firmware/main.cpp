@@ -1,6 +1,4 @@
-#include "hardware/clocks.h"
 #include "hardware/gpio.h"
-#include "hardware/pwm.h"
 #include "hardware/structs/syscfg.h"
 #include "pico/bootrom.h"
 #include <stdio.h>
@@ -10,6 +8,7 @@
 
 #include "comms.h"
 #include "flash.h"
+#include "peripherals.h"
 #include "pico_link.h"
 #include "pio_programs.h"
 #include "rom.h"
@@ -49,159 +48,6 @@ void configure_address_pins(uint32_t mask)
             gpio_set_input_enabled(gpio, false);
         }
     }
-}
-
-static uint8_t identify_request = 0;
-
-repeating_timer_t activity_timer;
-
-static uint8_t identify_ack = 0;
-static uint8_t activity_cycles = 0;
-static uint8_t activity_duty = 0;
-static uint8_t activity_count = 0;
-
-static uint8_t link_cycles = 0;
-static uint8_t link_duty = 0;
-static uint8_t link_count = 0;
-
-bool activity_timer_callback(repeating_timer_t * /*unused*/)
-{
-    if (activity_count >= activity_cycles)
-    {
-        bool rom_access = rom_check_oe();
-
-        activity_cycles = 0;
-        activity_duty = 0;
-
-        if (rom_access)
-        {
-            activity_cycles = 5;
-            activity_duty = 1;
-        }
-
-        activity_count = 0;
-    }
-
-    if (link_count >= link_cycles)
-    {
-        bool identify_req = identify_request != identify_ack;
-        bool usb_activity = pl_check_activity();
-
-        link_cycles = 0;
-        link_duty = 0;
-
-        if (identify_req)
-        {
-            identify_ack++;
-            link_cycles = 100;
-            link_duty = 90;
-        }
-        else if (usb_activity)
-        {
-            link_cycles = 20;
-            link_duty = 10;
-        }
-
-        link_count = 0;
-    }
-
-#if defined(BOARD_32P_TCA)
-    tca_set_pin(TCA_LINK_PIN, link_count < link_duty);
-    tca_set_pin(TCA_READ_PIN, activity_count < activity_duty);
-#else
-    if (link_count < link_duty)
-    {
-        pwm_set_gpio_level(INFO_LED_PIN, 64);
-    }
-    else if (activity_count < activity_duty)
-    {
-        pwm_set_gpio_level(INFO_LED_PIN, 64);
-    }
-    else
-    {
-        pwm_set_gpio_level(INFO_LED_PIN, 0);
-    }
-#endif
-    activity_count++;
-    link_count++;
-
-    return true;
-}
-
-ResetLevel current_reset = ResetLevel::Z;
-
-void reset_set(ResetLevel level)
-{
-    switch (level)
-    {
-        case ResetLevel::Low:
-#if defined(BOARD_32P_TCA)
-            tca_set_pin(TCA_RESET_VALUE_PIN, false);
-            tca_set_pin(TCA_RESET_PIN, true);
-#else
-            gpio_put(RESET_PIN, false);
-#endif
-            current_reset = ResetLevel::Low;
-            break;
-
-        case ResetLevel::High:
-#if defined(BOARD_32P_TCA)
-            tca_set_pin(TCA_RESET_VALUE_PIN, true);
-            tca_set_pin(TCA_RESET_PIN, true);
-#else
-            gpio_put(RESET_PIN, false);
-#endif
-            current_reset = ResetLevel::High;
-            break;
-
-        default:
-#if defined(BOARD_32P_TCA)
-            tca_set_pin(TCA_RESET_PIN, false);
-#else
-            gpio_put(RESET_PIN, true);
-#endif
-            current_reset = ResetLevel::Z;
-            break;
-    }
-}
-
-void reset_to_string(ResetLevel level, char *s, size_t sz)
-{
-    switch (level)
-    {
-        case ResetLevel::Low:
-            strcpyz(s, sz, "low");
-            break;
-
-        case ResetLevel::High:
-            strcpyz(s, sz, "high");
-            break;
-
-        default:
-            strcpyz(s, sz, "z");
-            break;
-    }
-}
-
-bool reset_from_string(const char *s, ResetLevel *level)
-{
-    if (streq(s, "low") || streq(s, "l"))
-    {
-        *level = ResetLevel::Low;
-        return true;
-    }
-    else if (streq(s, "high") || streq(s, "h"))
-    {
-        *level = ResetLevel::High;
-        return true;
-    }
-    else if (streq(s, "z"))
-    {
-        *level = ResetLevel::Z;
-        return true;
-    }
-
-    return false;
 }
 
 uint32_t flash_load_time = 0;
@@ -313,7 +159,7 @@ bool get_parameter(const char *name, char *value, size_t value_size)
     }
     else if (streq(name, "reset"))
     {
-        reset_to_string(current_reset, value, value_size);
+        reset_to_string(reset_get(), value, value_size);
         return true;
     }
     else if (streq(name, "build_config"))
@@ -350,12 +196,10 @@ int main()
 
     configure_address_pins(config.addr_mask);
 
-    identify_ack = identify_request = 0;
-
-    add_repeating_timer_ms(10, activity_timer_callback, nullptr, &activity_timer);
-
     rom_service_start();
-    
+
+    peripherals_init();
+
     reset_set(config.default_reset);
 
     while (true)
@@ -529,7 +373,7 @@ int main()
 
                     case PacketType::Identify:
                     {
-                        identify_request += 5;
+                        trigger_identify_led();
                         break;
                     }
 

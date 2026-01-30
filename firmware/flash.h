@@ -4,12 +4,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-enum class ResetLevel : uint8_t
-{
-    Low,
-    High,
-    Z
-};
+#include "peripherals.h"
 
 struct Config
 {

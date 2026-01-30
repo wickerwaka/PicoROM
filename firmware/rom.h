@@ -12,9 +12,4 @@ uint8_t *rom_get_buffer();
 
 bool rom_check_oe();
 
-#if defined(BOARD_32P_TCA)
-void tca_set_pins(uint8_t pins);
-void tca_set_pin(int pin, bool en);
-#endif
-
 #endif // ROM_H
