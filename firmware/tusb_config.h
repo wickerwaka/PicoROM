@@ -62,8 +62,9 @@ extern "C" {
 #define CFG_TUD_MIDI          0
 #define CFG_TUD_AUDIO         0
 
-// Vendor FIFO size of TX and RX (64 bytes for full-speed USB)
-#define CFG_TUD_VENDOR_RX_BUFSIZE 64
+// Vendor FIFO size of TX and RX
+// Set to 0 for direct endpoint access (no internal buffering)
+#define CFG_TUD_VENDOR_RX_BUFSIZE 0
 #define CFG_TUD_VENDOR_TX_BUFSIZE 64
 
 // Vendor endpoint buffer size
