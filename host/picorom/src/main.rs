@@ -4,8 +4,11 @@ use indicatif;
 use indicatif::ProgressBar;
 use indicatif::ProgressStyle;
 use std::fs;
+use std::io::{self, Write};
 use std::iter;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
 use std::time::Duration;
 
 use picolink::*;
@@ -119,6 +122,12 @@ enum Commands {
 
     /// Reboot the device into USB mode
     USBBoot { name: String },
+
+    /// Stream debug output from a PicoROM device
+    Debug {
+        /// PicoROM device name.
+        name: String,
+    },
 }
 
 fn main() -> Result<()> {
@@ -228,6 +237,41 @@ fn main() -> Result<()> {
             let mut pico = find_pico(&name)?;
             println!("Requesting USB boot");
             pico.usb_boot()?;
+        }
+
+        Commands::Debug { name } => {
+            let mut debug = find_pico_debug(&name)?;
+            eprintln!("Connected to '{}' debug interface. Press Ctrl-C to exit.", name);
+
+            let running = Arc::new(AtomicBool::new(true));
+            let r = running.clone();
+            ctrlc::set_handler(move || {
+                r.store(false, Ordering::SeqCst);
+            })?;
+
+            const MIN_POLL_MS: u64 = 1;
+            const MAX_POLL_MS: u64 = 100;
+            let mut poll_interval = MIN_POLL_MS;
+            let mut stdout = io::stdout();
+
+            while running.load(Ordering::SeqCst) {
+                match debug.read(Duration::from_millis(poll_interval)) {
+                    Ok(Some(data)) => {
+                        stdout.write_all(&data)?;
+                        stdout.flush()?;
+                        poll_interval = MIN_POLL_MS;
+                    }
+                    Ok(None) => {
+                        poll_interval = (poll_interval * 2).min(MAX_POLL_MS);
+                    }
+                    Err(e) => {
+                        eprintln!("Error: {}", e);
+                        break;
+                    }
+                }
+            }
+
+            eprintln!("\nDisconnected.");
         }
     }
 

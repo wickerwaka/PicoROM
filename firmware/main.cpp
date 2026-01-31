@@ -14,6 +14,7 @@
 #include "rom.h"
 #include "str_util.h"
 #include "system.h"
+#include "debug.h"
 
 
 // Dummy atexit implementation because some SDK/newlib versions don't strip
@@ -346,6 +347,13 @@ void handle_packet(const Packet *req)
     }
 }
 
+static bool send_debug_summary = false;
+
+void on_debug_connected(void)
+{
+    send_debug_summary = true;
+}
+
 int main()
 {
     flash_init_config(&config);
@@ -375,12 +383,20 @@ int main()
 
     // Arm initial RX transfer
     tud_vendor_read_flush();
+    dbg_set_enabled_cb(on_debug_connected);
 
-    // Simple main loop - no connection state tracking needed
     while (true)
     {
         tud_task();
 
         comms_update(nullptr, 0, 5000);
+
+        if (send_debug_summary)
+        {
+            dbg_print("=========\nWelcome to PicoROM!\n========\n");
+            dbg_print("PicoROM v%s\n", PICOROM_FIRMWARE_VERSION);
+            dbg_print("Config: %s\n", PICOROM_CONFIG_NAME);
+            send_debug_summary = false;
+        }
     }
 }
