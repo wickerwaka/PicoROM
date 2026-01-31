@@ -1,18 +1,38 @@
 #include "pico_link.h"
 
-#include "pico/stdlib.h"
 #include <string.h>
 #include <tusb.h>
-#include <unistd.h>
 
-
-static uint8_t incoming_buffer[sizeof(Packet)];
-static uint8_t incoming_count;
-
+static PacketHandler packet_handler = nullptr;
 static uint8_t activity_count = 0;
 static uint8_t activity_report = 0;
 
-void usb_send(const void *data, size_t len)
+void pl_init(PacketHandler handler)
+{
+    packet_handler = handler;
+}
+
+// USB RX callback - called by TinyUSB when data arrives
+extern "C" void tud_vendor_rx_cb(uint8_t itf, uint8_t const *buffer, uint16_t bufsize)
+{
+    (void)itf;
+
+    // Entire packet arrives at once (30-byte max payload + 2-byte header fits in 64-byte endpoint)
+    if (bufsize >= 2 && packet_handler)
+    {
+        const Packet *pkt = (const Packet *)buffer;
+        if ((pkt->size + 2) <= bufsize)
+        {
+            activity_count++;
+            packet_handler(pkt);
+        }
+    }
+
+    // Arm next transfer
+    tud_vendor_read_flush();
+}
+
+static void usb_send(const void *data, size_t len)
 {
     const uint8_t *ptr = (const uint8_t *)data;
     uint32_t remaining = len;
@@ -81,70 +101,6 @@ void pl_send_error(const char *s, uint32_t v0, uint32_t v1)
     memcpy(pkt.payload + 4, &v1, sizeof(v1));
     strncpy((char *)pkt.payload + 8, s, pkt.size - 8);
     usb_send(&pkt, pkt.size + 2);
-}
-
-void pl_wait_for_connection()
-{
-    // Wait for connection
-    while (!tud_vendor_mounted())
-    {
-        tud_task();
-        sleep_ms(1);
-    }
-
-    // Flush input
-    tud_vendor_read_flush();
-
-    incoming_count = 0;
-
-    activity_count = activity_report = 0;
-
-    // Write preamble
-    usb_send("PicoROM Hello", 13);
-}
-
-bool pl_is_connected()
-{
-    return tud_vendor_mounted();
-}
-
-const Packet *pl_poll()
-{
-    tud_task();
-
-    uint32_t space = sizeof(incoming_buffer) - incoming_count;
-    uint32_t rx_avail = tud_vendor_available();
-
-    uint32_t read_size = MIN(rx_avail, space);
-    if (read_size > 0)
-    {
-        incoming_count += tud_vendor_read(incoming_buffer + incoming_count, read_size);
-    }
-
-    if (incoming_count >= 2)
-    {
-        Packet *pkt = (Packet *)incoming_buffer;
-        if ((pkt->size + 2) <= incoming_count)
-        {
-            activity_count++;
-            return pkt;
-        }
-    }
-
-    return nullptr;
-}
-
-void pl_consume_packet(const Packet *pkt)
-{
-    uint32_t used = pkt->size + 2;
-    uint32_t remaining = incoming_count - used;
-
-    if (remaining > 0)
-    {
-        memmove(incoming_buffer, incoming_buffer + used, remaining);
-    }
-
-    incoming_count = remaining;
 }
 
 bool pl_check_activity()

@@ -42,6 +42,13 @@ struct Packet
     uint8_t payload[MAX_PKT_PAYLOAD];
 };
 
+// Packet handler callback type
+typedef void (*PacketHandler)(const Packet *pkt);
+
+// Initialize pico_link with a packet handler callback
+void pl_init(PacketHandler handler);
+
+// Send functions
 void pl_send_null(PacketType type);
 void pl_send_string(PacketType type, const char *s);
 void pl_send_payload(PacketType type, const void *data, size_t len);
@@ -49,11 +56,7 @@ void pl_send_debug(const char *s, uint32_t v0, uint32_t v1);
 void pl_send_error(const char *s, uint32_t v0, uint32_t v1);
 void pl_send_packet(const Packet *pkt);
 
-void pl_wait_for_connection();
-bool pl_is_connected();
-const Packet *pl_poll();
-void pl_consume_packet(const Packet *pkt);
-
+// Activity tracking
 bool pl_check_activity();
 
 

@@ -130,7 +130,7 @@ fn main() -> Result<()> {
             if found.len() > 0 {
                 println!("Available PicoROMs:");
                 for (k, v) in found.iter() {
-                    println!("  {:16} [{}]", k, v.path);
+                    println!("  {:16} [{}]", k, v.device_id);
                 }
             } else {
                 println!("No PicoROMs found.");

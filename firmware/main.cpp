@@ -177,6 +177,175 @@ bool get_parameter(const char *name, char *value, size_t value_size)
     return false;
 }
 
+// Packet handler - called from USB RX callback
+void handle_packet(const Packet *req)
+{
+    switch ((PacketType)req->type)
+    {
+        case PacketType::SetPointer:
+        {
+            memcpy(&rom_offset, req->payload, sizeof(uint32_t));
+            break;
+        }
+
+        case PacketType::GetPointer:
+        {
+            pl_send_payload(PacketType::CurPointer, &rom_offset, sizeof(rom_offset));
+            break;
+        }
+
+        case PacketType::Write:
+        {
+            uint32_t offset = rom_offset;
+            if ((offset + req->size) > ROM_SIZE)
+            {
+                pl_send_error("Write out of range", offset, req->size);
+                break;
+            }
+            memcpy(rom_get_buffer() + offset, req->payload, req->size);
+            rom_offset += req->size;
+            break;
+        }
+
+        case PacketType::Read:
+        {
+            uint32_t offset = rom_offset;
+            uint32_t size = MIN(MAX_PKT_PAYLOAD, ROM_SIZE - offset);
+            pl_send_payload(PacketType::ReadData, rom_get_buffer() + offset, size);
+            rom_offset += size;
+            break;
+        }
+
+        case PacketType::CommitFlash:
+        {
+            flash_save_rom();
+            flash_save_config(&config);
+            pl_send_null(PacketType::CommitDone);
+            break;
+        }
+
+        case PacketType::CommsStart:
+        {
+            uint32_t addr;
+            memcpy(&addr, req->payload, 4);
+            comms_begin_session(addr, rom_get_buffer());
+            pl_send_debug("Comms Started", addr, 0);
+            break;
+        }
+
+        case PacketType::CommsEnd:
+        {
+            comms_end_session();
+            pl_send_debug("Comms Ended", 0, 0);
+            break;
+        }
+
+        case PacketType::CommsData:
+        {
+            if (!comms_update(req->payload, req->size, 5000))
+            {
+                pl_send_error("Comms send timeout", 0, 0);
+            }
+            break;
+        }
+
+        case PacketType::SetParameter:
+        {
+            char *split = (char *)memchr(req->payload, ',', req->size);
+            if (split != nullptr)
+            {
+                *split = '\0';
+                if (set_parameter((char *)req->payload, split + 1))
+                {
+                    Packet pkt;
+                    if (get_parameter((const char *)req->payload, (char *)pkt.payload, sizeof(pkt.payload)))
+                    {
+                        pkt.size = strlen((char *)pkt.payload);
+                        pkt.type = (uint8_t)PacketType::Parameter;
+                        pl_send_packet(&pkt);
+                    }
+                    else
+                    {
+                        pl_send_null(PacketType::ParameterError);
+                    }
+                    break;
+                }
+                else
+                {
+                    pl_send_null(PacketType::ParameterError);
+                }
+            }
+            else
+            {
+                pl_send_null(PacketType::ParameterError);
+            }
+            break;
+        }
+
+        case PacketType::GetParameter:
+        {
+            Packet pkt;
+            if (get_parameter((const char *)req->payload, (char *)pkt.payload, sizeof(pkt.payload)))
+            {
+                pkt.size = strlen((char *)pkt.payload);
+                pkt.type = (uint8_t)PacketType::Parameter;
+            }
+            else
+            {
+                pkt.size = 0;
+                pkt.type = (uint8_t)PacketType::ParameterError;
+            }
+            pl_send_packet(&pkt);
+            break;
+        }
+
+        case PacketType::QueryParameter:
+        {
+            if (req->size == 0)
+            {
+                pl_send_string(PacketType::Parameter, parameter_names[0]);
+            }
+            else
+            {
+                const char **p = parameter_names;
+                while (p)
+                {
+                    if (!strcmp(*p, (char *)req->payload))
+                    {
+                        p++;
+                        break;
+                    }
+                    p++;
+                }
+
+                if (p)
+                    pl_send_string(PacketType::Parameter, *p);
+                else
+                    pl_send_null(PacketType::Parameter);
+            }
+            break;
+        }
+
+        case PacketType::Identify:
+        {
+            trigger_identify_led();
+            break;
+        }
+
+        case PacketType::Bootsel:
+        {
+            rom_reset_usb_boot(-1, 0);
+            break;
+        }
+
+        default:
+        {
+            pl_send_error("Unrecognized packet", req->type, req->size);
+            break;
+        }
+    }
+}
+
 int main()
 {
     flash_init_config(&config);
@@ -194,6 +363,8 @@ int main()
 
     tusb_init();
 
+    pl_init(handle_packet);
+
     configure_address_pins(config.addr_mask);
 
     rom_service_start();
@@ -202,195 +373,14 @@ int main()
 
     reset_set(config.default_reset);
 
+    // Arm initial RX transfer
+    tud_vendor_read_flush();
+
+    // Simple main loop - no connection state tracking needed
     while (true)
     {
-        // Reset state
-        rom_offset = 0;
-        comms_end_session();
+        tud_task();
 
-        pl_wait_for_connection();
-
-        pl_send_debug("Connected", 1, 2);
-
-        // Loop while connected
-        while (pl_is_connected())
-        {
-            uint32_t addr = sio_hw->gpio_in & config.addr_mask;
-            if (!comms_update(nullptr, 0, 5000))
-            {
-                pl_send_error("Comms Update Timeout", 0, 0);
-            }
-
-            const Packet *req = pl_poll();
-
-            if (req)
-            {
-                switch ((PacketType)req->type)
-                {
-                    case PacketType::SetPointer:
-                    {
-                        memcpy(&rom_offset, req->payload, sizeof(uint32_t));
-                        break;
-                    }
-
-                    case PacketType::GetPointer:
-                    {
-                        pl_send_payload(PacketType::CurPointer, &rom_offset, sizeof(rom_offset));
-                        break;
-                    }
-
-                    case PacketType::Write:
-                    {
-                        uint32_t offset = rom_offset;
-                        if ((offset + req->size) > ROM_SIZE)
-                        {
-                            pl_send_error("Write out of range", offset, req->size);
-                            break;
-                        }
-                        memcpy(rom_get_buffer() + offset, req->payload, req->size);
-                        rom_offset += req->size;
-                        break;
-                    }
-
-                    case PacketType::Read:
-                    {
-                        uint32_t offset = rom_offset;
-                        uint32_t size = MIN(MAX_PKT_PAYLOAD, ROM_SIZE - offset);
-                        pl_send_payload(PacketType::ReadData, rom_get_buffer() + offset, size);
-                        rom_offset += size;
-                        break;
-                    }
-
-                    case PacketType::CommitFlash:
-                    {
-                        flash_save_rom();
-                        flash_save_config(&config);
-                        pl_send_null(PacketType::CommitDone);
-                        break;
-                    }
-
-                    case PacketType::CommsStart:
-                    {
-                        uint32_t addr;
-                        memcpy(&addr, req->payload, 4);
-                        comms_begin_session(addr, rom_get_buffer());
-                        pl_send_debug("Comms Started", addr, 0);
-                        break;
-                    }
-
-                    case PacketType::CommsEnd:
-                    {
-                        comms_end_session();
-                        pl_send_debug("Comms Ended", 0, 0);
-                        break;
-                    }
-
-                    case PacketType::CommsData:
-                    {
-                        if (!comms_update(req->payload, req->size, 5000))
-                        {
-                            pl_send_error("Comms send timeout", 0, 0);
-                        }
-                        break;
-                    }
-
-                    case PacketType::SetParameter:
-                    {
-                        char *split = (char *)memchr(req->payload, ',', req->size);
-                        if (split != nullptr)
-                        {
-                            *split = '\0';
-                            if (set_parameter((char *)req->payload, split + 1))
-                            {
-                                Packet pkt;
-                                if (get_parameter((const char *)req->payload, (char *)pkt.payload, sizeof(pkt.payload)))
-                                {
-                                    pkt.size = strlen((char *)pkt.payload);
-                                    pkt.type = (uint8_t)PacketType::Parameter;
-                                    pl_send_packet(&pkt);
-                                }
-                                else
-                                {
-                                    pl_send_null(PacketType::ParameterError);
-                                }
-                                break;
-                            }
-                            else
-                            {
-                                pl_send_null(PacketType::ParameterError);
-                            }
-                        }
-                        else
-                        {
-                            pl_send_null(PacketType::ParameterError);
-                        }
-                        break;
-                    }
-
-                    case PacketType::GetParameter:
-                    {
-                        Packet pkt;
-                        if (get_parameter((const char *)req->payload, (char *)pkt.payload, sizeof(pkt.payload)))
-                        {
-                            pkt.size = strlen((char *)pkt.payload);
-                            pkt.type = (uint8_t)PacketType::Parameter;
-                        }
-                        else
-                        {
-                            pkt.size = 0;
-                            pkt.type = (uint8_t)PacketType::ParameterError;
-                        }
-                        pl_send_packet(&pkt);
-                        break;
-                    }
-
-                    case PacketType::QueryParameter:
-                    {
-                        if (req->size == 0)
-                        {
-                            pl_send_string(PacketType::Parameter, parameter_names[0]);
-                        }
-                        else
-                        {
-                            const char **p = parameter_names;
-                            while (p)
-                            {
-                                if (!strcmp(*p, (char *)req->payload))
-                                {
-                                    p++;
-                                    break;
-                                }
-                                p++;
-                            }
-
-                            if (p)
-                                pl_send_string(PacketType::Parameter, *p);
-                            else
-                                pl_send_null(PacketType::Parameter);
-                        }
-                        break;
-                    }
-
-                    case PacketType::Identify:
-                    {
-                        trigger_identify_led();
-                        break;
-                    }
-
-                    case PacketType::Bootsel:
-                    {
-                        rom_reset_usb_boot(-1, 0);
-                        break;
-                    }
-
-                    default:
-                    {
-                        pl_send_error("Unrecognized packet", req->type, req->size);
-                        break;
-                    }
-                }
-                pl_consume_packet(req);
-            }
-        }
+        comms_update(nullptr, 0, 5000);
     }
 }

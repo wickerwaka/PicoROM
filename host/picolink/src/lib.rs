@@ -1,14 +1,22 @@
 use anyhow::{anyhow, Result};
-use serialport::SerialPort;
+use nusb::transfer::{Bulk, Buffer, In, Out};
+use nusb::{Endpoint, Interface, MaybeFuture};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufRead, BufReader, BufWriter, Read, Write};
+use std::io::{BufRead, BufReader, BufWriter, Write};
 use std::path::PathBuf;
 use std::{thread::sleep, time::Duration, time::Instant};
 
 use dirs::cache_dir;
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
+
+// USB constants
+const VID: u16 = 0x2E8A;
+const PID: u16 = 0x000A;
+const INTERFACE_NUM: u8 = 0;
+const EP_OUT: u8 = 0x01;
+const EP_IN: u8 = 0x81;
 
 #[repr(u8)]
 #[derive(FromPrimitive, Debug)]
@@ -118,11 +126,13 @@ pub enum RespPacket {
     Debug(String, u32, u32),
 }
 
-#[derive(Debug)]
 pub struct PicoLink {
-    port: Box<dyn SerialPort>,
+    #[allow(dead_code)]
+    interface: Interface,
+    ep_out: Endpoint<Bulk, Out>,
+    ep_in: Endpoint<Bulk, In>,
     debug: bool,
-    pub path: String,
+    pub device_id: String,
 }
 
 struct RawPacket {
@@ -131,28 +141,73 @@ struct RawPacket {
     payload: [u8; 30],
 }
 
+/// Create an IN buffer for receiving data
+fn new_in_buffer(size: usize) -> Buffer {
+    let mut buf = Buffer::new(size);
+    buf.set_requested_len(size);
+    buf
+}
+
 impl PicoLink {
-    pub fn open(port_path: &str, debug: bool) -> Result<PicoLink> {
-        let baud_rate = if cfg!(target_os = "macos") { 0 } else { 9600 };
+    pub fn open(device_id: &str, debug: bool) -> Result<PicoLink> {
+        let devices = nusb::list_devices().wait()?;
 
-        let mut port = serialport::new(port_path, baud_rate)
-            .timeout(std::time::Duration::from_millis(1000))
-            .dtr_on_open(true)
-            .open()?;
+        let device_info = devices
+            .filter(|d| d.vendor_id() == VID && d.product_id() == PID)
+            .find(|d| {
+                // Match by serial number or bus:addr
+                if let Some(serial) = d.serial_number() {
+                    if serial == device_id {
+                        return true;
+                    }
+                }
+                let bus_addr = format!("{}:{}", d.bus_id(), d.device_address());
+                bus_addr == device_id
+            })
+            .ok_or_else(|| anyhow!("Device '{}' not found", device_id))?;
 
-        let expected = "PicoROM Hello".as_bytes();
-        let mut preamble = Vec::new();
+        let device = device_info.open().wait()?;
+        let interface = device.claim_interface(INTERFACE_NUM).wait()?;
 
-        while preamble.len() < expected.len() && !preamble.ends_with(&expected) {
-            let mut buf = [0u8];
-            port.read_exact(&mut buf)?;
-            preamble.push(buf[0]);
-        }
+        let ep_out = interface.endpoint::<Bulk, Out>(EP_OUT)?;
+        let mut ep_in = interface.endpoint::<Bulk, In>(EP_IN)?;
+
+        // Pre-submit a buffer for receiving
+        ep_in.submit(new_in_buffer(64));
 
         Ok(PicoLink {
-            port,
+            interface,
+            ep_out,
+            ep_in,
             debug,
-            path: port_path.to_string(),
+            device_id: device_id.to_string(),
+        })
+    }
+
+    /// Open a PicoROM device from DeviceInfo (used for enumeration)
+    fn open_device_info(device_info: &nusb::DeviceInfo, debug: bool) -> Result<PicoLink> {
+        let device_id = device_info
+            .serial_number()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| {
+                format!("{}:{}", device_info.bus_id(), device_info.device_address())
+            });
+
+        let device = device_info.open().wait()?;
+        let interface = device.claim_interface(INTERFACE_NUM).wait()?;
+
+        let ep_out = interface.endpoint::<Bulk, Out>(EP_OUT)?;
+        let mut ep_in = interface.endpoint::<Bulk, In>(EP_IN)?;
+
+        // Pre-submit a buffer for receiving
+        ep_in.submit(new_in_buffer(64));
+
+        Ok(PicoLink {
+            interface,
+            ep_out,
+            ep_in,
+            debug,
+            device_id,
         })
     }
 
@@ -161,9 +216,16 @@ impl PicoLink {
 
         let data = packet.encode()?;
 
-        //println!(">>> {} {} {:?}", data[0], data[1], &data[2..]);
+        self.ep_out.submit(data.into());
+        let completion = self
+            .ep_out
+            .wait_next_complete(Duration::from_secs(1))
+            .ok_or_else(|| anyhow!("USB send timeout"))?;
 
-        self.port.write_all(&data)?;
+        completion
+            .status
+            .map_err(|e| anyhow!("USB send error: {:?}", e))?;
+
         Ok(())
     }
 
@@ -171,38 +233,54 @@ impl PicoLink {
     /// Err on port error or packet formatting
     /// None if data not received before deadline
     fn recv_raw(&mut self, deadline: Instant) -> Result<Option<RawPacket>> {
-        let port = &mut self.port;
-
-        while port.bytes_to_read()? < 2 {
-            if Instant::now() > deadline {
+        loop {
+            let timeout = deadline.saturating_duration_since(Instant::now());
+            if timeout.is_zero() {
                 return Ok(None);
             }
-            sleep(Duration::from_micros(10));
-        }
 
-        let mut data = [0u8; 32];
-        port.read_exact(&mut data[0..2])?;
-        let size = data[1] as usize;
+            // Check if we have pending data
+            if let Some(completion) = self.ep_in.wait_next_complete(timeout) {
+                // Re-submit a buffer for the next receive
+                self.ep_in.submit(new_in_buffer(64));
 
-        if size > 30 {
-            return Err(anyhow!("Packet payload too large: {}", size));
-        }
+                completion
+                    .status
+                    .map_err(|e| anyhow!("USB receive error: {:?}", e))?;
 
-        while port.bytes_to_read()? < size as u32 {
-            sleep(Duration::from_micros(10));
-        }
+                let data = &completion.buffer[..completion.actual_len];
+                if data.len() < 2 {
+                    return Err(anyhow!("Packet too small: {} bytes", data.len()));
+                }
 
-        port.read_exact(&mut data[2..2 + size])?;
+                let size = data[1] as usize;
+                if size > 30 {
+                    return Err(anyhow!("Packet payload too large: {}", size));
+                }
 
-        let kind: Option<PacketKind> = FromPrimitive::from_u8(data[0]);
-        if let Some(kind) = kind {
-            Ok(Some(RawPacket {
-                kind,
-                size,
-                payload: data[2..].try_into().unwrap(),
-            }))
-        } else {
-            Err(anyhow!("Unknown packet kind: 0x{:x}", data[0]))
+                if data.len() < 2 + size {
+                    return Err(anyhow!(
+                        "Packet truncated: expected {} bytes, got {}",
+                        2 + size,
+                        data.len()
+                    ));
+                }
+
+                let kind: Option<PacketKind> = FromPrimitive::from_u8(data[0]);
+                if let Some(kind) = kind {
+                    let mut payload = [0u8; 30];
+                    payload[..size].copy_from_slice(&data[2..2 + size]);
+                    return Ok(Some(RawPacket {
+                        kind,
+                        size,
+                        payload,
+                    }));
+                } else {
+                    return Err(anyhow!("Unknown packet kind: 0x{:x}", data[0]));
+                }
+            } else {
+                return Ok(None);
+            }
         }
     }
 
@@ -215,8 +293,6 @@ impl PicoLink {
 
         let pkt = pkt.unwrap();
         let payload = &pkt.payload[0..pkt.size];
-
-        //println!("<<< {:?} {} {:?}", pkt.kind, pkt.size, payload);
 
         match pkt.kind {
             PacketKind::Debug => {
@@ -475,7 +551,14 @@ impl PicoLink {
                     }
                 }
                 let pkt = ReqPacket::CommsData(chunk.to_vec()).encode()?;
-                self.port.write_all(&pkt)?;
+                self.ep_out.submit(pkt.into());
+                let completion = self
+                    .ep_out
+                    .wait_next_complete(Duration::from_secs(1))
+                    .ok_or_else(|| anyhow!("USB send timeout"))?;
+                completion
+                    .status
+                    .map_err(|e| anyhow!("USB send error: {:?}", e))?;
             }
         }
         while let Some(pkt) = self.recv(Instant::now())? {
@@ -491,23 +574,13 @@ impl PicoLink {
     }
 }
 
-/// Find all USB serial ports matching the PicoROM VID:PID
-fn enumerate_ports() -> Result<Vec<String>> {
-    let mut ports = Vec::new();
-    let all_ports = serialport::available_ports()?;
-
-    for p in all_ports.iter() {
-        match &p.port_type {
-            serialport::SerialPortType::UsbPort(info) => {
-                if info.vid == 0x2e8a && info.pid == 0x000a {
-                    ports.push(p.port_name.clone());
-                }
-            }
-            _ => {}
-        }
-    }
-
-    Ok(ports)
+/// Find all USB devices matching the PicoROM VID:PID
+fn enumerate_devices() -> Result<Vec<nusb::DeviceInfo>> {
+    let devices: Vec<_> = nusb::list_devices()
+        .wait()?
+        .filter(|d| d.vendor_id() == VID && d.product_id() == PID)
+        .collect();
+    Ok(devices)
 }
 
 fn get_cache_path() -> Option<PathBuf> {
@@ -518,8 +591,8 @@ fn write_cache_file(entries: HashMap<String, String>) -> Result<()> {
     if let Some(cache_path) = get_cache_path() {
         let fs = File::create(cache_path)?;
         let mut writer = BufWriter::new(fs);
-        for (ident, path) in entries.iter() {
-            writeln!(writer, "{},{}", path, ident)?;
+        for (ident, device_id) in entries.iter() {
+            writeln!(writer, "{},{}", device_id, ident)?;
         }
     }
 
@@ -534,8 +607,8 @@ fn read_cache_file() -> Result<HashMap<String, String>> {
         let reader = BufReader::new(fs);
         for line in reader.lines() {
             let line = line?;
-            if let Some((path, ident)) = line.split_once(',') {
-                entries.insert(ident.to_string(), path.to_string());
+            if let Some((device_id, ident)) = line.split_once(',') {
+                entries.insert(ident.to_string(), device_id.to_string());
             }
         }
     }
@@ -546,11 +619,11 @@ fn read_cache_file() -> Result<HashMap<String, String>> {
 pub fn enumerate_picos() -> Result<HashMap<String, PicoLink>> {
     let mut cache_data = HashMap::new();
     let mut found = HashMap::new();
-    for p in enumerate_ports()?.iter() {
-        let link = PicoLink::open(p, false);
+    for device_info in enumerate_devices()?.iter() {
+        let link = PicoLink::open_device_info(device_info, false);
         if let Ok(mut link) = link {
             if let Ok(ident) = link.get_parameter("name") {
-                cache_data.insert(ident.clone(), p.to_string());
+                cache_data.insert(ident.clone(), link.device_id.clone());
                 found.insert(ident, link);
             }
         }
@@ -563,9 +636,9 @@ pub fn enumerate_picos() -> Result<HashMap<String, PicoLink>> {
 
 pub fn find_pico(name: &str) -> Result<PicoLink> {
     // Check cache first
-    let cached_paths = read_cache_file().unwrap_or_default();
-    if let Some(path) = cached_paths.get(name) {
-        if let Ok(mut link) = PicoLink::open(path, false) {
+    let cached_ids = read_cache_file().unwrap_or_default();
+    if let Some(device_id) = cached_ids.get(name) {
+        if let Ok(mut link) = PicoLink::open(device_id, false) {
             if let Ok(ident) = link.get_parameter("name") {
                 if ident == name {
                     return Ok(link);
