@@ -40,11 +40,11 @@ static uint16_t resetd_open(uint8_t rhport, tusb_desc_interface_t const *itf_des
 static bool resetd_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_request_t const *request) {
     (void)rhport;
 
-    // Only handle SETUP stage
-    if (stage != CONTROL_STAGE_SETUP) return true;
-
     // Only handle requests for our interface
     if (request->wIndex != itf_num) return false;
+
+    // Only handle SETUP stage
+    if (stage != CONTROL_STAGE_SETUP) return true;
 
     switch (request->bRequest) {
         case RESET_REQUEST_BOOTSEL:
@@ -80,20 +80,42 @@ static bool resetd_xfer_cb(uint8_t rhport, uint8_t ep_addr, xfer_result_t result
 // USB Class Driver Registration
 //--------------------------------------------------------------------
 
-static const usbd_class_driver_t _resetd_driver = {
+// External debug driver functions (defined in debug.c)
+extern void debugd_init(void);
+extern void debugd_reset(uint8_t rhport);
+extern uint16_t debugd_open(uint8_t rhport, tusb_desc_interface_t const *itf_desc, uint16_t max_len);
+extern bool debugd_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_request_t const *request);
+extern bool debugd_xfer_cb(uint8_t rhport, uint8_t ep_addr, xfer_result_t result, uint32_t xferred_bytes);
+
+static const usbd_class_driver_t _app_drivers[] = {
+    // Reset driver
+    {
 #if CFG_TUSB_DEBUG >= 2
-    .name             = "RESET",
+        .name             = "RESET",
 #endif
-    .init             = resetd_init,
-    .reset            = resetd_reset,
-    .open             = resetd_open,
-    .control_xfer_cb  = resetd_control_xfer_cb,
-    .xfer_cb          = resetd_xfer_cb,
-    .sof              = NULL,
+        .init             = resetd_init,
+        .reset            = resetd_reset,
+        .open             = resetd_open,
+        .control_xfer_cb  = resetd_control_xfer_cb,
+        .xfer_cb          = resetd_xfer_cb,
+        .sof              = NULL,
+    },
+    // Debug driver
+    {
+#if CFG_TUSB_DEBUG >= 2
+        .name             = "DEBUG",
+#endif
+        .init             = debugd_init,
+        .reset            = debugd_reset,
+        .open             = debugd_open,
+        .control_xfer_cb  = debugd_control_xfer_cb,
+        .xfer_cb          = debugd_xfer_cb,
+        .sof              = NULL,
+    },
 };
 
 // TinyUSB callback to register custom USB class drivers
 usbd_class_driver_t const *usbd_app_driver_get_cb(uint8_t *driver_count) {
-    *driver_count = 1;
-    return &_resetd_driver;
+    *driver_count = 2;
+    return _app_drivers;
 }

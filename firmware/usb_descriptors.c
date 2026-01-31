@@ -6,6 +6,7 @@
 #include "tusb.h"
 #include "pico/unique_id.h"
 #include "pico/usb_reset_interface.h"
+#include "debug.h"
 
 //--------------------------------------------------------------------
 // Device Descriptor
@@ -46,11 +47,13 @@ const uint8_t *tud_descriptor_device_cb(void) {
 enum {
     ITF_NUM_VENDOR = 0,
     ITF_NUM_RESET  = 1,
+    ITF_NUM_DEBUG  = 2,
     ITF_NUM_TOTAL
 };
 
 #define EPNUM_VENDOR_OUT  0x01
 #define EPNUM_VENDOR_IN   0x81
+#define EPNUM_DEBUG_IN    0x82
 #define VENDOR_EP_SIZE    64
 
 // Reset interface descriptor macro (no endpoints)
@@ -58,7 +61,16 @@ enum {
     9, TUSB_DESC_INTERFACE, _itfnum, 0, 0, \
     TUSB_CLASS_VENDOR_SPECIFIC, RESET_INTERFACE_SUBCLASS, RESET_INTERFACE_PROTOCOL, _stridx
 
-#define CONFIG_TOTAL_LEN  (TUD_CONFIG_DESC_LEN + TUD_VENDOR_DESC_LEN + 9)
+// Debug interface descriptor macro (single bulk IN endpoint)
+// Interface descriptor (9 bytes) + Endpoint descriptor (7 bytes) = 16 bytes
+// Protocol 0xDB distinguishes debug interface from other vendor interfaces
+#define DEBUG_INTERFACE_PROTOCOL 0xDB
+#define TUD_DEBUG_INTERFACE_DESCRIPTOR(_itfnum, _stridx, _epin) \
+    9, TUSB_DESC_INTERFACE, _itfnum, 0, 1, \
+    TUSB_CLASS_VENDOR_SPECIFIC, 0x00, DEBUG_INTERFACE_PROTOCOL, _stridx, \
+    7, TUSB_DESC_ENDPOINT, _epin, TUSB_XFER_BULK, U16_TO_U8S_LE(64), 0
+
+#define CONFIG_TOTAL_LEN  (TUD_CONFIG_DESC_LEN + TUD_VENDOR_DESC_LEN + 9 + 16)
 
 static const uint8_t desc_configuration[] = {
     // Configuration descriptor
@@ -69,6 +81,9 @@ static const uint8_t desc_configuration[] = {
 
     // Interface 1: Reset interface (no endpoints)
     TUD_RESET_INTERFACE_DESCRIPTOR(ITF_NUM_RESET, 5),
+
+    // Interface 2: Debug interface (bulk IN only)
+    TUD_DEBUG_INTERFACE_DESCRIPTOR(ITF_NUM_DEBUG, 6, EPNUM_DEBUG_IN),
 };
 
 const uint8_t *tud_descriptor_configuration_cb(uint8_t index) {
@@ -82,10 +97,10 @@ const uint8_t *tud_descriptor_configuration_cb(uint8_t index) {
 
 #define VENDOR_REQUEST_MICROSOFT 1
 
-// Total length: header(10) + config subset(8) + 2x(function subset(8) + compat id(20) + registry prop(132))
-// = 10 + 8 + 2*(8 + 20 + 132) = 10 + 8 + 320 = 338 bytes
+// Total length: header(10) + config subset(8) + 3x(function subset(8) + compat id(20) + registry prop(132))
+// = 10 + 8 + 3*(8 + 20 + 132) = 10 + 8 + 480 = 498 bytes
 #define MS_OS_20_SUBSET_LEN       (8 + 20 + 132)
-#define MS_OS_20_DESC_LEN         (10 + 8 + MS_OS_20_SUBSET_LEN + MS_OS_20_SUBSET_LEN)
+#define MS_OS_20_DESC_LEN         (10 + 8 + MS_OS_20_SUBSET_LEN + MS_OS_20_SUBSET_LEN + MS_OS_20_SUBSET_LEN)
 
 //--------------------------------------------------------------------
 // BOS Descriptor (for MS OS 2.0)
@@ -193,6 +208,43 @@ static const uint8_t desc_ms_os_20[] = {
     'd', 0x00, 'e', 0x00, 'f', 0x00, '0', 0x00, '1', 0x00, '2', 0x00,
     '3', 0x00, '4', 0x00, '5', 0x00, '6', 0x00, '7', 0x00, '8', 0x00,
     '}', 0x00, 0x00, 0x00, 0x00, 0x00,
+
+    //--------------------------------------------------------------------------
+    // Function subset for Interface 2 (Debug)
+    //--------------------------------------------------------------------------
+    U16_TO_U8S_LE(0x0008),                              // wLength
+    U16_TO_U8S_LE(MS_OS_20_SUBSET_HEADER_FUNCTION),     // wDescriptorType
+    ITF_NUM_DEBUG,                                      // bFirstInterface
+    0x00,                                               // bReserved
+    U16_TO_U8S_LE(MS_OS_20_SUBSET_LEN),                 // wSubsetLength
+
+    // Compatible ID descriptor
+    U16_TO_U8S_LE(0x0014),                              // wLength
+    U16_TO_U8S_LE(MS_OS_20_FEATURE_COMPATBLE_ID),       // wDescriptorType
+    'W', 'I', 'N', 'U', 'S', 'B', 0x00, 0x00,           // CompatibleID
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,     // SubCompatibleID
+
+    // Registry property descriptor: DeviceInterfaceGUID
+    U16_TO_U8S_LE(0x0084),                              // wLength (132 bytes)
+    U16_TO_U8S_LE(MS_OS_20_FEATURE_REG_PROPERTY),       // wDescriptorType
+    U16_TO_U8S_LE(0x0007),                              // wPropertyDataType (REG_MULTI_SZ)
+    U16_TO_U8S_LE(0x002A),                              // wPropertyNameLength (42 bytes)
+    // PropertyName: "DeviceInterfaceGUIDs\0" in UTF-16LE
+    'D', 0x00, 'e', 0x00, 'v', 0x00, 'i', 0x00, 'c', 0x00, 'e', 0x00,
+    'I', 0x00, 'n', 0x00, 't', 0x00, 'e', 0x00, 'r', 0x00, 'f', 0x00,
+    'a', 0x00, 'c', 0x00, 'e', 0x00, 'G', 0x00, 'U', 0x00, 'I', 0x00,
+    'D', 0x00, 's', 0x00, 0x00, 0x00,
+    U16_TO_U8S_LE(0x0050),                              // wPropertyDataLength (80 bytes)
+    // PropertyData: GUID for debug interface
+    // {e0e0e0e3-1234-5678-9abc-def012345678}
+    '{', 0x00, 'e', 0x00, '0', 0x00, 'e', 0x00, '0', 0x00, 'e', 0x00,
+    '0', 0x00, 'e', 0x00, '3', 0x00, '-', 0x00,
+    '1', 0x00, '2', 0x00, '3', 0x00, '4', 0x00, '-', 0x00,
+    '5', 0x00, '6', 0x00, '7', 0x00, '8', 0x00, '-', 0x00,
+    '9', 0x00, 'a', 0x00, 'b', 0x00, 'c', 0x00, '-', 0x00,
+    'd', 0x00, 'e', 0x00, 'f', 0x00, '0', 0x00, '1', 0x00, '2', 0x00,
+    '3', 0x00, '4', 0x00, '5', 0x00, '6', 0x00, '7', 0x00, '8', 0x00,
+    '}', 0x00, 0x00, 0x00, 0x00, 0x00,
 };
 
 TU_VERIFY_STATIC(sizeof(desc_ms_os_20) == MS_OS_20_DESC_LEN, "Incorrect MS OS 2.0 descriptor size");
@@ -208,6 +260,7 @@ enum {
     STRID_SERIAL,
     STRID_VENDOR_ITF,
     STRID_RESET_ITF,
+    STRID_DEBUG_ITF,
 };
 
 static char serial_str[PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2 + 1];
@@ -219,6 +272,7 @@ static const char *const string_desc_arr[] = {
     [STRID_SERIAL]       = serial_str,
     [STRID_VENDOR_ITF]   = "PicoROM Data",
     [STRID_RESET_ITF]    = "Reset",
+    [STRID_DEBUG_ITF]    = "Debug",
 };
 
 static uint16_t _desc_str[32 + 1];
@@ -268,13 +322,20 @@ const uint16_t *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
 //--------------------------------------------------------------------
 
 bool tud_vendor_control_xfer_cb(uint8_t rhport, uint8_t stage, tusb_control_request_t const *request) {
-    // Only handle SETUP stage
-    if (stage != CONTROL_STAGE_SETUP) return true;
+    if (stage == CONTROL_STAGE_SETUP) {
+        // Handle MS OS 2.0 descriptor request
+        if (request->bRequest == VENDOR_REQUEST_MICROSOFT && request->wIndex == 7) {
+            return tud_control_xfer(rhport, request, (void *)desc_ms_os_20, sizeof(desc_ms_os_20));
+        }
 
-    // Handle MS OS 2.0 descriptor request
-    if (request->bRequest == VENDOR_REQUEST_MICROSOFT && request->wIndex == 7) {
-        return tud_control_xfer(rhport, request, (void *)desc_ms_os_20, sizeof(desc_ms_os_20));
+        // Try debug interface handler
+        if (dbg_vendor_control_xfer_cb(rhport, stage, request)) {
+            return true;
+        }
+
+        return false;  // Stall unknown requests
     }
 
-    return false;
+    // For non-SETUP stages, return true to complete the transfer
+    return true;
 }

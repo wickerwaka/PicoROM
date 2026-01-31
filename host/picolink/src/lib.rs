@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
-use nusb::transfer::{Bulk, Buffer, In, Out};
-use nusb::{Endpoint, Interface, MaybeFuture};
+use nusb::transfer::{Bulk, Buffer, ControlOut, ControlType, In, Out, Recipient};
+use nusb::{Device, Endpoint, Interface, MaybeFuture};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Write};
@@ -17,6 +17,11 @@ const PID: u16 = 0x000A;
 const INTERFACE_NUM: u8 = 0;
 const EP_OUT: u8 = 0x01;
 const EP_IN: u8 = 0x81;
+
+// Debug interface constants (vendor-specific class)
+const DEBUG_CLASS: u8 = 0xff;
+const DEBUG_SUBCLASS: u8 = 0x00;
+const DEBUG_PROTOCOL: u8 = 0xdb;
 
 #[repr(u8)]
 #[derive(FromPrimitive, Debug)]
@@ -652,6 +657,164 @@ pub fn find_pico(name: &str) -> Result<PicoLink> {
 
     if let Some(pico) = found.remove(name) {
         Ok(pico)
+    } else {
+        Err(anyhow!("PicoROM '{}' not found.", name))
+    }
+}
+
+/// Debug interface for streaming raw debug output from firmware
+pub struct DebugLink {
+    device: Device,
+    #[allow(dead_code)]
+    interface: Interface,
+    interface_num: u8,
+    ep_in: Endpoint<Bulk, In>,
+    pub device_id: String,
+}
+
+impl DebugLink {
+    /// Open the debug interface on a device by device_id
+    pub fn open(device_id: &str) -> Result<DebugLink> {
+        let devices = nusb::list_devices().wait()?;
+
+        let device_info = devices
+            .filter(|d| d.vendor_id() == VID && d.product_id() == PID)
+            .find(|d| {
+                if let Some(serial) = d.serial_number() {
+                    if serial == device_id {
+                        return true;
+                    }
+                }
+                let bus_addr = format!("{}:{}", d.bus_id(), d.device_address());
+                bus_addr == device_id
+            })
+            .ok_or_else(|| anyhow!("Device '{}' not found", device_id))?;
+
+        let device = device_info.open().wait()?;
+
+        // Find the debug interface by class/subclass/protocol
+        let config = device.active_configuration()?;
+        let mut debug_iface_num = None;
+        let mut ep_in_addr = None;
+
+        for iface in config.interfaces() {
+            for alt in iface.alt_settings() {
+                if alt.class() == DEBUG_CLASS
+                    && alt.subclass() == DEBUG_SUBCLASS
+                    && alt.protocol() == DEBUG_PROTOCOL
+                {
+                    debug_iface_num = Some(iface.interface_number());
+                    // Find the bulk IN endpoint
+                    for ep in alt.endpoints() {
+                        if ep.transfer_type() == nusb::descriptors::TransferType::Bulk
+                            && ep.direction() == nusb::transfer::Direction::In
+                        {
+                            ep_in_addr = Some(ep.address());
+                            break;
+                        }
+                    }
+                    break;
+                }
+            }
+            if debug_iface_num.is_some() {
+                break;
+            }
+        }
+
+        let iface_num =
+            debug_iface_num.ok_or_else(|| anyhow!("Debug interface not found on device"))?;
+        let ep_addr = ep_in_addr.ok_or_else(|| anyhow!("Debug bulk IN endpoint not found"))?;
+
+        // Send vendor control request to enable debug output (before claiming interface)
+        device
+            .control_out(
+                ControlOut {
+                    control_type: ControlType::Vendor,
+                    recipient: Recipient::Interface,
+                    request: 0x01,
+                    value: 1, // enable
+                    index: iface_num as u16,
+                    data: &[],
+                },
+                Duration::from_secs(1),
+            )
+            .wait()
+            .map_err(|e| anyhow!("Failed to enable debug output: {:?}", e))?;
+
+        let interface = device.claim_interface(iface_num).wait()?;
+        let mut ep_in = interface.endpoint::<Bulk, In>(ep_addr)?;
+
+        // Pre-submit a buffer for receiving
+        ep_in.submit(new_in_buffer(64));
+
+        Ok(DebugLink {
+            device,
+            interface,
+            interface_num: iface_num,
+            ep_in,
+            device_id: device_id.to_string(),
+        })
+    }
+
+    /// Read raw bytes from the debug interface with timeout
+    /// Returns Ok(Some(data)) if data was received, Ok(None) on timeout
+    pub fn read(&mut self, timeout: Duration) -> Result<Option<Vec<u8>>> {
+        if let Some(completion) = self.ep_in.wait_next_complete(timeout) {
+            // Re-submit a buffer for the next receive
+            self.ep_in.submit(new_in_buffer(64));
+
+            completion
+                .status
+                .map_err(|e| anyhow!("USB receive error: {:?}", e))?;
+
+            if completion.actual_len > 0 {
+                Ok(Some(completion.buffer[..completion.actual_len].to_vec()))
+            } else {
+                Ok(None)
+            }
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+impl Drop for DebugLink {
+    fn drop(&mut self) {
+        // Send vendor control request to disable debug output
+        let _ = self
+            .device
+            .control_out(
+                ControlOut {
+                    control_type: ControlType::Vendor,
+                    recipient: Recipient::Interface,
+                    request: 0x01,
+                    value: 0, // disable
+                    index: self.interface_num as u16,
+                    data: &[],
+                },
+                Duration::from_secs(1),
+            )
+            .wait();
+    }
+}
+
+/// Find and open the debug interface on a PicoROM device by name
+pub fn find_pico_debug(name: &str) -> Result<DebugLink> {
+    // Check cache first to get device_id without opening Interface 0
+    let cached_ids = read_cache_file().unwrap_or_default();
+    if let Some(device_id) = cached_ids.get(name) {
+        if let Ok(link) = DebugLink::open(device_id) {
+            return Ok(link);
+        }
+    }
+
+    // If not in cache, do a full enumeration to find the device_id
+    // This will open Interface 0 to query the name parameter
+    let found = enumerate_picos()?;
+
+    if let Some(pico) = found.get(name) {
+        // Now open just the debug interface using the device_id we found
+        DebugLink::open(&pico.device_id)
     } else {
         Err(anyhow!("PicoROM '{}' not found.", name))
     }
