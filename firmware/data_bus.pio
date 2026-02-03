@@ -7,9 +7,8 @@
 .wrap
 
 ; OR /OE and /CS and set the buffer OE
-; Also works with a single /OE input
 ; 4 ops
-.program set_output_enable
+.program or_output_enable
 .origin 0
 .side_set 1
     mov pc, pins side 0
@@ -17,16 +16,23 @@
     mov pc, pins side 1
     mov pc, pins side 1
 
+; Route input /OE to  buffer /OE
+; 1 ops
+.program route_output_enable
+.wrap_target
+    mov pins, pins
+.wrap
+
+
 ; OR /OE and /CS and set 4 pindirs
-; Also works with a single /OE input
 ; 4 ops
 .program set_pindir
 .origin 0
 .side_set 4 pindirs
     mov pc, pins side 0xf
-    mov pc, pins side 0
-    mov pc, pins side 0
-    mov pc, pins side 0
+    mov pc, pins side 0x0
+    mov pc, pins side 0x0
+    mov pc, pins side 0x0
 
 
 ; Report activity to CPU

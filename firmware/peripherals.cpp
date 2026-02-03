@@ -133,7 +133,7 @@ void reset_set(ResetLevel level)
             tca_set_pin(TCA_RESET_VALUE_PIN, false);
             tca_set_pin(TCA_RESET_PIN, true);
 #else
-            gpio_put(RESET_PIN, false);
+            gpio_put(RESET_PIN, true);
 #endif
             current_reset = ResetLevel::Low;
             break;
@@ -143,7 +143,7 @@ void reset_set(ResetLevel level)
             tca_set_pin(TCA_RESET_VALUE_PIN, true);
             tca_set_pin(TCA_RESET_PIN, true);
 #else
-            gpio_put(RESET_PIN, false);
+            gpio_put(RESET_PIN, true);
 #endif
             current_reset = ResetLevel::High;
             break;
@@ -152,7 +152,7 @@ void reset_set(ResetLevel level)
 #if defined(BOARD_32P_TCA)
             tca_set_pin(TCA_RESET_PIN, false);
 #else
-            gpio_put(RESET_PIN, true);
+            gpio_put(RESET_PIN, false);
 #endif
             current_reset = ResetLevel::Z;
             break;
@@ -243,7 +243,7 @@ void peripherals_init()
     gpio_set_input_enabled(RESET_PIN, false);
     gpio_set_inover(RESET_PIN, GPIO_OVERRIDE_LOW);
     gpio_set_dir(RESET_PIN, true);
-    gpio_put(RESET_PIN, false);
+    gpio_put(RESET_PIN, true);
 #endif
     
     add_repeating_timer_ms(10, activity_timer_callback, nullptr, &activity_timer);
