@@ -476,6 +476,33 @@ impl PicoLink {
         Ok(())
     }
 
+    pub fn download<F>(&mut self, size: usize, f: F) -> Result<Vec<u8>>
+    where
+        F: Fn(usize),
+    {
+        self.send(ReqPacket::PointerSet(0))?;
+
+        let mut data = Vec::with_capacity(size);
+
+        while data.len() < size {
+            self.send(ReqPacket::Read)?;
+            let chunk = self.recv_until(|pkt| match pkt {
+                RespPacket::ReadData(bytes) => Some(bytes),
+                _ => None,
+            })?;
+
+            if chunk.is_empty() {
+                break;
+            }
+
+            f(chunk.len());
+            data.extend_from_slice(&chunk);
+        }
+
+        data.truncate(size);
+        Ok(data)
+    }
+
     pub fn commit_rom(&mut self) -> Result<()> {
         self.send(ReqPacket::CommitFlash)?;
 

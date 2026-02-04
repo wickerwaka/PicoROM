@@ -83,6 +83,14 @@ enum Commands {
         store: bool,
     },
 
+    /// Download the current ROM image from a PicoROM to a file
+    Download {
+        /// PicoROM device name.
+        name: String,
+        /// Destination file path.
+        dest: PathBuf,
+    },
+
     /// Set the level of the reset pin
     Reset {
         /// PicoROM device name.
@@ -196,6 +204,29 @@ fn main() -> Result<()> {
                 pico.commit_rom()?;
                 spinner.finish_with_message("Done.");
             }
+        }
+        Commands::Download { name, dest } => {
+            let mut pico = find_pico(&name)?;
+
+            // Get addr_mask to determine ROM size
+            let mask_str = pico.get_parameter("addr_mask")?;
+            let mask_str = mask_str.trim().strip_prefix("0x").unwrap_or(&mask_str);
+            let addr_mask = u32::from_str_radix(mask_str, 16)?;
+            let size = (addr_mask + 1) as usize;
+
+            let progress = ProgressBar::new(size as u64)
+                .with_prefix("Downloading ROM")
+                .with_style(
+                    ProgressStyle::with_template("{prefix:.bold} [{wide_bar:.cyan/blue}] {msg:10}")
+                        .unwrap()
+                        .progress_chars("#>-"),
+                );
+
+            let data = pico.download(size, |x| progress.inc(x as u64))?;
+            progress.finish_with_message("Done.");
+
+            fs::write(&dest, &data)?;
+            println!("Downloaded {} bytes to {:?}", data.len(), dest);
         }
         Commands::Reset { name, level } => {
             let mut pico = find_pico(&name)?;
