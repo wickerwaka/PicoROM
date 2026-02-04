@@ -6,11 +6,13 @@
 
 #include "peripherals.h"
 
+#include "flash_name.h"
+
 struct Config
 {
     uint32_t version;
-    char name[16];
-    char rom_name[16];
+    char name[CONFIG_NAME_LEN];
+    char rom_name[CONFIG_ROM_NAME_LEN];
     ResetLevel initial_reset;
     ResetLevel default_reset;
     uint32_t addr_mask;
