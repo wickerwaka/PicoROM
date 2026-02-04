@@ -7,6 +7,10 @@ use std::{thread::sleep, time::Duration, time::Instant};
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
 
+// Protocol constants
+const MAX_PKT_PAYLOAD: usize = 36;
+const MAX_DATA_PAYLOAD: usize = MAX_PKT_PAYLOAD - 4; // 32 bytes (offset takes 4)
+
 // USB constants
 const VID: u16 = 0x2E8A;
 const PID: u16 = 0x000A;
@@ -17,9 +21,6 @@ const EP_IN: u8 = 0x81;
 #[repr(u8)]
 #[derive(FromPrimitive, Debug)]
 enum PacketKind {
-    PointerSet = 3,
-    PointerGet = 4,
-    PointerCur = 5,
     Write = 6,
     Read = 7,
     ReadData = 8,
@@ -52,10 +53,8 @@ pub enum ResetLevel {
 
 #[derive(Clone, Debug)]
 pub enum ReqPacket {
-    PointerSet(u32),
-    PointerGet,
-    Write(Vec<u8>),
-    Read,
+    Write(u32, Vec<u8>),  // (offset, data)
+    Read(u32, u8),        // (offset, size)
     CommitFlash,
     CommsStart(u32),
     CommsEnd,
@@ -76,12 +75,16 @@ fn zstring(s: String) -> Vec<u8> {
 impl ReqPacket {
     fn encode(self) -> Result<Vec<u8>> {
         let (kind, payload) = match self.clone() {
-            ReqPacket::PointerSet(offset) => {
-                (PacketKind::PointerSet, offset.to_le_bytes().to_vec())
+            ReqPacket::Write(offset, data) => {
+                let mut payload = offset.to_le_bytes().to_vec();
+                payload.extend(data);
+                (PacketKind::Write, payload)
             }
-            ReqPacket::PointerGet => (PacketKind::PointerGet, vec![]),
-            ReqPacket::Write(data) => (PacketKind::Write, data),
-            ReqPacket::Read => (PacketKind::Read, vec![]),
+            ReqPacket::Read(offset, size) => {
+                let mut payload = offset.to_le_bytes().to_vec();
+                payload.push(size);
+                (PacketKind::Read, payload)
+            }
             ReqPacket::CommitFlash => (PacketKind::CommitFlash, vec![]),
             ReqPacket::CommsStart(addr) => (PacketKind::CommsStart, addr.to_le_bytes().to_vec()),
             ReqPacket::CommsEnd => (PacketKind::CommsEnd, vec![]),
@@ -97,11 +100,11 @@ impl ReqPacket {
             ),
         };
 
-        if payload.len() > 30 {
+        if payload.len() > MAX_PKT_PAYLOAD {
             return Err(anyhow!("{:?} request packet payload too large", self));
         }
 
-        let mut data = Vec::with_capacity(32);
+        let mut data = Vec::with_capacity(MAX_PKT_PAYLOAD + 2);
         data.push(kind as u8);
         data.push(payload.len() as u8);
         data.extend(payload);
@@ -111,8 +114,7 @@ impl ReqPacket {
 
 #[derive(Clone, Debug)]
 pub enum RespPacket {
-    PointerCur(u32),
-    ReadData(Vec<u8>),
+    ReadData(u32, Vec<u8>),  // (offset, data)
     CommitDone,
     CommsData(Vec<u8>),
     Parameter(String),
@@ -134,7 +136,7 @@ pub struct PicoLink {
 struct RawPacket {
     kind: PacketKind,
     size: usize,
-    payload: [u8; 30],
+    payload: [u8; MAX_PKT_PAYLOAD],
 }
 
 /// Create an IN buffer for receiving data
@@ -224,7 +226,7 @@ impl PicoLink {
                 }
 
                 let size = data[1] as usize;
-                if size > 30 {
+                if size > MAX_PKT_PAYLOAD {
                     return Err(anyhow!("Packet payload too large: {}", size));
                 }
 
@@ -238,7 +240,7 @@ impl PicoLink {
 
                 let kind: Option<PacketKind> = FromPrimitive::from_u8(data[0]);
                 if let Some(kind) = kind {
-                    let mut payload = [0u8; 30];
+                    let mut payload = [0u8; MAX_PKT_PAYLOAD];
                     payload[..size].copy_from_slice(&data[2..2 + size]);
                     return Ok(Some(RawPacket {
                         kind,
@@ -285,11 +287,14 @@ impl PicoLink {
                     Err(anyhow!("Error payload is too small: {}", payload.len()))
                 }
             }
-            PacketKind::PointerCur => {
-                let arr = payload.try_into().unwrap_or_default();
-                Ok(Some(RespPacket::PointerCur(u32::from_le_bytes(arr))))
-            }
-            PacketKind::ReadData => Ok(Some(RespPacket::ReadData(payload.to_vec()))),
+            PacketKind::ReadData => {
+                if payload.len() < 4 {
+                    return Err(anyhow!("ReadData payload too small: {}", payload.len()));
+                }
+                let offset = u32::from_le_bytes(payload[0..4].try_into()?);
+                let data = payload[4..].to_vec();
+                Ok(Some(RespPacket::ReadData(offset, data)))
+            },
             PacketKind::CommitDone => Ok(Some(RespPacket::CommitDone)),
             PacketKind::CommsData => Ok(Some(RespPacket::CommsData(payload.to_vec()))),
             PacketKind::ParameterError => Ok(Some(RespPacket::ParameterError)),
@@ -428,22 +433,11 @@ impl PicoLink {
     where
         F: Fn(usize),
     {
-        self.send(ReqPacket::PointerSet(0))?;
-
-        for chunk in data.chunks(30) {
+        let mut offset: u32 = 0;
+        for chunk in data.chunks(MAX_DATA_PAYLOAD) {
             f(chunk.len());
-            self.send(ReqPacket::Write(chunk.to_vec()))?;
-        }
-
-        self.send(ReqPacket::PointerGet)?;
-
-        let cur = self.recv_until(|x| match x {
-            RespPacket::PointerCur(x) => Some(x),
-            _ => None,
-        })?;
-
-        if cur != data.len() as u32 {
-            return Err(anyhow!("Upload did not complete."));
+            self.send(ReqPacket::Write(offset, chunk.to_vec()))?;
+            offset += chunk.len() as u32;
         }
 
         self.set_parameter("addr_mask", &format!("0x{:x}", addr_mask))?;
@@ -455,22 +449,11 @@ impl PicoLink {
     where
         F: Fn(usize),
     {
-        self.send(ReqPacket::PointerSet(addr))?;
-
-        for chunk in data.chunks(30) {
+        let mut offset = addr;
+        for chunk in data.chunks(MAX_DATA_PAYLOAD) {
             f(chunk.len());
-            self.send(ReqPacket::Write(chunk.to_vec()))?;
-        }
-
-        self.send(ReqPacket::PointerGet)?;
-
-        let cur = self.recv_until(|x| match x {
-            RespPacket::PointerCur(x) => Some(x),
-            _ => None,
-        })?;
-
-        if (cur - addr) != data.len() as u32 {
-            return Err(anyhow!("Upload did not complete."));
+            self.send(ReqPacket::Write(offset, chunk.to_vec()))?;
+            offset += chunk.len() as u32;
         }
 
         Ok(())
@@ -480,23 +463,29 @@ impl PicoLink {
     where
         F: Fn(usize),
     {
-        self.send(ReqPacket::PointerSet(0))?;
-
         let mut data = Vec::with_capacity(size);
+        let mut offset: u32 = 0;
 
         while data.len() < size {
-            self.send(ReqPacket::Read)?;
-            let chunk = self.recv_until(|pkt| match pkt {
-                RespPacket::ReadData(bytes) => Some(bytes),
+            let remaining = size - data.len();
+            let chunk_size = remaining.min(MAX_DATA_PAYLOAD) as u8;
+
+            self.send(ReqPacket::Read(offset, chunk_size))?;
+            let (resp_offset, chunk) = self.recv_until(|pkt| match pkt {
+                RespPacket::ReadData(off, bytes) => Some((off, bytes)),
                 _ => None,
             })?;
 
+            if resp_offset != offset {
+                return Err(anyhow!("Read offset mismatch: expected {}, got {}", offset, resp_offset));
+            }
             if chunk.is_empty() {
                 break;
             }
 
             f(chunk.len());
             data.extend_from_slice(&chunk);
+            offset += chunk.len() as u32;
         }
 
         data.truncate(size);
@@ -538,7 +527,7 @@ impl PicoLink {
     pub fn poll_comms(&mut self, outgoing: Option<Vec<u8>>) -> Result<Vec<u8>> {
         let mut incoming = Vec::new();
         if let Some(outgoing) = outgoing {
-            for chunk in outgoing.chunks(30) {
+            for chunk in outgoing.chunks(MAX_PKT_PAYLOAD) {
                 while let Some(pkt) = self.recv(Instant::now())? {
                     match pkt {
                         RespPacket::CommsData(data) => {

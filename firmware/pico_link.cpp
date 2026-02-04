@@ -79,6 +79,17 @@ void pl_send_payload(PacketType type, const void *data, size_t len)
     usb_send(&pkt, pkt.size + 2);
 }
 
+void pl_send_payload_offset(PacketType type, uint32_t offset, const void *data, size_t len)
+{
+    Packet pkt;
+    pkt.type = (uint8_t)type;
+    size_t data_len = MIN(len, MAX_PKT_PAYLOAD - 4);
+    pkt.size = 4 + data_len;
+    memcpy(pkt.payload, &offset, sizeof(uint32_t));
+    memcpy(pkt.payload + 4, data, data_len);
+    usb_send(&pkt, pkt.size + 2);
+}
+
 void pl_send_debug(const char *s, uint32_t v0, uint32_t v1)
 {
     Packet pkt;
