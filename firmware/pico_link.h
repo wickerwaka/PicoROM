@@ -6,9 +6,6 @@
 
 enum class PacketType : uint8_t
 {
-    SetPointer = 3,
-    GetPointer = 4,
-    CurPointer = 5,
     Write = 6,
     Read = 7,
     ReadData = 8,
@@ -32,7 +29,7 @@ enum class PacketType : uint8_t
     Debug = 0xff
 };
 
-static constexpr size_t MAX_PKT_PAYLOAD = 30;
+static constexpr size_t MAX_PKT_PAYLOAD = 36;
 
 struct Packet
 {
@@ -52,6 +49,7 @@ void pl_init(PacketHandler handler);
 void pl_send_null(PacketType type);
 void pl_send_string(PacketType type, const char *s);
 void pl_send_payload(PacketType type, const void *data, size_t len);
+void pl_send_payload_offset(PacketType type, uint32_t offset, const void *data, size_t len);
 void pl_send_debug(const char *s, uint32_t v0, uint32_t v1);
 void pl_send_error(const char *s, uint32_t v0, uint32_t v1);
 void pl_send_packet(const Packet *pkt);

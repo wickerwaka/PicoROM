@@ -24,8 +24,6 @@ int __wrap_atexit(void *)
     return 0;
 }
 
-uint32_t rom_offset = 0;
-
 void configure_address_pins(uint32_t mask)
 {
     mask &= ADDR_MASK;
@@ -187,37 +185,39 @@ void handle_packet(const Packet *req)
 {
     switch ((PacketType)req->type)
     {
-        case PacketType::SetPointer:
-        {
-            memcpy(&rom_offset, req->payload, sizeof(uint32_t));
-            break;
-        }
-
-        case PacketType::GetPointer:
-        {
-            pl_send_payload(PacketType::CurPointer, &rom_offset, sizeof(rom_offset));
-            break;
-        }
-
         case PacketType::Write:
         {
-            uint32_t offset = rom_offset;
-            if ((offset + req->size) > ROM_SIZE)
+            if (req->size < 4)
             {
-                pl_send_error("Write out of range", offset, req->size);
+                pl_send_error("Write too small", 0, req->size);
                 break;
             }
-            memcpy(rom_get_buffer() + offset, req->payload, req->size);
-            rom_offset += req->size;
+            uint32_t offset;
+            memcpy(&offset, req->payload, sizeof(uint32_t));
+            uint32_t data_size = req->size - 4;
+            if ((offset + data_size) > ROM_SIZE)
+            {
+                pl_send_error("Write out of range", offset, data_size);
+                break;
+            }
+            memcpy(rom_get_buffer() + offset, req->payload + 4, data_size);
             break;
         }
 
         case PacketType::Read:
         {
-            uint32_t offset = rom_offset;
-            uint32_t size = MIN(MAX_PKT_PAYLOAD, ROM_SIZE - offset);
-            pl_send_payload(PacketType::ReadData, rom_get_buffer() + offset, size);
-            rom_offset += size;
+            if (req->size < 5)
+            {
+                pl_send_error("Read too small", 0, req->size);
+                break;
+            }
+            uint32_t offset;
+            memcpy(&offset, req->payload, sizeof(uint32_t));
+            uint32_t requested = req->payload[4];
+            uint32_t available = (offset < ROM_SIZE) ? (ROM_SIZE - offset) : 0;
+            uint32_t max_data = MAX_PKT_PAYLOAD - 4;
+            uint32_t size = MIN(MIN(requested, max_data), available);
+            pl_send_payload_offset(PacketType::ReadData, offset, rom_get_buffer() + offset, size);
             break;
         }
 
