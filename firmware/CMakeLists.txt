@@ -22,7 +22,6 @@ foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit 32P_2MBit 32P_2MBit_100ns)
         peripherals.cpp
         usb_descriptors.c
         reset_interface.c
-        debug.c
     )
     # Create alias target so "make 2MBit" works
     add_custom_target(${BUILD_CONFIG} DEPENDS ${TARGET})
