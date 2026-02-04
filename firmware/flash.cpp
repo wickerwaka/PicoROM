@@ -14,8 +14,8 @@
 #include "rom.h"
 #include "system.h"
 
-static constexpr uint FLASH_ROM_OFFSET = FLASH_SIZE - ROM_SIZE;
-static constexpr uint FLASH_CFG_OFFSET = FLASH_ROM_OFFSET - FLASH_SECTOR_SIZE;
+static constexpr uint FLASH_CFG_OFFSET = FLASH_SIZE - FLASH_SECTOR_SIZE;
+static constexpr uint FLASH_ROM_OFFSET = FLASH_CFG_OFFSET - ROM_SIZE;
 
 static constexpr uint CONFIG_VERSION = 0x00010009;
 
@@ -117,4 +117,9 @@ uint32_t flash_load_rom()
     uint32_t flash_load_time = time_us_32() - start_time;
 
     return flash_load_time;
+}
+
+extern "C" const char* flash_get_device_name(void)
+{
+    return flash_config->name;
 }

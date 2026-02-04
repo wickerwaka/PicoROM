@@ -3,9 +3,13 @@
  * Vendor bulk endpoints with MS OS 2.0 descriptors for driverless WinUSB
  */
 
+#include <string.h>
+
 #include "tusb.h"
 #include "pico/unique_id.h"
 #include "pico/usb_reset_interface.h"
+
+#include "flash_name.h"
 
 //--------------------------------------------------------------------
 // Device Descriptor
@@ -211,13 +215,11 @@ enum {
     STRID_RESET_ITF,
 };
 
-static char serial_str[PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2 + 1];
-
 static const char *const string_desc_arr[] = {
     [STRID_LANGID]       = (const char[]){0x09, 0x04},  // English (US)
     [STRID_MANUFACTURER] = "PicoROM",
     [STRID_PRODUCT]      = "PicoROM",
-    [STRID_SERIAL]       = serial_str,
+    [STRID_SERIAL]       = NULL,  // Handled specially in callback
     [STRID_VENDOR_ITF]   = "PicoROM Data",
     [STRID_RESET_ITF]    = "Reset",
 };
@@ -228,16 +230,27 @@ const uint16_t *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
     (void)langid;
     size_t chr_count;
 
-    // Initialize serial string from unique board ID on first call
-    if (!serial_str[0]) {
-        pico_get_unique_board_id_string(serial_str, sizeof(serial_str));
-    }
-
     switch (index) {
         case STRID_LANGID:
             memcpy(&_desc_str[1], string_desc_arr[0], 2);
             chr_count = 1;
             break;
+
+        case STRID_SERIAL: {
+            // Build "device_id:device_name" on stack
+            char serial_str[PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2 + 1 + 16];
+            pico_get_unique_board_id_string(serial_str, PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2 + 1);
+            serial_str[PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2] = ':';
+            const char *name = flash_get_device_name();
+            strncpy(&serial_str[PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2 + 1], name, 15);
+            serial_str[sizeof(serial_str) - 1] = '\0';
+
+            chr_count = strlen(serial_str);
+            for (size_t i = 0; i < chr_count; i++) {
+                _desc_str[1 + i] = serial_str[i];
+            }
+            break;
+        }
 
         default:
             if (index >= sizeof(string_desc_arr) / sizeof(string_desc_arr[0])) {
