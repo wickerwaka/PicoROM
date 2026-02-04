@@ -42,10 +42,8 @@ static void usb_send(const void *data, size_t len)
         uint32_t sent = tud_vendor_write(ptr, remaining);
         ptr += sent;
         remaining -= sent;
-        tud_task();
+        tud_vendor_write_flush();
     }
-
-    tud_vendor_write_flush();
 
     activity_count++;
 }
