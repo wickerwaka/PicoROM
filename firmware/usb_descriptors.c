@@ -238,11 +238,11 @@ const uint16_t *tud_descriptor_string_cb(uint8_t index, uint16_t langid) {
 
         case STRID_SERIAL: {
             // Build "device_id:device_name" on stack
-            char serial_str[PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2 + 1 + 16];
+            char serial_str[PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2 + 1 + CONFIG_NAME_LEN];
             pico_get_unique_board_id_string(serial_str, PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2 + 1);
             serial_str[PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2] = ':';
             const char *name = flash_get_device_name();
-            strncpy(&serial_str[PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2 + 1], name, 15);
+            strncpy(&serial_str[PICO_UNIQUE_BOARD_ID_SIZE_BYTES * 2 + 1], name, CONFIG_NAME_LEN - 1);
             serial_str[sizeof(serial_str) - 1] = '\0';
 
             chr_count = strlen(serial_str);

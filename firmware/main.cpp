@@ -1,6 +1,7 @@
 #include "hardware/gpio.h"
 #include "hardware/structs/syscfg.h"
 #include "pico/bootrom.h"
+#include "pico/time.h"
 #include <stdio.h>
 #include <unistd.h>
 
@@ -53,6 +54,9 @@ void configure_address_pins(uint32_t mask)
 uint32_t flash_load_time = 0;
 uint32_t system_status = 0;
 
+// Flag to trigger USB re-enumeration from main loop (not safe in USB callback)
+static bool usb_reenumerate_pending = false;
+
 static Config config;
 
 static const char *parameter_names[] = {
@@ -81,6 +85,7 @@ bool set_parameter(const char *name, const char *value)
     {
         strcpyz(config.name, sizeof(config.name), value);
         flash_save_config(&config);
+        usb_reenumerate_pending = true;
         return true;
     }
     else if (streq(name, "rom_name"))
@@ -379,6 +384,17 @@ int main()
     while (true)
     {
         tud_task();
+
+        if (usb_reenumerate_pending)
+        {
+            usb_reenumerate_pending = false;
+            // Allow USB response to complete before disconnecting
+            sleep_ms(50);
+            tud_task();
+            tud_disconnect();
+            sleep_ms(250);
+            tud_connect();
+        }
 
         comms_update(nullptr, 0, 5000);
     }

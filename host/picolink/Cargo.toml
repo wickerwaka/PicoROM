@@ -9,6 +9,5 @@ edition = "2021"
 anyhow = "1"
 num-traits = "0.2"
 num-derive = "0.4"
-dirs = "5.0"
 nusb = "0.2"
 

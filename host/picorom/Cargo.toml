@@ -9,7 +9,6 @@ edition = "2021"
 anyhow = "1"
 clap = { version = "4", features = ["derive", "string"] }
 clap-num = "1"
-ctrlc = "3.4"
 indicatif = "0.17"
 
 picolink = { path = "../picolink" }
