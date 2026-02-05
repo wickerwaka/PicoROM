@@ -78,12 +78,7 @@ static void rom_pio_init_output_enable_program()
         // OE pins as input
         sm_config_set_in_pins(&cfg, BASE_OE_PIN);
         sm_config_set_sideset_pins(&cfg, BUF_OE_PIN);
-
-        // Data pins as output, but just the direction is set
-        sm_config_set_out_pins(&cfg, BASE_DATA_PIN, N_DATA_PINS);
-
-        // We set the BUF_OE pin using the SET op
-        sm_config_set_set_pins(&cfg, BUF_OE_PIN, 1);
+        sm_config_set_out_pins(&cfg, BUF_OE_PIN, 1);
 
         pio_sm_init(p, sm, offset, &cfg);
         pio_sm_set_enabled(p, sm, true);
@@ -142,7 +137,6 @@ void rom_init_programs()
     for (uint ofs = 0; ofs < N_DATA_PINS; ofs++)
     {
         pio_gpio_init(prg_data_output.pio(), BASE_DATA_PIN + ofs);
-        gpio_set_dir(BASE_DATA_PIN + ofs, true);
         gpio_set_drive_strength(BASE_DATA_PIN + ofs, GPIO_DRIVE_STRENGTH_2MA);
         gpio_set_input_enabled(BASE_DATA_PIN + ofs, false);
         gpio_set_inover(BASE_DATA_PIN + ofs, GPIO_OVERRIDE_LOW);
@@ -172,7 +166,12 @@ void rom_init_programs()
 #endif
 
     rom_pio_init_output_program();
+
+    // Not needed on newer revisions, data dir is always out
+#if defined(BOARD_32P_TCA)
     rom_pio_init_pindirs_program();
+#endif
+
     rom_pio_init_output_enable_program();
     rom_pio_init_output_enable_report_program();
 }

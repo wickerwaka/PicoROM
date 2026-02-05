@@ -51,7 +51,11 @@ bool pio_programs_init()
     add_program(pio0, 2, comms_detect, prg_comms_detect);
     add_program(pio0, 3, data_output, prg_data_output);
 
-    add_program(pio1, 0, set_output_enable, prg_set_output_enable);
+    if (N_OE_PINS == 2)
+        add_program(pio1, 0, or_output_enable, prg_set_output_enable);
+    else
+        add_program(pio1, 0, route_output_enable, prg_set_output_enable);
+
 
     add_program(pio1, 1, report_data_access, prg_report_data_access);
 
