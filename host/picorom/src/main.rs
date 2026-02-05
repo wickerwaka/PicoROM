@@ -13,6 +13,7 @@ use picolink::{
     PicobootConnection, FLASH_SECTOR_SIZE,
 };
 
+mod embedded_firmware;
 mod firmware;
 mod rom_size;
 mod uf2;
@@ -139,8 +140,8 @@ enum Commands {
     Firmware {
         /// PicoROM device name
         name: String,
-        /// Path to firmware file (.uf2 or .bin)
-        firmware: PathBuf,
+        /// Path to firmware file (.uf2 or .bin) - if omitted, select from embedded firmware
+        firmware: Option<PathBuf>,
         /// Skip confirmation prompt
         #[arg(short = 'y', long)]
         yes: bool,
@@ -288,17 +289,39 @@ fn main() -> Result<()> {
             yes,
             no_reboot,
         } => {
-            // Parse firmware file based on extension
-            let extension = firmware
-                .extension()
-                .and_then(|e| e.to_str())
-                .map(|e| e.to_lowercase());
+            // Parse firmware file based on extension, or select from embedded firmware
+            let (uf2, firmware_label) = if let Some(firmware_path) = firmware {
+                let extension = firmware_path
+                    .extension()
+                    .and_then(|e| e.to_str())
+                    .map(|e| e.to_lowercase());
 
-            let uf2 = match extension.as_deref() {
-                Some("uf2") => Uf2File::parse(&firmware)?,
-                Some("bin") => Uf2File::parse_bin(&firmware)?,
-                Some(ext) => return Err(anyhow!("Unsupported firmware format: .{}", ext)),
-                None => return Err(anyhow!("Firmware file has no extension")),
+                let uf2 = match extension.as_deref() {
+                    Some("uf2") => Uf2File::parse(&firmware_path)?,
+                    Some("bin") => Uf2File::parse_bin(&firmware_path)?,
+                    Some(ext) => return Err(anyhow!("Unsupported firmware format: .{}", ext)),
+                    None => return Err(anyhow!("Firmware file has no extension")),
+                };
+                (uf2, format!("{:?}", firmware_path))
+            } else {
+                // Select from embedded firmware
+                let firmwares = embedded_firmware::read_embedded_firmware()?;
+                if firmwares.is_empty() {
+                    return Err(anyhow!("No embedded firmware and no file specified"));
+                }
+
+                let items: Vec<&str> = firmwares.iter().map(|f| f.display_name.as_str()).collect();
+
+                let selection = dialoguer::Select::new()
+                    .with_prompt("Select firmware version")
+                    .items(&items)
+                    .default(0)
+                    .interact()?;
+
+                let selected = &firmwares[selection];
+                let label = selected.display_name.clone();
+                let uf2 = Uf2File::parse_bin_bytes(&selected.data)?;
+                (uf2, label)
             };
 
             let (start_addr, end_addr) = uf2
@@ -306,7 +329,7 @@ fn main() -> Result<()> {
                 .ok_or_else(|| anyhow!("Firmware file contains no data"))?;
 
             // Show summary
-            println!("Firmware: {:?}", firmware);
+            println!("Firmware: {}", firmware_label);
             println!(
                 "  Blocks: {}, Total size: {} bytes",
                 uf2.block_count,
