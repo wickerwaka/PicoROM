@@ -139,7 +139,7 @@ enum Commands {
     Firmware {
         /// PicoROM device name
         name: String,
-        /// Path to UF2 firmware file
+        /// Path to firmware file (.uf2 or .bin)
         firmware: PathBuf,
         /// Skip confirmation prompt
         #[arg(short = 'y', long)]
@@ -288,12 +288,22 @@ fn main() -> Result<()> {
             yes,
             no_reboot,
         } => {
-            // Parse and validate UF2 file
-            let uf2 = Uf2File::parse(&firmware)?;
+            // Parse firmware file based on extension
+            let extension = firmware
+                .extension()
+                .and_then(|e| e.to_str())
+                .map(|e| e.to_lowercase());
+
+            let uf2 = match extension.as_deref() {
+                Some("uf2") => Uf2File::parse(&firmware)?,
+                Some("bin") => Uf2File::parse_bin(&firmware)?,
+                Some(ext) => return Err(anyhow!("Unsupported firmware format: .{}", ext)),
+                None => return Err(anyhow!("Firmware file has no extension")),
+            };
 
             let (start_addr, end_addr) = uf2
                 .address_range()
-                .ok_or_else(|| anyhow!("UF2 file contains no data"))?;
+                .ok_or_else(|| anyhow!("Firmware file contains no data"))?;
 
             // Show summary
             println!("Firmware: {:?}", firmware);
