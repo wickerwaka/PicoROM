@@ -44,18 +44,3 @@ jobs:
             build/firmware-bundle.zip
           if-no-files-found: error
 
-  release:
-    name: Release
-    runs-on: ubuntu-latest
-    if: "startsWith(github.ref, 'refs/tags/')"
-    needs: [build]
-    steps:
-      - uses: actions/download-artifact@v4
-        with:
-          name: firmware
-      - name: Attach firmware
-        uses: svenstaro/upload-release-action@v2
-        with:
-          file_glob: true
-          file: PicoROM*.uf2
-

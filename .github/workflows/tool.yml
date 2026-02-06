@@ -78,13 +78,46 @@ jobs:
     if: "startsWith(github.ref, 'refs/tags/')"
     needs: [build]
     steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup ARM toolchain
+        run: sudo apt install cmake gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential libstdc++-arm-none-eabi-newlib
+
+      - name: Build firmware
+        run: |
+          mkdir build && cd build
+          cmake ../firmware
+          make
+          make firmware-bundle.zip
+
       - uses: actions/download-artifact@v4
         with:
           pattern: picorom-*
+          path: tools/
           merge-multiple: true
-      - name: Attach picorom
+
+      - name: Bundle firmware into tools
+        run: |
+          for binary in tools/picorom-*; do
+            # Skip .pdb files
+            if [[ "$binary" == *.pdb ]]; then continue; fi
+            cat "$binary" build/firmware-bundle.zip > "${binary}.bundled"
+            mv "${binary}.bundled" "$binary"
+            # Restore execute permission for non-Windows
+            if [[ ! "$binary" == *.exe ]]; then chmod +x "$binary"; fi
+          done
+
+      - name: Upload tools to release
         uses: svenstaro/upload-release-action@v2
         with:
           file_glob: true
-          file: picorom*
+          file: tools/picorom*
+
+      - name: Upload firmware to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          file_glob: true
+          file: build/PicoROM*.uf2
 
