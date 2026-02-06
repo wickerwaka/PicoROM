@@ -4,7 +4,7 @@ include(pico-sdk/pico_sdk_init.cmake)
 project(PicoROM C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
-set(VERSION 1.7)
+set(VERSION 2.0)
 string(REPLACE . _ FILENAME_VERSION ${VERSION})
 
 pico_sdk_init()
@@ -12,7 +12,9 @@ pico_sdk_init()
 pico_define_boot_stage2(boot_div4 ${PICO_DEFAULT_BOOT_STAGE2_FILE})
 target_compile_definitions(boot_div4 PRIVATE PICO_FLASH_SPI_CLKDIV=4)
 
-foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit 32P_2MBit 32P_2MBit_100ns)
+set(ALL_FIRMWARE_TARGETS "" CACHE INTERNAL "List of all firmware targets")
+
+function(picorom BUILD_CONFIG DEFINES)
     set(TARGET PicoROM-${BUILD_CONFIG}-${FILENAME_VERSION})
     add_executable(${TARGET} EXCLUDE_FROM_ALL
         main.cpp
@@ -26,8 +28,10 @@ foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit 32P_2MBit 32P_2MBit_100ns)
         usb_descriptors.c
         reset_interface.c
     )
-    # Create alias target so "make 2MBit" works
+
     add_custom_target(${BUILD_CONFIG} DEPENDS ${TARGET})
+    target_compile_definitions(${TARGET} PRIVATE ${DEFINES})
+    set_target_properties(${TARGET} PROPERTIES EXCLUDE_FROM_ALL FALSE)
 
     pico_set_float_implementation(${TARGET} none)
     pico_set_double_implementation(${TARGET} none)
@@ -84,34 +88,26 @@ foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit 32P_2MBit 32P_2MBit_100ns)
     pico_set_program_name(${TARGET} PicoROM)
     pico_set_program_url(${TARGET} https://github.com/wickerwaka/PicoROM)
     pico_set_program_version(${TARGET} ${VERSION})
+
+    set(ALL_FIRMWARE_TARGETS ${ALL_FIRMWARE_TARGETS} ${TARGET} CACHE INTERNAL "List of all firmware targets")
+endfunction()
+
+picorom(POG_27C020_70ns BOARD_32P_TCA=1)
+picorom(POG_27C020_100ns BOARD_32P_TCA=1 FEATURE_STABLE_ADDRESS=1)
+picorom(P32_27C020_70ns BOARD_32P=1)
+picorom(P32_27C020_100ns BOARD_32P=1 FEATURE_STABLE_ADDRESS=1)
+picorom(P28_27C512_70ns BOARD_28P=1)
+picorom(P28_27C512_100ns BOARD_28P=1 FEATURE_STABLE_ADDRESS=1)
+
+foreach(TARGET ${ALL_FIRMWARE_TARGETS})
+    list(APPEND FIRMWARE_BIN_FILES "${TARGET}.bin")
 endforeach()
 
-target_compile_definitions(PicoROM-2MBit-${FILENAME_VERSION} PRIVATE
-    BOARD_32P_TCA=1
+add_custom_target(firmware-bundle.zip
+    COMMAND ${CMAKE_COMMAND} -E rm -f firmware-bundle.zip
+    COMMAND zip -j firmware-bundle.zip ${FIRMWARE_BIN_FILES}
+    DEPENDS ${ALL_FIRMWARE_TARGETS}
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Creating firmware-bundle.zip"
 )
-
-target_compile_definitions(PicoROM-2MBit_100ns-${FILENAME_VERSION} PRIVATE
-    BOARD_32P_TCA=1
-    FEATURE_STABLE_ADDRESS=1
-)
-
-target_compile_definitions(PicoROM-32P_2MBit-${FILENAME_VERSION} PRIVATE
-    BOARD_32P=1
-)
-
-target_compile_definitions(PicoROM-32P_2MBit_100ns-${FILENAME_VERSION} PRIVATE
-    BOARD_32P=1
-    FEATURE_STABLE_ADDRESS=1
-)
-
-
-target_compile_definitions(PicoROM-28P_512KBit-${FILENAME_VERSION} PRIVATE
-    BOARD_28P=1
-)
-
-set_target_properties(PicoROM-2MBit-${FILENAME_VERSION} PROPERTIES EXCLUDE_FROM_ALL FALSE)
-set_target_properties(PicoROM-2MBit_100ns-${FILENAME_VERSION} PROPERTIES EXCLUDE_FROM_ALL FALSE)
-set_target_properties(PicoROM-32P_2MBit-${FILENAME_VERSION} PROPERTIES EXCLUDE_FROM_ALL FALSE)
-set_target_properties(PicoROM-32P_2MBit_100ns-${FILENAME_VERSION} PROPERTIES EXCLUDE_FROM_ALL FALSE)
-set_target_properties(PicoROM-28P_512KBit-${FILENAME_VERSION} PROPERTIES EXCLUDE_FROM_ALL FALSE)
 
