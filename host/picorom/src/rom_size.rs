@@ -7,6 +7,27 @@ pub enum RomSize {
 }
 
 impl RomSize {
+    /// Parse a ROM size from a byte count (as returned by device rom_size parameter)
+    pub fn from_bytes(bytes: usize) -> Option<Self> {
+        let bits = bytes * 8;
+        if bits >= 1024 * 1024 && bits % (1024 * 1024) == 0 {
+            Some(RomSize::MBit(bits / (1024 * 1024)))
+        } else if bits >= 1024 && bits % 1024 == 0 {
+            Some(RomSize::KBit(bits / 1024))
+        } else {
+            None
+        }
+    }
+
+    /// Parse a ROM size from a hex string like "0x00010000"
+    pub fn from_hex_bytes(s: &str) -> Option<Self> {
+        let s = s.trim().strip_prefix("0x").unwrap_or(s.trim());
+        let bytes = usize::from_str_radix(s, 16).ok()?;
+        Self::from_bytes(bytes)
+    }
+}
+
+impl RomSize {
     pub fn bytes(&self) -> usize {
         match *self {
             RomSize::MBit(x) => x * 128 * 1024,

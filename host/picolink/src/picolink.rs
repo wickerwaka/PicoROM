@@ -204,11 +204,8 @@ impl PicoLink {
     fn recv_raw(&mut self, deadline: Instant) -> Result<Option<RawPacket>> {
         loop {
             let timeout = deadline.saturating_duration_since(Instant::now());
-            if timeout.is_zero() {
-                return Ok(None);
-            }
 
-            // Check if we have pending data
+            // Check if we have pending data (Duration::ZERO does a non-blocking poll)
             if let Some(completion) = self.ep_in.wait_next_complete(timeout) {
                 // Re-submit a buffer for the next receive
                 self.ep_in.submit(new_in_buffer(64));
@@ -314,9 +311,7 @@ impl PicoLink {
                     }
                 }
                 RespPacket::Error(msg, v0, v1) => {
-                    if self.debug {
-                        eprintln!("ERROR: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1);
-                    }
+                    return Err(anyhow!("Device error: '{}' [0x{:x}, 0x{:x}]", msg, v0, v1));
                 }
                 _ => {}
             }

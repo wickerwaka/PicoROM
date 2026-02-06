@@ -86,9 +86,9 @@ enum Commands {
         name: String,
         /// Path of file to upload.
         source: PathBuf,
-        /// Emulate a specific ROM size.
-        #[arg(value_enum, ignore_case=true, default_value_t=RomSize::MBit(2))]
-        size: RomSize,
+        /// Emulate a specific ROM size. If not specified, uses the device's current rom_size.
+        #[arg(value_enum, ignore_case = true)]
+        size: Option<RomSize>,
         /// Store the uploaded image in flash memory also.
         #[arg(short, long, default_value_t = false)]
         store: bool,
@@ -204,6 +204,17 @@ fn main() -> Result<()> {
             store,
         } => {
             let mut pico = find_pico(&name)?;
+
+            // Use provided size or read from device
+            let size = match size {
+                Some(s) => s,
+                None => {
+                    let rom_size_str = pico.get_parameter("rom_size")?;
+                    RomSize::from_hex_bytes(&rom_size_str)
+                        .ok_or_else(|| anyhow!("Invalid rom_size from device: {}", rom_size_str))?
+                }
+            };
+
             let data = read_file(source.as_path(), size)?;
             let progress = ProgressBar::new(data.len() as u64)
                 .with_prefix("Uploading ROM")

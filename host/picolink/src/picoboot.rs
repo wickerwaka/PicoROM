@@ -34,6 +34,7 @@ enum PicobootCmd {
 
 /// Connection to a device in PICOBOOT bootloader mode
 pub struct PicobootConnection {
+    #[allow(dead_code)]
     device: nusb::Device,
     #[allow(dead_code)]
     interface: Interface,
@@ -228,7 +229,7 @@ impl PicobootConnection {
         };
 
         let status_buf = self
-            .device
+            .interface
             .control_in(control, Duration::from_secs(5))
             .wait()
             .map_err(|e| anyhow!("Status control transfer failed: {:?}", e))?;
