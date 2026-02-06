@@ -16,7 +16,6 @@
 #include "str_util.h"
 #include "system.h"
 
-
 // Dummy atexit implementation because some SDK/newlib versions don't strip
 // atexit and it uses several 100bytes of RAM
 int __wrap_atexit(void *)
@@ -57,20 +56,9 @@ static bool usb_reenumerate_pending = false;
 
 static Config config;
 
-static const char *parameter_names[] = {
-    "name",
-    "rom_name",
-    "addr_mask",
-    "rom_size",
-    "initial_reset",
-    "default_reset",
-    "reset",
-    "status",
-    "startup_time",
-    "build_config",
-    "build_version",
-    nullptr
-};
+static const char *parameter_names[] = {"name",          "rom_name",      "addr_mask",     "rom_size",
+                                        "initial_reset", "default_reset", "reset",         "status",
+                                        "startup_time",  "build_config",  "build_version", nullptr};
 
 bool set_parameter(const char *name, const char *value)
 {
@@ -182,7 +170,6 @@ bool get_parameter(const char *name, char *value, size_t value_size)
         return true;
     }
 
-
     return false;
 }
 
@@ -191,169 +178,169 @@ void handle_packet(const Packet *req)
 {
     switch ((PacketType)req->type)
     {
-        case PacketType::Write:
+    case PacketType::Write:
+    {
+        if (req->size < 4)
         {
-            if (req->size < 4)
+            pl_send_error("Write too small", 0, req->size);
+            break;
+        }
+        uint32_t offset;
+        memcpy(&offset, req->payload, sizeof(uint32_t));
+        uint32_t data_size = req->size - 4;
+        if ((offset + data_size) > ROM_SIZE)
+        {
+            pl_send_error("Write out of range", offset, data_size);
+            break;
+        }
+        memcpy(rom_get_buffer() + offset, req->payload + 4, data_size);
+        break;
+    }
+
+    case PacketType::Read:
+    {
+        if (req->size < 5)
+        {
+            pl_send_error("Read too small", 0, req->size);
+            break;
+        }
+        uint32_t offset;
+        memcpy(&offset, req->payload, sizeof(uint32_t));
+        uint32_t requested = req->payload[4];
+        uint32_t available = (offset < ROM_SIZE) ? (ROM_SIZE - offset) : 0;
+        uint32_t max_data = MAX_PKT_PAYLOAD - 4;
+        uint32_t size = MIN(MIN(requested, max_data), available);
+        pl_send_payload_offset(PacketType::ReadData, offset, rom_get_buffer() + offset, size);
+        break;
+    }
+
+    case PacketType::CommitFlash:
+    {
+        flash_save_rom();
+        flash_save_config(&config);
+        pl_send_null(PacketType::CommitDone);
+        break;
+    }
+
+    case PacketType::CommsStart:
+    {
+        uint32_t addr;
+        memcpy(&addr, req->payload, 4);
+        comms_begin_session(addr, rom_get_buffer());
+        pl_send_debug("Comms Started", addr, 0);
+        break;
+    }
+
+    case PacketType::CommsEnd:
+    {
+        comms_end_session();
+        pl_send_debug("Comms Ended", 0, 0);
+        break;
+    }
+
+    case PacketType::CommsData:
+    {
+        if (!comms_update(req->payload, req->size, 5000))
+        {
+            pl_send_error("Comms send timeout", 0, 0);
+        }
+        break;
+    }
+
+    case PacketType::SetParameter:
+    {
+        char *split = (char *)memchr(req->payload, ',', req->size);
+        if (split != nullptr)
+        {
+            *split = '\0';
+            if (set_parameter((char *)req->payload, split + 1))
             {
-                pl_send_error("Write too small", 0, req->size);
-                break;
-            }
-            uint32_t offset;
-            memcpy(&offset, req->payload, sizeof(uint32_t));
-            uint32_t data_size = req->size - 4;
-            if ((offset + data_size) > ROM_SIZE)
-            {
-                pl_send_error("Write out of range", offset, data_size);
-                break;
-            }
-            memcpy(rom_get_buffer() + offset, req->payload + 4, data_size);
-            break;
-        }
-
-        case PacketType::Read:
-        {
-            if (req->size < 5)
-            {
-                pl_send_error("Read too small", 0, req->size);
-                break;
-            }
-            uint32_t offset;
-            memcpy(&offset, req->payload, sizeof(uint32_t));
-            uint32_t requested = req->payload[4];
-            uint32_t available = (offset < ROM_SIZE) ? (ROM_SIZE - offset) : 0;
-            uint32_t max_data = MAX_PKT_PAYLOAD - 4;
-            uint32_t size = MIN(MIN(requested, max_data), available);
-            pl_send_payload_offset(PacketType::ReadData, offset, rom_get_buffer() + offset, size);
-            break;
-        }
-
-        case PacketType::CommitFlash:
-        {
-            flash_save_rom();
-            flash_save_config(&config);
-            pl_send_null(PacketType::CommitDone);
-            break;
-        }
-
-        case PacketType::CommsStart:
-        {
-            uint32_t addr;
-            memcpy(&addr, req->payload, 4);
-            comms_begin_session(addr, rom_get_buffer());
-            pl_send_debug("Comms Started", addr, 0);
-            break;
-        }
-
-        case PacketType::CommsEnd:
-        {
-            comms_end_session();
-            pl_send_debug("Comms Ended", 0, 0);
-            break;
-        }
-
-        case PacketType::CommsData:
-        {
-            if (!comms_update(req->payload, req->size, 5000))
-            {
-                pl_send_error("Comms send timeout", 0, 0);
-            }
-            break;
-        }
-
-        case PacketType::SetParameter:
-        {
-            char *split = (char *)memchr(req->payload, ',', req->size);
-            if (split != nullptr)
-            {
-                *split = '\0';
-                if (set_parameter((char *)req->payload, split + 1))
+                Packet pkt;
+                if (get_parameter((const char *)req->payload, (char *)pkt.payload, sizeof(pkt.payload)))
                 {
-                    Packet pkt;
-                    if (get_parameter((const char *)req->payload, (char *)pkt.payload, sizeof(pkt.payload)))
-                    {
-                        pkt.size = strlen((char *)pkt.payload);
-                        pkt.type = (uint8_t)PacketType::Parameter;
-                        pl_send_packet(&pkt);
-                    }
-                    else
-                    {
-                        pl_send_null(PacketType::ParameterError);
-                    }
-                    break;
+                    pkt.size = strlen((char *)pkt.payload);
+                    pkt.type = (uint8_t)PacketType::Parameter;
+                    pl_send_packet(&pkt);
                 }
                 else
                 {
                     pl_send_null(PacketType::ParameterError);
                 }
+                break;
             }
             else
             {
                 pl_send_null(PacketType::ParameterError);
             }
-            break;
         }
-
-        case PacketType::GetParameter:
+        else
         {
-            Packet pkt;
-            if (get_parameter((const char *)req->payload, (char *)pkt.payload, sizeof(pkt.payload)))
-            {
-                pkt.size = strlen((char *)pkt.payload);
-                pkt.type = (uint8_t)PacketType::Parameter;
-            }
-            else
-            {
-                pkt.size = 0;
-                pkt.type = (uint8_t)PacketType::ParameterError;
-            }
-            pl_send_packet(&pkt);
-            break;
+            pl_send_null(PacketType::ParameterError);
         }
+        break;
+    }
 
-        case PacketType::QueryParameter:
+    case PacketType::GetParameter:
+    {
+        Packet pkt;
+        if (get_parameter((const char *)req->payload, (char *)pkt.payload, sizeof(pkt.payload)))
         {
-            if (req->size == 0)
+            pkt.size = strlen((char *)pkt.payload);
+            pkt.type = (uint8_t)PacketType::Parameter;
+        }
+        else
+        {
+            pkt.size = 0;
+            pkt.type = (uint8_t)PacketType::ParameterError;
+        }
+        pl_send_packet(&pkt);
+        break;
+    }
+
+    case PacketType::QueryParameter:
+    {
+        if (req->size == 0)
+        {
+            pl_send_string(PacketType::Parameter, parameter_names[0]);
+        }
+        else
+        {
+            const char **p = parameter_names;
+            while (p)
             {
-                pl_send_string(PacketType::Parameter, parameter_names[0]);
-            }
-            else
-            {
-                const char **p = parameter_names;
-                while (p)
+                if (!strcmp(*p, (char *)req->payload))
                 {
-                    if (!strcmp(*p, (char *)req->payload))
-                    {
-                        p++;
-                        break;
-                    }
                     p++;
+                    break;
                 }
-
-                if (p)
-                    pl_send_string(PacketType::Parameter, *p);
-                else
-                    pl_send_null(PacketType::Parameter);
+                p++;
             }
-            break;
-        }
 
-        case PacketType::Identify:
-        {
-            trigger_identify_led();
-            break;
+            if (p)
+                pl_send_string(PacketType::Parameter, *p);
+            else
+                pl_send_null(PacketType::Parameter);
         }
+        break;
+    }
 
-        case PacketType::Bootsel:
-        {
-            rom_reset_usb_boot(-1, 0);
-            break;
-        }
+    case PacketType::Identify:
+    {
+        trigger_identify_led();
+        break;
+    }
 
-        default:
-        {
-            pl_send_error("Unrecognized packet", req->type, req->size);
-            break;
-        }
+    case PacketType::Bootsel:
+    {
+        rom_reset_usb_boot(-1, 0);
+        break;
+    }
+
+    default:
+    {
+        pl_send_error("Unrecognized packet", req->type, req->size);
+        break;
+    }
     }
 }
 
@@ -368,7 +355,7 @@ int main()
 
     // We have to initialize these pins before starting the rom programs
     peripherals_init();
-    
+
     rom_init_programs();
 
     reset_set(config.initial_reset);
@@ -382,7 +369,6 @@ int main()
     configure_address_pins(config.addr_mask);
 
     rom_service_start();
-
 
     reset_set(config.default_reset);
 

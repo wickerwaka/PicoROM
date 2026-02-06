@@ -17,6 +17,7 @@ static void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) 
     register uint32_t r2 __asm__("r2") = (uint32_t)&prg_data_output.pio()->txf[prg_data_output.sm];
 
 #if defined(FEATURE_STABLE_ADDRESS)
+    // clang-format off
     __asm__ volatile(
           "ldr r5, =0xd0000004 \n\t"
           "loop:               \n\t" //                         Cycles  Loop1 Loop2
@@ -44,10 +45,10 @@ static void __attribute__((noreturn, section(".time_critical.core1_rom_loop"))) 
           : "+r"(r0), "+r"(r1), "+r"(r2)
           :
           : "r5", "cc", "memory");
+    // clang-format on
 #endif
     __builtin_unreachable();
 }
-
 
 static void rom_pio_init_output_program()
 {
@@ -111,7 +112,6 @@ static void rom_pio_init_pindirs_program()
         pio_sm_set_enabled(p, sm, true);
     }
 }
-
 
 static void rom_pio_init_output_enable_report_program()
 {
@@ -204,5 +204,3 @@ bool rom_check_oe()
     }
     return false;
 }
-
-

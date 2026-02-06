@@ -39,7 +39,6 @@ static void tca_set_pin(int pin, bool en)
 }
 #endif
 
-
 static uint8_t identify_req = 0;
 
 repeating_timer_t activity_timer;
@@ -128,34 +127,34 @@ void reset_set(ResetLevel level)
 {
     switch (level)
     {
-        case ResetLevel::Low:
+    case ResetLevel::Low:
 #if defined(BOARD_32P_TCA)
-            tca_set_pin(TCA_RESET_VALUE_PIN, false);
-            tca_set_pin(TCA_RESET_PIN, true);
+        tca_set_pin(TCA_RESET_VALUE_PIN, false);
+        tca_set_pin(TCA_RESET_PIN, true);
 #else
-            gpio_put(RESET_PIN, true);
+        gpio_put(RESET_PIN, true);
 #endif
-            current_reset = ResetLevel::Low;
-            break;
+        current_reset = ResetLevel::Low;
+        break;
 
-        case ResetLevel::High:
+    case ResetLevel::High:
 #if defined(BOARD_32P_TCA)
-            tca_set_pin(TCA_RESET_VALUE_PIN, true);
-            tca_set_pin(TCA_RESET_PIN, true);
+        tca_set_pin(TCA_RESET_VALUE_PIN, true);
+        tca_set_pin(TCA_RESET_PIN, true);
 #else
-            gpio_put(RESET_PIN, true);
+        gpio_put(RESET_PIN, true);
 #endif
-            current_reset = ResetLevel::High;
-            break;
+        current_reset = ResetLevel::High;
+        break;
 
-        default:
+    default:
 #if defined(BOARD_32P_TCA)
-            tca_set_pin(TCA_RESET_PIN, false);
+        tca_set_pin(TCA_RESET_PIN, false);
 #else
-            gpio_put(RESET_PIN, false);
+        gpio_put(RESET_PIN, false);
 #endif
-            current_reset = ResetLevel::Z;
-            break;
+        current_reset = ResetLevel::Z;
+        break;
     }
 }
 
@@ -163,17 +162,17 @@ void reset_to_string(ResetLevel level, char *s, size_t sz)
 {
     switch (level)
     {
-        case ResetLevel::Low:
-            strcpyz(s, sz, "low");
-            break;
+    case ResetLevel::Low:
+        strcpyz(s, sz, "low");
+        break;
 
-        case ResetLevel::High:
-            strcpyz(s, sz, "high");
-            break;
+    case ResetLevel::High:
+        strcpyz(s, sz, "high");
+        break;
 
-        default:
-            strcpyz(s, sz, "z");
-            break;
+    default:
+        strcpyz(s, sz, "z");
+        break;
     }
 }
 
@@ -215,7 +214,7 @@ void peripherals_init()
         pio_sm_set_pins_with_mask(p, sm, 0xffffffff, TCA_EXPANDER_PIN_MASK);
 
         sm_config_set_out_pins(&cfg, TCA_EXPANDER_PIN, 1);
-        sm_config_set_clkdiv(&cfg, 1000); // divide down to TCA rate
+        sm_config_set_clkdiv(&cfg, 1000);              // divide down to TCA rate
         sm_config_set_out_shift(&cfg, true, true, 10); // 4-bits of preample, 5-bits of data, 1-end bit
 
         pio_sm_init(p, sm, offset, &cfg);
@@ -245,8 +244,6 @@ void peripherals_init()
     gpio_set_dir(RESET_PIN, true);
     gpio_put(RESET_PIN, true);
 #endif
-    
+
     add_repeating_timer_ms(10, activity_timer_callback, nullptr, &activity_timer);
 }
-
-

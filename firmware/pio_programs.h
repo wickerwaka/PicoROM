@@ -37,10 +37,10 @@ struct PIOProgram
     }
 };
 
-#define PRG_LOCAL(prg, p, s, o, c) \
-    PIO p = prg.pio(); \
-    int s = prg.sm; \
-    int o = prg.offset; \
+#define PRG_LOCAL(prg, p, s, o, c)                                                                                     \
+    PIO p = prg.pio();                                                                                                 \
+    int s = prg.sm;                                                                                                    \
+    int o = prg.offset;                                                                                                \
     pio_sm_config c = prg.config();
 
 extern PIOProgram prg_comms_detect;

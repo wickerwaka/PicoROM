@@ -6,7 +6,7 @@
 
 #include "hardware/sync.h"
 
-template<uint32_t N>
+template <uint32_t N>
 struct FIFO
 {
     uint32_t head;

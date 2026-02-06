@@ -14,17 +14,15 @@ PIOProgram prg_set_pindir_hi;
 PIOProgram prg_set_pindir_lo;
 PIOProgram prg_report_data_access;
 
-
-#define add_program(p, s, name, prg) \
-    do \
-    { \
-        prg.pio_index = PIO_NUM(p); \
-        prg.sm = s; \
-        prg.config_func = name ## _program_get_default_config; \
-        prg.offset = pio_add_program(p, &name ## _program); \
-        if (prg.offset < 0) return false; \
-    } while(false)
-
+#define add_program(p, s, name, prg)                                                                                   \
+    do                                                                                                                 \
+    {                                                                                                                  \
+        prg.pio_index = PIO_NUM(p);                                                                                    \
+        prg.sm = s;                                                                                                    \
+        prg.config_func = name##_program_get_default_config;                                                           \
+        prg.offset = pio_add_program(p, &name##_program);                                                              \
+        if (prg.offset < 0) return false;                                                                              \
+    } while (false)
 
 void pio_programs_reset()
 {
@@ -40,7 +38,6 @@ void pio_programs_reset()
     prg_set_pindir_lo.reset();
 }
 
-
 bool pio_programs_init()
 {
     pio_programs_reset();
@@ -55,7 +52,6 @@ bool pio_programs_init()
         add_program(pio1, 0, or_output_enable, prg_set_output_enable);
     else
         add_program(pio1, 0, route_output_enable, prg_set_output_enable);
-
 
     add_program(pio1, 1, report_data_access, prg_report_data_access);
 

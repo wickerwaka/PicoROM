@@ -57,5 +57,4 @@ void pl_send_packet(const Packet *pkt);
 // Activity tracking
 bool pl_check_activity();
 
-
 #endif // PICO_LINK_H
