@@ -360,6 +360,9 @@ int main()
         system_status |= STATUS_PIO_INIT;
     }
 
+    // We have to initialize these pins before starting the rom programs
+    peripherals_init();
+    
     rom_init_programs();
 
     reset_set(config.initial_reset);
@@ -374,7 +377,6 @@ int main()
 
     rom_service_start();
 
-    peripherals_init();
 
     reset_set(config.default_reset);
 
