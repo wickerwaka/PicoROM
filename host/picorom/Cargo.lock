@@ -665,7 +665,7 @@ dependencies = [
 
 [[package]]
 name = "picolink"
-version = "1.7.3"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "num-derive",
@@ -675,7 +675,7 @@ dependencies = [
 
 [[package]]
 name = "picorom"
-version = "1.7.3"
+version = "2.0.0"
 dependencies = [
  "anyhow",
  "clap",

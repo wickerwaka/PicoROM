@@ -34,12 +34,14 @@ jobs:
           cd build
           cmake ../firmware
           make
+          make firmware-bundle.zip
       - uses: actions/upload-artifact@v4
         with:
           name: firmware
           path: |
             build/PicoROM*.elf
             build/PicoROM*.uf2
+            build/firmware-bundle.zip
           if-no-files-found: error
 
   release:
@@ -55,5 +57,5 @@ jobs:
         uses: svenstaro/upload-release-action@v2
         with:
           file_glob: true
-          file: PicoROM*
+          file: PicoROM*.uf2
 

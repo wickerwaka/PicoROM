@@ -61,6 +61,7 @@ static const char *parameter_names[] = {
     "name",
     "rom_name",
     "addr_mask",
+    "rom_size",
     "initial_reset",
     "default_reset",
     "reset",
@@ -128,6 +129,11 @@ bool get_parameter(const char *name, char *value, size_t value_size)
     if (streq(name, "addr_mask"))
     {
         snprintf(value, value_size, "0x%08x", config.addr_mask);
+        return true;
+    }
+    else if (streq(name, "rom_size"))
+    {
+        snprintf(value, value_size, "0x%08x", ROM_SIZE);
         return true;
     }
     else if (streq(name, "name"))
