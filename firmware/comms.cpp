@@ -139,9 +139,11 @@ static void comms_start_programs(uint32_t addr, CommsRegisters *regs)
         channel_config_set_high_priority(&c, true);
         channel_config_set_irq_quiet(&c, true);
         channel_config_set_chain_to(&c, DMA_CH_CLOCK_PONG);
-        dma_channel_configure(DMA_CH_CLOCK_PING, &c, &regs->tick_count, &prg_comms_clock.pio()->rxf[prg_comms_clock.sm], 0xffffffff, false);
+        dma_channel_configure(DMA_CH_CLOCK_PING, &c, &regs->tick_count, &prg_comms_clock.pio()->rxf[prg_comms_clock.sm],
+                              0xffffffff, false);
         channel_config_set_chain_to(&c, DMA_CH_CLOCK_PING);
-        dma_channel_configure(DMA_CH_CLOCK_PONG, &c, &regs->tick_count, &prg_comms_clock.pio()->rxf[prg_comms_clock.sm], 0xffffffff, true);
+        dma_channel_configure(DMA_CH_CLOCK_PONG, &c, &regs->tick_count, &prg_comms_clock.pio()->rxf[prg_comms_clock.sm],
+                              0xffffffff, true);
     }
 #endif // FEATURE_CLOCK
 }
