@@ -1,5 +1,6 @@
 cmake_minimum_required(VERSION 3.13)
-include(pico_sdk_import.cmake)
+set(PICO_PLATFORM,rp2040)
+include(../firmware/pico-sdk/pico_sdk_init.cmake)
 project(testbench C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)

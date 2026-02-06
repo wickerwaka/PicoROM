@@ -9,6 +9,9 @@ string(REPLACE . _ FILENAME_VERSION ${VERSION})
 
 pico_sdk_init()
 
+pico_define_boot_stage2(boot_div4 ${PICO_DEFAULT_BOOT_STAGE2_FILE})
+target_compile_definitions(boot_div4 PRIVATE PICO_FLASH_SPI_CLKDIV=4)
+
 foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit 32P_2MBit 32P_2MBit_100ns)
     set(TARGET PicoROM-${BUILD_CONFIG}-${FILENAME_VERSION})
     add_executable(${TARGET} EXCLUDE_FROM_ALL
@@ -75,6 +78,9 @@ foreach(BUILD_CONFIG 2MBit 2MBit_100ns 28P_512KBit 32P_2MBit 32P_2MBit_100ns)
         PLL_SYS_POSTDIV2=1
         SYS_CLK_HZ=270000000
     )
+    
+    pico_set_boot_stage2(${TARGET} boot_div4)
+    
     pico_set_program_name(${TARGET} PicoROM)
     pico_set_program_url(${TARGET} https://github.com/wickerwaka/PicoROM)
     pico_set_program_version(${TARGET} ${VERSION})

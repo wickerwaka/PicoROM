@@ -162,7 +162,7 @@ void rom_init_programs()
     gpio_set_input_enabled(BUF_DIR_PIN, false);
     gpio_set_inover(BUF_DIR_PIN, GPIO_OVERRIDE_LOW);
     gpio_set_dir(BUF_DIR_PIN, true);
-    gpio_put(BUF_DIR_PIN, false);
+    gpio_put(BUF_DIR_PIN, true);
 #endif
 
     rom_pio_init_output_program();

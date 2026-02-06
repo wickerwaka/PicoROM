@@ -100,11 +100,11 @@ bool activity_timer_callback(repeating_timer_t * /*unused*/)
 #else
     if (link_count < link_duty)
     {
-        pwm_set_gpio_level(INFO_LED_PIN, 64);
+        pwm_set_gpio_level(INFO_LED_PIN, 210);
     }
     else if (activity_count < activity_duty)
     {
-        pwm_set_gpio_level(INFO_LED_PIN, 64);
+        pwm_set_gpio_level(INFO_LED_PIN, 210);
     }
     else
     {

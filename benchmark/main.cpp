@@ -30,7 +30,20 @@ template <> __force_inline void asm_delay<0>()
 {
 }
 
-uint32_t make_addr(uint32_t addr)
+void set_data_pulls(bool up)
+{
+    for( int pin = 0; pin < 31; pin++ )
+    {
+        uint32_t pin_mask = 1 << pin;
+
+        if( pin_mask & DATA_MASK )
+        {
+            gpio_set_pulls(pin, up, ~up);
+        }
+    }
+}
+
+static inline uint32_t make_addr(uint32_t addr)
 {
     uint32_t exp = ((addr & 0x00008000) << 3) | addr;
 
@@ -52,32 +65,41 @@ void rom_configure_pins()
         {
             gpio_set_input_hysteresis_enabled(pin, false);
             syscfg_hw->proc_in_sync_bypass |= 1 << pin;
-            gpio_set_pulls(pin, false, true);
         }
 
         gpio_set_slew_rate(pin, GPIO_SLEW_RATE_FAST);
         //gpio_set_drive_strength(pin, GPIO_DRIVE_STRENGTH_12MA);
     }
+
+    set_data_pulls(false);
+}
+
+static inline void address_bus(uint32_t address, bool ce, bool oe)
+{
+    uint32_t out = make_addr(address);
+    gpio_put_masked(ADDR_MASK | CE_MASK | OE_MASK, out | (ce ? 0 : CE_MASK) | (oe ? 0 : OE_MASK));
+}
+
+static inline uint8_t read_data()
+{
+    uint32_t v = gpio_get_all();
+    return (v & DATA_MASK) >> DATA_SHIFT;
 }
 
 template<int N> uint8_t rom_read(uint32_t address)
 {
-    uint32_t out = make_addr(address);
-    gpio_put_masked(ADDR_MASK | CE_MASK | OE_MASK, out);
+    address_bus(address, true, true);
     asm_delay<N>();
-    uint32_t v = gpio_get_all();
-    return (v & DATA_MASK) >> DATA_SHIFT;
+    return read_data();
 }
 
 template<int N> uint8_t rom_read_ce(uint32_t address)
 {
-    uint32_t out = make_addr(address);
-    gpio_put_masked(ADDR_MASK | CE_MASK | OE_MASK, out | OE_MASK);
+    address_bus(address, true, false);
     busy_wait_at_least_cycles(200);
-    gpio_put_masked(ADDR_MASK | CE_MASK | OE_MASK, out);
+    address_bus(address, true, true);
     asm_delay<N>();
-    uint32_t v = gpio_get_all();
-    return (v & DATA_MASK) >> DATA_SHIFT;
+    return read_data();
 }
 
 
@@ -103,6 +125,44 @@ uint8_t rom_read_ce(uint32_t address, int delay)
     return func_array[delay](address);
 }
 
+void test_disabled()
+{
+    for( int mode = 0; mode < 7; mode++ )
+    {
+        bool ce, oe, pullup;
+        switch(mode)
+        {
+            case 0: ce = false; oe = false; pullup = false; break;
+            case 1: ce = false; oe = false; pullup = true; break;
+            case 2: ce = false; oe = true; pullup = false; break;
+            case 3: ce = false; oe = true; pullup = true; break;
+            case 4: ce = true; oe = false; pullup = false; break;
+            case 5: ce = true; oe = false; pullup = true; break;
+            case 6: ce = true; oe = true; pullup = true; break;
+        }
+
+        set_data_pulls(pullup);
+
+        int fail_count = 0;
+        for( int addr = 0; addr < 1024; addr++ )
+        {
+            address_bus(addr, ce, oe);
+            busy_wait_at_least_cycles(200);
+            uint8_t d = read_data();
+            printf("%02X", d);
+            if (d != (pullup ? 0xff : 0x00)) fail_count++;
+        }
+
+        printf("\n[%s] CE: %s  OE: %s  PULLUP:  %s\n",
+                fail_count == 0 ? "PASS" : "FAIL",
+                ce ? "SET" : "CLR",
+                oe ? "SET" : "CLR",
+                pullup ? "HI " : "LOW");
+    }
+}
+
+
+
 uint32_t data[16 * 1024];
 
 int main()
@@ -118,6 +178,8 @@ int main()
 
     while (true)
     {
+        test_disabled();
+/*
         int fail_count = 0;
         int succeed_count = 0;
         //int delay = 30;
@@ -155,7 +217,7 @@ int main()
                 succeed_count++;
             }
         }
-
+*/
         sleep_ms(1000);
 
         ce_tests = !ce_tests;
