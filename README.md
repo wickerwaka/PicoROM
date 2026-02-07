@@ -1,17 +1,28 @@
 ![PicoROM](docs/header.jpg)
 ---
-PicoROM is an 8-bit ROM emulator in a DIP-32 compatible form factor. Its main use case (the reason I made it) is for rapid iteration when experimenting with arcade hardware. The PicoROM can emulate ROMs up to 2MBit (256Kbytes) in size and access times of 70ns. Its size allows it to fit into almost any ROM socket regardless of how crowded the board might be.
+PicoROM is an 8-bit ROM emulator in a DIP-32 and DIP-28 compatible form factors. Its main use case (the reason I made it) is for rapid iteration when experimenting with arcade hardware. The PicoROM can emulate ROMs up to 2MBit (256Kbytes) in size and access times of 70ns. Its size allows it to fit into almost any ROM socket regardless of how crowded the board might be.
 
 ![Header Image](docs/use_collage.jpg)
 
 Feature Summary
-- DIP-32 form factor
-- 2MBit (256KByte) storage
+- DIP-32 and DIP-28 form factors
+- Up to 2MBit (256KByte) storage
 - 70ns access time
-- USB or board powered
-- Reset line
+- USB communication
+- Reset control
 
 Fully assembled versions available for purchase from [Tindie.](https://www.tindie.com/products/pbretro/picorom/)
+
+## Hardware Flavors
+There are currently three different hardware versions of the PicoROM.
+- PicoROM Original (POG). Original 32-pin design. Has a single pin, tri-state reset header that can be set high, low or high-impedance. Can be powered by either USB or from the board it is mounted in. 
+- PicoROM 28 (P28). New 28-pin design. Has a dual pin reset header, one for reset high and one for low. Has a split power design so the microcontroller can be powered by either USB or from the board, but the external buffers are powered from the 5V input. This was primarily done to reduce instances of high power usage when a PicoROM is connected to an unpowered device while it is power via USB.
+- PicoROM 32 (P32). New 32-pin design. Has all the changes from the P28 design, but in 32-pin form factor.
+
+The shortened names POG, P28 and P32 are used to identify which firmware images are appropriate for each device.
+
+## Version 2.0
+Version 2.0 of the firmware and software changes how the `picorom` command line tool communicates with the PicoROM device. It now uses a custom USB protocol instead of emulating a USB serial port. 2.0+ firmware will not work with the 1.0 `picorom` tool and vice versa.
 
 ## Operation
 A PicoROM is controlled by the `picorom` tool on a PC via the USB connection. The `picorom` tool allows you to list PicoROMs attached to the system, rename them, set parameters and (most important of all) upload ROM data.
