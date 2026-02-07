@@ -93,7 +93,8 @@ jobs:
         if: ${{ contains(matrix.target, 'apple-darwin') }}
         env:
           SIGNING_KEY_PEM: ${{ secrets.SIGNING_KEY_PEM }}
-        run: echo "$SIGNING_KEY_PEM" | tr ' ' '\n' > key.pem
+        run: |
+          echo $SIGNING_KEY_PEM | tr ' ' '\n' > key.pem
       - name: Sign macOS binary
         if: ${{ contains(matrix.target, 'apple-darwin') }}
         uses: indygreg/apple-code-sign-action@v1
