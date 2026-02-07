@@ -11,7 +11,9 @@ mod picolink;
 
 // Re-export picolink types
 pub use picolink::{
-    enumerate_picos, find_pico, get_device_location, PicoLink, ReqPacket, ResetLevel, RespPacket,
+    enumerate_all_devices, enumerate_picos, find_pico, get_device_location, reboot_to_bootloader,
+    wait_for_device_at_location, DetectedDevice, DeviceMode, PicoLink, ReqPacket, ResetLevel,
+    RespPacket,
 };
 
 // Re-export picoboot types

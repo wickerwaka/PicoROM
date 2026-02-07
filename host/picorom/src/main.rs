@@ -9,7 +9,8 @@ use std::thread::sleep;
 use std::time::Duration;
 
 use picolink::{
-    enumerate_picos, find_pico, get_device_location, wait_for_bootloader_at_location,
+    enumerate_all_devices, enumerate_picos, find_pico, get_device_location, reboot_to_bootloader,
+    wait_for_bootloader_at_location, wait_for_device_at_location, DetectedDevice, DeviceMode,
     PicobootConnection, FLASH_SECTOR_SIZE,
 };
 
@@ -135,9 +136,10 @@ enum Commands {
 
     /// Upload firmware to a PicoROM device
     Firmware {
-        /// PicoROM device name
-        name: String,
+        /// PicoROM device name (optional if only one device connected)
+        name: Option<String>,
         /// Path to firmware file (.uf2 or .bin) - if omitted, select from embedded firmware
+        #[arg(short = 'f', long = "file")]
         firmware: Option<PathBuf>,
         /// Skip confirmation prompt
         #[arg(short = 'y', long)]
@@ -291,6 +293,96 @@ fn main() -> Result<()> {
             yes,
             no_reboot,
         } => {
+            // Resolve target device - either by name or auto-detect
+            let target_device: DetectedDevice = if let Some(ref device_name) = name {
+                // Explicit device name provided - find it
+                match find_pico(device_name) {
+                    Ok(_) => {
+                        let (bus_id, port_chain) = get_device_location(device_name)?;
+                        DetectedDevice {
+                            mode: DeviceMode::Application,
+                            display_name: device_name.clone(),
+                            device_id: device_name.clone(),
+                            bus_id,
+                            port_chain,
+                        }
+                    }
+                    Err(_) => {
+                        // Check if there's a bootloader device
+                        match PicobootConnection::open(None) {
+                            Ok(conn) => {
+                                // Try to find a bootloader matching by name pattern or accept any
+                                let all_devices = enumerate_all_devices()?;
+                                let bootloaders: Vec<_> = all_devices
+                                    .into_iter()
+                                    .filter(|d| matches!(d.mode, DeviceMode::Bootloader))
+                                    .collect();
+
+                                if bootloaders.is_empty() {
+                                    return Err(anyhow!(
+                                        "Device '{}' not found and no bootloader device available",
+                                        device_name
+                                    ));
+                                }
+
+                                // Use the first bootloader found
+                                println!(
+                                    "Device '{}' not found, using bootloader: {}",
+                                    device_name, conn.device_id
+                                );
+                                drop(conn); // Release connection, we'll reconnect later
+                                bootloaders.into_iter().next().unwrap()
+                            }
+                            Err(_) => {
+                                return Err(anyhow!(
+                                    "Device '{}' not found and no bootloader device available",
+                                    device_name
+                                ));
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Auto-detect: enumerate all devices
+                let all_devices = enumerate_all_devices()?;
+
+                match all_devices.len() {
+                    0 => {
+                        return Err(anyhow!(
+                            "No PicoROM devices found.\n\
+                             Connect a device or hold BOOTSEL while connecting for bootloader mode."
+                        ));
+                    }
+                    1 => {
+                        let device = all_devices.into_iter().next().unwrap();
+                        let mode_str = match device.mode {
+                            DeviceMode::Application => "application mode",
+                            DeviceMode::Bootloader => "bootloader mode",
+                            DeviceMode::Resettable => "resettable",
+                        };
+                        println!("Auto-detected: {} ({})", device.display_name, mode_str);
+                        device
+                    }
+                    _ => {
+                        eprintln!(
+                            "Error: Found {} devices. Please specify which device to flash:",
+                            all_devices.len()
+                        );
+                        for device in &all_devices {
+                            let mode_str = match device.mode {
+                                DeviceMode::Application => "application mode",
+                                DeviceMode::Bootloader => "bootloader mode",
+                                DeviceMode::Resettable => "resettable",
+                            };
+                            eprintln!("  {} ({})", device.display_name, mode_str);
+                        }
+                        eprintln!();
+                        eprintln!("Usage: picorom firmware <name>");
+                        return Err(anyhow!("Multiple devices found"));
+                    }
+                }
+            };
+
             // Parse firmware file based on extension, or select from embedded firmware
             let (uf2, firmware_label) = if let Some(firmware_path) = firmware {
                 let extension = firmware_path
@@ -349,7 +441,10 @@ fn main() -> Result<()> {
 
             // Confirmation prompt
             if !yes {
-                print!("\nFlash firmware to '{}'? [y/N] ", name);
+                print!(
+                    "\nFlash firmware to '{}'? [y/N] ",
+                    target_device.display_name
+                );
                 io::stdout().flush()?;
 
                 let mut input = String::new();
@@ -361,14 +456,18 @@ fn main() -> Result<()> {
                 }
             }
 
-            // Try to find device and send to bootloader, or connect to existing bootloader
-            let mut conn = match find_pico(&name) {
-                Ok(mut pico) => {
-                    // Capture USB port location before rebooting
-                    // This allows us to identify the same physical device in bootloader mode
-                    let (bus_id, port_chain) = get_device_location(&name)?;
+            // Connect to device based on its mode
+            let (mut conn, bus_id, port_chain) = match target_device.mode {
+                DeviceMode::Application => {
+                    // Device is in application mode - need to reboot to bootloader
+                    let mut pico = find_pico(&target_device.display_name)?;
+                    let bus_id = target_device.bus_id.clone();
+                    let port_chain = target_device.port_chain.clone();
 
-                    println!("\nSending '{}' to bootloader...", name);
+                    println!(
+                        "\nSending '{}' to bootloader...",
+                        target_device.display_name
+                    );
                     pico.usb_boot()?;
 
                     // Wait for device to disconnect
@@ -390,23 +489,52 @@ fn main() -> Result<()> {
                         Duration::from_secs(10),
                     )?;
                     spinner.finish_with_message("Connected");
-                    conn
+                    (conn, bus_id, port_chain)
                 }
-                Err(_) => {
-                    // Device not found - check if there's already a bootloader device
-                    println!("\nDevice '{}' not found, checking for bootloader...", name);
-                    match PicobootConnection::open(None) {
-                        Ok(conn) => {
-                            println!("Found bootloader device: {}", conn.device_id);
-                            conn
-                        }
-                        Err(_) => {
-                            return Err(anyhow!(
-                                "Device '{}' not found and no bootloader device available",
-                                name
-                            ));
-                        }
-                    }
+                DeviceMode::Bootloader => {
+                    // Device is already in bootloader mode - connect directly
+                    println!("\nConnecting to bootloader...");
+                    let conn = PicobootConnection::open_at_location(
+                        &target_device.bus_id,
+                        &target_device.port_chain,
+                    )?;
+                    (
+                        conn,
+                        target_device.bus_id.clone(),
+                        target_device.port_chain.clone(),
+                    )
+                }
+                DeviceMode::Resettable => {
+                    // RP2040 device with reset interface - reboot to bootloader
+                    let bus_id = target_device.bus_id.clone();
+                    let port_chain = target_device.port_chain.clone();
+
+                    println!(
+                        "\nSending '{}' to bootloader...",
+                        target_device.display_name
+                    );
+                    reboot_to_bootloader(&bus_id, &port_chain)?;
+
+                    // Wait for device to disconnect
+                    sleep(Duration::from_millis(500));
+
+                    // Wait for bootloader to appear at the same USB port location
+                    let spinner = ProgressBar::new_spinner()
+                        .with_prefix("Waiting for bootloader")
+                        .with_style(
+                            ProgressStyle::with_template("{prefix:.bold} {spinner} {msg}")
+                                .unwrap()
+                                .tick_chars(r"\|/--"),
+                        );
+                    spinner.enable_steady_tick(Duration::from_millis(100));
+
+                    let conn = wait_for_bootloader_at_location(
+                        &bus_id,
+                        &port_chain,
+                        Duration::from_secs(10),
+                    )?;
+                    spinner.finish_with_message("Connected");
+                    (conn, bus_id, port_chain)
                 }
             };
 
@@ -457,18 +585,10 @@ fn main() -> Result<()> {
                     );
                 spinner.enable_steady_tick(Duration::from_millis(100));
 
-                // Try to reconnect
-                let deadline = std::time::Instant::now() + Duration::from_secs(10);
-                loop {
-                    if let Ok(_pico) = find_pico(&name) {
-                        spinner.finish_with_message("Device online");
-                        break;
-                    }
-                    if std::time::Instant::now() >= deadline {
-                        spinner.finish_with_message("Timeout (device may still boot)");
-                        break;
-                    }
-                    sleep(Duration::from_millis(200));
+                // Wait for device at the same USB location
+                match wait_for_device_at_location(&bus_id, &port_chain, Duration::from_secs(10)) {
+                    Ok(_) => spinner.finish_with_message("Device online"),
+                    Err(_) => spinner.finish_with_message("Timeout (device may still boot)"),
                 }
 
                 println!("\nFirmware update complete!");

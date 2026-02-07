@@ -4,7 +4,10 @@ use anyhow::{anyhow, Result};
 use nusb::transfer::{Bulk, In, Out};
 use nusb::{Endpoint, Interface, MaybeFuture};
 use std::collections::HashMap;
+use std::thread::sleep;
 use std::time::{Duration, Instant};
+
+use crate::picoboot::enumerate_bootloaders;
 
 use num_derive::FromPrimitive;
 use num_traits::FromPrimitive;
@@ -642,4 +645,227 @@ pub fn get_device_location(name: &str) -> Result<(String, Vec<u8>)> {
         }
     }
     Err(anyhow!("PicoROM '{}' not found.", name))
+}
+
+/// Detected device mode
+#[derive(Debug, Clone)]
+pub enum DeviceMode {
+    /// Device is running PicoROM application firmware
+    Application,
+    /// Device is in PICOBOOT bootloader mode
+    Bootloader,
+    /// RP2040 device with reset interface (not PicoROM, but can be rebooted to bootloader)
+    Resettable,
+}
+
+/// Device detected for firmware operations
+#[derive(Debug, Clone)]
+pub struct DetectedDevice {
+    /// Whether the device is in application or bootloader mode
+    pub mode: DeviceMode,
+    /// Human-readable name for display
+    pub display_name: String,
+    /// Device ID used for opening connections
+    pub device_id: String,
+    /// USB bus identifier
+    pub bus_id: String,
+    /// USB port chain (path from root hub)
+    pub port_chain: Vec<u8>,
+}
+
+/// Check if a device has the RP2040 reset interface (any interface with class 0xFF)
+/// Returns the interface number if found
+fn find_reset_interface(device: &nusb::Device) -> Option<u8> {
+    if let Ok(config) = device.active_configuration() {
+        for iface in config.interfaces() {
+            for alt in iface.alt_settings() {
+                if alt.class() == 0xFF {
+                    return Some(iface.interface_number());
+                }
+            }
+        }
+    }
+    None
+}
+
+/// Enumerate all PicoROM-compatible devices (application + bootloader + resettable modes)
+pub fn enumerate_all_devices() -> Result<Vec<DetectedDevice>> {
+    let mut devices = Vec::new();
+    let mut seen_locations: std::collections::HashSet<(String, Vec<u8>)> =
+        std::collections::HashSet::new();
+
+    // Find devices in application mode (PicoROM firmware)
+    for device_info in enumerate_devices()?.iter() {
+        if let Some(serial) = device_info.serial_number() {
+            let (device_id, device_name) = parse_serial_string(serial);
+            if let Some(name) = device_name {
+                let location = (
+                    device_info.bus_id().to_string(),
+                    device_info.port_chain().to_vec(),
+                );
+                seen_locations.insert(location);
+                devices.push(DetectedDevice {
+                    mode: DeviceMode::Application,
+                    display_name: name,
+                    device_id,
+                    bus_id: device_info.bus_id().to_string(),
+                    port_chain: device_info.port_chain().to_vec(),
+                });
+            }
+        }
+    }
+
+    // Find devices in bootloader mode
+    for device_info in enumerate_bootloaders()?.iter() {
+        let location = (
+            device_info.bus_id().to_string(),
+            device_info.port_chain().to_vec(),
+        );
+        seen_locations.insert(location);
+
+        // Format a display name from the USB location
+        let port_str = device_info
+            .port_chain()
+            .iter()
+            .map(|p| p.to_string())
+            .collect::<Vec<_>>()
+            .join(".");
+        let display_name = format!("bootloader@{}:{}", device_info.bus_id(), port_str);
+
+        let device_id = device_info
+            .serial_number()
+            .map(|s| s.to_string())
+            .unwrap_or_else(|| {
+                format!("{}:{}", device_info.bus_id(), device_info.device_address())
+            });
+
+        devices.push(DetectedDevice {
+            mode: DeviceMode::Bootloader,
+            display_name,
+            device_id,
+            bus_id: device_info.bus_id().to_string(),
+            port_chain: device_info.port_chain().to_vec(),
+        });
+    }
+
+    // Find other RP2040 devices with reset interface (resettable)
+    // Look for devices with Raspberry Pi VID that have the reset interface
+    const RP2040_VID: u16 = 0x2E8A;
+    for device_info in nusb::list_devices()
+        .wait()?
+        .filter(|d| d.vendor_id() == RP2040_VID)
+    {
+        let location = (
+            device_info.bus_id().to_string(),
+            device_info.port_chain().to_vec(),
+        );
+
+        // Skip if we already found this device as PicoROM or bootloader
+        if seen_locations.contains(&location) {
+            continue;
+        }
+
+        // Try to open the device and check for reset interface
+        if let Ok(device) = device_info.open().wait() {
+            if find_reset_interface(&device).is_some() {
+                let port_str = device_info
+                    .port_chain()
+                    .iter()
+                    .map(|p| p.to_string())
+                    .collect::<Vec<_>>()
+                    .join(".");
+                let display_name = format!("rp2040@{}:{}", device_info.bus_id(), port_str);
+
+                let device_id =
+                    format!("{}:{}", device_info.bus_id(), device_info.device_address());
+
+                devices.push(DetectedDevice {
+                    mode: DeviceMode::Resettable,
+                    display_name,
+                    device_id,
+                    bus_id: device_info.bus_id().to_string(),
+                    port_chain: device_info.port_chain().to_vec(),
+                });
+            }
+        }
+    }
+
+    Ok(devices)
+}
+
+/// Reboot an RP2040 device to bootloader mode using its reset interface
+pub fn reboot_to_bootloader(bus_id: &str, port_chain: &[u8]) -> Result<()> {
+    const RP2040_VID: u16 = 0x2E8A;
+    const RESET_REQUEST_BOOTSEL: u8 = 0x01;
+
+    let device_info = nusb::list_devices()
+        .wait()?
+        .filter(|d| d.vendor_id() == RP2040_VID)
+        .find(|d| d.bus_id() == bus_id && d.port_chain() == port_chain)
+        .ok_or_else(|| anyhow!("Device not found at {}:{:?}", bus_id, port_chain))?;
+
+    let device = device_info.open().wait()?;
+
+    // Find the reset interface (vendor-specific, class 0xFF)
+    let reset_interface_num =
+        find_reset_interface(&device).ok_or_else(|| anyhow!("Device has no reset interface"))?;
+
+    // Claim the reset interface
+    let reset_interface = device
+        .claim_interface(reset_interface_num)
+        .wait()
+        .map_err(|e| anyhow!("Failed to claim reset interface: {:?}", e))?;
+
+    // Send control transfer to reboot to bootloader
+    let control = nusb::transfer::ControlOut {
+        control_type: nusb::transfer::ControlType::Class,
+        recipient: nusb::transfer::Recipient::Interface,
+        request: RESET_REQUEST_BOOTSEL,
+        value: 0,
+        index: reset_interface.interface_number() as u16,
+        data: &[],
+    };
+
+    // Device will reboot - may return error on disconnect, which we ignore
+    let _ = reset_interface
+        .control_out(control, Duration::from_secs(1))
+        .wait();
+
+    Ok(())
+}
+
+/// Wait for a device to appear at a specific USB port location in application mode
+pub fn wait_for_device_at_location(
+    bus_id: &str,
+    port_chain: &[u8],
+    timeout: Duration,
+) -> Result<PicoLink> {
+    let deadline = Instant::now() + timeout;
+
+    loop {
+        // Look for a device at the specified location
+        for device_info in nusb::list_devices().wait()?.filter(|d| {
+            d.vendor_id() == VID
+                && d.product_id() == PID
+                && d.bus_id() == bus_id
+                && d.port_chain() == port_chain
+        }) {
+            if let Some(serial) = device_info.serial_number() {
+                let (device_id, _) = parse_serial_string(serial);
+                if let Ok(link) = PicoLink::open(&device_id, false) {
+                    return Ok(link);
+                }
+            }
+        }
+
+        if Instant::now() >= deadline {
+            return Err(anyhow!(
+                "Timeout waiting for device at {}:{:?}",
+                bus_id,
+                port_chain
+            ));
+        }
+
+        sleep(Duration::from_millis(100));
+    }
 }

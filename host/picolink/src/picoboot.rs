@@ -9,8 +9,8 @@ use std::time::{Duration, Instant};
 use crate::new_in_buffer;
 
 // USB constants for PICOBOOT bootloader
-const PICOBOOT_VID: u16 = 0x2E8A;
-const PICOBOOT_PID_RP2040: u16 = 0x0003;
+pub(crate) const PICOBOOT_VID: u16 = 0x2E8A;
+pub(crate) const PICOBOOT_PID_RP2040: u16 = 0x0003;
 const PICOBOOT_MAGIC: u32 = 0x431FD10B;
 
 // Flash constants
