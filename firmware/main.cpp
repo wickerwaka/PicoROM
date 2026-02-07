@@ -337,12 +337,6 @@ void handle_packet(const Packet *req)
         break;
     }
 
-    case PacketType::Bootsel:
-    {
-        rom_reset_usb_boot(-1, 0);
-        break;
-    }
-
     default:
     {
         pl_send_error("Unrecognized packet", req->type, req->size);

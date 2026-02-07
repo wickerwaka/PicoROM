@@ -24,7 +24,6 @@ enum class PacketType : uint8_t
     CommsData = 82,
 
     Identify = 0xf8,
-    Bootsel = 0xf9,
     Error = 0xfe,
     Debug = 0xff
 };

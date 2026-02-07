@@ -43,7 +43,6 @@ enum PacketKind {
     CommsData = 82,
 
     Identify = 0xf8,
-    Bootsel = 0xf9,
     Error = 0xfe,
     Debug = 0xff,
 }
@@ -64,7 +63,6 @@ pub enum ReqPacket {
     CommsEnd,
     CommsData(Vec<u8>),
     Identify,
-    Bootsel,
     ParameterQuery(Option<String>),
     ParameterGet(String),
     ParameterSet(String, String),
@@ -94,7 +92,6 @@ impl ReqPacket {
             ReqPacket::CommsEnd => (PacketKind::CommsEnd, vec![]),
             ReqPacket::CommsData(data) => (PacketKind::CommsData, data),
             ReqPacket::Identify => (PacketKind::Identify, vec![]),
-            ReqPacket::Bootsel => (PacketKind::Bootsel, vec![]),
             ReqPacket::ParameterQuery(None) => (PacketKind::ParameterQuery, vec![]),
             ReqPacket::ParameterQuery(Some(x)) => (PacketKind::ParameterQuery, zstring(x)),
             ReqPacket::ParameterGet(param) => (PacketKind::ParameterGet, zstring(param)),
@@ -129,7 +126,8 @@ pub enum RespPacket {
 }
 
 pub struct PicoLink {
-    #[allow(dead_code)]
+    device: nusb::Device,
+    #[allow(dead_code)] // Kept alive to maintain endpoint validity
     interface: Interface,
     ep_out: Endpoint<Bulk, Out>,
     ep_in: Endpoint<Bulk, In>,
@@ -172,6 +170,7 @@ impl PicoLink {
         ep_in.submit(new_in_buffer(64));
 
         Ok(PicoLink {
+            device,
             interface,
             ep_out,
             ep_in,
@@ -506,7 +505,31 @@ impl PicoLink {
     }
 
     pub fn usb_boot(&mut self) -> Result<()> {
-        self.send(ReqPacket::Bootsel)?;
+        const RESET_INTERFACE_NUM: u8 = 1;
+        const RESET_REQUEST_BOOTSEL: u8 = 0x01;
+
+        // Claim the reset interface to send control transfer
+        let reset_interface = self
+            .device
+            .claim_interface(RESET_INTERFACE_NUM)
+            .wait()
+            .map_err(|e| anyhow!("Failed to claim reset interface: {:?}", e))?;
+
+        // Send control transfer to reset interface (using claimed interface's number)
+        // Note: Uses Class type, not Vendor - matches picotool's implementation
+        let control = nusb::transfer::ControlOut {
+            control_type: nusb::transfer::ControlType::Class,
+            recipient: nusb::transfer::Recipient::Interface,
+            request: RESET_REQUEST_BOOTSEL,
+            value: 0,
+            index: reset_interface.interface_number() as u16,
+            data: &[],
+        };
+
+        // Device will reboot - may return error on disconnect, which we ignore
+        let _ = reset_interface
+            .control_out(control, Duration::from_secs(1))
+            .wait();
         Ok(())
     }
 
