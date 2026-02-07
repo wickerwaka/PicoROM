@@ -11,6 +11,7 @@ hardware/**/*.kicad_sch-bak
 hardware/**/*-backups
 hardware/**/*.kicad_prl
 hardware/**/*.sch-bak
+hardware/**/*.lck
 hardware/**/*~
 hardware/**/_autosave-*
 hardware/**/*.tmp

@@ -89,6 +89,22 @@ jobs:
         env:
           EMBED_FIRMWARE: ${{ github.workspace }}/firmware-bundle/firmware-bundle.zip
         run: cargo build --release --target ${{ matrix.target }} --manifest-path host/picorom/Cargo.toml --target-dir target
+      - name: Write signing key
+        if: ${{ contains(matrix.target, 'apple-darwin') }}
+        env:
+          SIGNING_KEY_PEM: ${{ secrets.SIGNING_KEY_PEM }}
+        run: echo "$SIGNING_KEY_PEM" | tr ' ' '\n' > key.pem
+      - name: Sign macOS binary
+        if: ${{ contains(matrix.target, 'apple-darwin') }}
+        uses: indygreg/apple-code-sign-action@v1
+        with:
+          input_path: target/${{ matrix.target }}/release/picorom
+          pem_file: |
+            key.pem
+            cert.pem
+      - name: Clean up signing key
+        if: ${{ contains(matrix.target, 'apple-darwin') }}
+        run: rm -f key.pem
       - run: |
           mkdir artifacts
           cp target/${{ matrix.target }}/release/picorom.exe artifacts/picorom-${{ matrix.target }}.exe
