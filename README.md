@@ -22,6 +22,8 @@ There are three hardware versions of PicoROM:
 
 The abbreviated names POG, P28, and P32 identify which firmware image to use for each device.
 
+![Model Comparison](docs/model_comparison.jpg)
+
 ## Version 2.0
 Version 2.0 introduced a custom USB protocol, replacing the emulated USB serial port used in version 1.x. The 2.0+ firmware is not compatible with the 1.x `picorom` tool, and vice versa.
 
