@@ -14,6 +14,13 @@ target_compile_definitions(boot_div4 PRIVATE PICO_FLASH_SPI_CLKDIV=4)
 
 set(ALL_FIRMWARE_TARGETS "" CACHE INTERNAL "List of all firmware targets")
 
+# Generate initial build_time.h during configure (will be updated on each build)
+execute_process(
+    COMMAND ${CMAKE_COMMAND}
+        -D OUTPUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/build_time.h
+        -P ${CMAKE_CURRENT_LIST_DIR}/generate_build_time.cmake
+)
+
 function(picorom BUILD_CONFIG DEFINES)
     set(TARGET PicoROM-${BUILD_CONFIG}-${FILENAME_VERSION})
     add_executable(${TARGET} EXCLUDE_FROM_ALL
@@ -43,8 +50,16 @@ function(picorom BUILD_CONFIG DEFINES)
     pico_enable_stdio_usb(${TARGET} 0)
     pico_enable_stdio_uart(${TARGET} 0)
 
-    # Include directory for our tusb_config.h
-    target_include_directories(${TARGET} PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+    # Include directory for our tusb_config.h and generated build_time.h
+    target_include_directories(${TARGET} PRIVATE ${CMAKE_CURRENT_LIST_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+
+    # Generate build timestamp on every build
+    add_custom_command(TARGET ${TARGET} PRE_BUILD
+        COMMAND ${CMAKE_COMMAND}
+            -D OUTPUT_FILE=${CMAKE_CURRENT_BINARY_DIR}/build_time.h
+            -P ${CMAKE_CURRENT_LIST_DIR}/generate_build_time.cmake
+        COMMENT "Generating build timestamp"
+    )
 
     pico_set_linker_script(${TARGET} ${CMAKE_CURRENT_LIST_DIR}/memmap_firmware.ld)
 

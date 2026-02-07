@@ -2,19 +2,17 @@ name: PicoROM Tool CI
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - '*'
+    branches: [main]
+    tags: ['*']
     paths:
       - 'host/**'
+      - 'firmware/**'
       - '.github/workflows/tool.yml'
-
   pull_request:
     paths:
       - 'host/**'
+      - 'firmware/**'
       - '.github/workflows/tool.yml'
-
   workflow_dispatch:
 
 permissions:
@@ -25,8 +23,32 @@ env:
   GH_TOKEN: '${{ github.token }}'
 
 jobs:
+  build-firmware:
+    name: Build Firmware
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Setup ARM toolchain
+        run: sudo apt install cmake gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential libstdc++-arm-none-eabi-newlib
+      - name: Build firmware
+        run: |
+          mkdir build && cd build
+          cmake ../firmware
+          make
+          make firmware-bundle.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: firmware
+          path: |
+            build/PicoROM*.uf2
+            build/firmware-bundle.zip
+          if-no-files-found: error
+
   build:
     name: Build
+    needs: [build-firmware]
     strategy:
       matrix:
         include:
@@ -51,12 +73,22 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: ${{ matrix.target }}
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: firmware-bundle/
       - run: cargo install cross --git https://github.com/cross-rs/cross
         if: ${{ matrix.cross }}
-      - run: cross build --release --target ${{ matrix.target }} --manifest-path host/picorom/Cargo.toml --target-dir target
+      - name: Build with embedded firmware (cross)
         if: ${{ matrix.cross }}
-      - run: cargo build --release --target ${{ matrix.target }} --manifest-path host/picorom/Cargo.toml --target-dir target
+        env:
+          EMBED_FIRMWARE: ${{ github.workspace }}/firmware-bundle/firmware-bundle.zip
+        run: cross build --release --target ${{ matrix.target }} --manifest-path host/picorom/Cargo.toml --target-dir target
+      - name: Build with embedded firmware (native)
         if: ${{ !matrix.cross }}
+        env:
+          EMBED_FIRMWARE: ${{ github.workspace }}/firmware-bundle/firmware-bundle.zip
+        run: cargo build --release --target ${{ matrix.target }} --manifest-path host/picorom/Cargo.toml --target-dir target
       - run: |
           mkdir artifacts
           cp target/${{ matrix.target }}/release/picorom.exe artifacts/picorom-${{ matrix.target }}.exe
@@ -75,49 +107,25 @@ jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
-    if: "startsWith(github.ref, 'refs/tags/')"
+    if: startsWith(github.ref, 'refs/tags/')
     needs: [build]
     steps:
-      - uses: actions/checkout@v4
-        with:
-          submodules: recursive
-
-      - name: Setup ARM toolchain
-        run: sudo apt install cmake gcc-arm-none-eabi libnewlib-arm-none-eabi build-essential libstdc++-arm-none-eabi-newlib
-
-      - name: Build firmware
-        run: |
-          mkdir build && cd build
-          cmake ../firmware
-          make
-          make firmware-bundle.zip
-
       - uses: actions/download-artifact@v4
         with:
           pattern: picorom-*
           path: tools/
           merge-multiple: true
-
-      - name: Bundle firmware into tools
-        run: |
-          for binary in tools/picorom-*; do
-            # Skip .pdb files
-            if [[ "$binary" == *.pdb ]]; then continue; fi
-            cat "$binary" build/firmware-bundle.zip > "${binary}.bundled"
-            mv "${binary}.bundled" "$binary"
-            # Restore execute permission for non-Windows
-            if [[ ! "$binary" == *.exe ]]; then chmod +x "$binary"; fi
-          done
-
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: firmware/
       - name: Upload tools to release
         uses: svenstaro/upload-release-action@v2
         with:
           file_glob: true
           file: tools/picorom*
-
       - name: Upload firmware to release
         uses: svenstaro/upload-release-action@v2
         with:
           file_glob: true
-          file: build/PicoROM*.uf2
-
+          file: firmware/PicoROM*.uf2
