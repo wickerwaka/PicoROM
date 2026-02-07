@@ -1,0 +1,9 @@
+pub mod commit;
+pub mod download;
+pub mod firmware;
+pub mod identify;
+pub mod list;
+pub mod parameter;
+pub mod rename;
+pub mod reset;
+pub mod upload;
