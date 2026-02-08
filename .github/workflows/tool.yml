@@ -76,18 +76,18 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: firmware
-          path: firmware-bundle/
+          path: host/picorom/
       - run: cargo install cross --git https://github.com/cross-rs/cross
         if: ${{ matrix.cross }}
       - name: Build with embedded firmware (cross)
         if: ${{ matrix.cross }}
         env:
-          EMBED_FIRMWARE: ${{ github.workspace }}/firmware-bundle/firmware-bundle.zip
+          EMBED_FIRMWARE: firmware-bundle.zip
         run: cross build --release --target ${{ matrix.target }} --manifest-path host/picorom/Cargo.toml --target-dir target
       - name: Build with embedded firmware (native)
         if: ${{ !matrix.cross }}
         env:
-          EMBED_FIRMWARE: ${{ github.workspace }}/firmware-bundle/firmware-bundle.zip
+          EMBED_FIRMWARE: firmware-bundle.zip
         run: cargo build --release --target ${{ matrix.target }} --manifest-path host/picorom/Cargo.toml --target-dir target
       - name: Write signing key
         if: ${{ contains(matrix.target, 'apple-darwin') }}
