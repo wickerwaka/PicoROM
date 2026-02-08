@@ -15,3 +15,6 @@ indicatif = "0.17"
 zip = "2"
 
 picolink = { path = "../picolink" }
+
+[package.metadata.cross.build.env]
+passthrough = [ "EMBED_FIRMWARE" ]
