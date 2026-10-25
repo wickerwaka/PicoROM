@@ -3488,7 +3488,7 @@
 				)
 			)
 		)
-		(property "MPN" "C273268"
+		(property "MPN" "C473051"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -5814,7 +5814,7 @@
 				)
 			)
 		)
-		(property "MPN" "C2843335"
+		(property "MPN" "C7466821"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -11391,7 +11391,7 @@
 				)
 			)
 		)
-		(property "MPN" "C273268"
+		(property "MPN" "C473051"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "F.Fab")
@@ -12181,7 +12181,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "C2676234"
+		(property "MPN" "C294612"
 			(at 0 0 180)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -13036,7 +13036,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "C2676234"
+		(property "MPN" "C294612"
 			(at 0 0 90)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -14187,7 +14187,7 @@
 				(justify mirror)
 			)
 		)
-		(property "MPN" "C2676234"
+		(property "MPN" "C294612"
 			(at 0 0 0)
 			(unlocked yes)
 			(layer "B.Fab")
@@ -18717,7 +18717,7 @@
 		)
 	)
 	(gr_text "."
-		(at 100.865 61.990098 -90)
+		(at 102.895 61.45 -90)
 		(layer "F.SilkS")
 		(uuid "cc5e5288-4f57-4cc6-9420-f545b089aa71")
 		(effects
