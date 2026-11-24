@@ -103,12 +103,27 @@ static void pio_set_y(PIO p, uint sm, uint32_t v)
     p->sm[sm].shiftctrl &= shift_save;
 }
 
+// The comms_detect programs (comms.pio) read the address from GPIO 0, the window as address bits
+// 9-17, and the enables from BASE_OE_PIN. The two-pin versions name their enable pins.
+static_assert(BASE_ADDR_PIN == 0 && N_ADDR_PINS <= 18);
+static_assert(BASE_DATA_PIN >= N_ADDR_PINS); // window bits past the address read as 0
+#if defined(BOARD_32P_TCA)
+static_assert(BASE_OE_PIN == 20 && N_OE_PINS == 2);
+#elif defined(BOARD_28P)
+static_assert(BASE_OE_PIN == 24 && N_OE_PINS == 2);
+#else
+static_assert(N_OE_PINS == 1);
+#endif
+
 static void comms_start_programs(uint32_t addr, CommsRegisters *regs)
 {
     if (prg_comms_detect.valid())
     {
         PRG_LOCAL(prg_comms_detect, p, sm, offset, cfg);
         sm_config_set_in_pins(&cfg, 0);
+        // the access strobe (the first of the two on TCA and 28P); BUF_OE_PIN can't be used,
+        // rom.cpp forces its input low
+        sm_config_set_jmp_pin(&cfg, BASE_OE_PIN);
         pio_sm_init(p, sm, offset, &cfg);
         pio_set_y(p, sm, (addr + 0x200) >> 9);
         pio_sm_set_enabled(p, sm, true);
@@ -180,24 +195,28 @@ static void comms_end_programs()
 #endif // FEATURE_CLOCK
 }
 
-static void update_comms_out(uint8_t *outbytes, int *outcount, int max_outcount)
+// Sends one packet of what has arrived, once the last has gone (pl_tx_idle), so it never blocks:
+// usb_send only returns once tud_task() has taken the earlier packets, and this may be called from
+// inside it. Meanwhile the bytes collect in comms_out_fifo, and while that is full the program
+// waits on out_seq.
+static void update_comms_out()
 {
-    while (comms_out_deferred_ack != comms_out_deferred_req)
+    if (comms_out_fifo.count() > 0 && pl_tx_idle())
+    {
+        const uint32_t count = MIN(comms_out_fifo.count(), MAX_PKT_PAYLOAD);
+        uint8_t outbytes[MAX_PKT_PAYLOAD];
+        for (uint32_t i = 0; i < count; i++)
+        {
+            outbytes[i] = comms_out_fifo.pop();
+        }
+        pl_send_payload(PacketType::CommsData, outbytes, count);
+    }
+
+    // acknowledge the bytes that arrived while the fifo was full, once there is room for more
+    while (comms_out_deferred_ack != comms_out_deferred_req && !comms_out_fifo.is_full())
     {
         comms_reg->out_seq++;
         comms_out_deferred_ack++;
-    }
-
-    while (comms_out_fifo.count() > 0)
-    {
-        outbytes[*outcount] = comms_out_fifo.pop();
-        (*outcount)++;
-
-        if (*outcount == max_outcount)
-        {
-            pl_send_payload(PacketType::CommsData, outbytes, *outcount);
-            *outcount = 0;
-        }
     }
 }
 
@@ -238,10 +257,7 @@ bool comms_update(const uint8_t *data, uint32_t len, uint32_t timeout_ms)
 
     absolute_time_t end_time = make_timeout_time_ms(timeout_ms);
 
-    uint8_t outbytes[MAX_PKT_PAYLOAD];
-    int outcount = 0;
-
-    update_comms_out(outbytes, &outcount, sizeof(outbytes));
+    update_comms_out();
 
     uint incount = 0;
     while (incount < len)
@@ -249,7 +265,7 @@ bool comms_update(const uint8_t *data, uint32_t len, uint32_t timeout_ms)
         comms_reg->pending = 1;
         do
         {
-            update_comms_out(outbytes, &outcount, sizeof(outbytes));
+            update_comms_out();
             if (absolute_time_diff_us(get_absolute_time(), end_time) < 0)
             {
                 return false;
@@ -265,11 +281,6 @@ bool comms_update(const uint8_t *data, uint32_t len, uint32_t timeout_ms)
             comms_reg->in_seq++;
             comms_in_empty_ack++;
         }
-    }
-
-    if (outcount > 0)
-    {
-        pl_send_payload(PacketType::CommsData, outbytes, outcount);
     }
 
     return true;

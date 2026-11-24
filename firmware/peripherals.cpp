@@ -51,6 +51,7 @@ static uint8_t activity_count = 0;
 static uint8_t link_cycles = 0;
 static uint8_t link_duty = 0;
 static uint8_t link_count = 0;
+static bool identifying = false;
 
 bool activity_timer_callback(repeating_timer_t * /*unused*/)
 {
@@ -72,13 +73,13 @@ bool activity_timer_callback(repeating_timer_t * /*unused*/)
 
     if (link_count >= link_cycles)
     {
-        bool identify_req = identify_req != identify_ack;
         bool usb_activity = pl_check_activity();
 
         link_cycles = 0;
         link_duty = 0;
+        identifying = identify_req != identify_ack;
 
-        if (identify_req)
+        if (identifying)
         {
             identify_ack++;
             link_cycles = 100;
@@ -97,11 +98,13 @@ bool activity_timer_callback(repeating_timer_t * /*unused*/)
     tca_set_pin(TCA_LINK_PIN, link_count < link_duty);
     tca_set_pin(TCA_READ_PIN, activity_count < activity_duty);
 #else
+    // one LED for both: while identifying, show only the identify blinks, or ROM reads would fill in
+    // the gaps
     if (link_count < link_duty)
     {
         pwm_set_gpio_level(INFO_LED_PIN, 210);
     }
-    else if (activity_count < activity_duty)
+    else if (!identifying && activity_count < activity_duty)
     {
         pwm_set_gpio_level(INFO_LED_PIN, 210);
     }

@@ -53,6 +53,10 @@ void pl_send_debug(const char *s, uint32_t v0, uint32_t v1);
 void pl_send_error(const char *s, uint32_t v0, uint32_t v1);
 void pl_send_packet(const Packet *pkt);
 
+// Whether nothing is waiting to go to the host, so a packet sent now goes out in a USB transfer of
+// its own. The host takes one packet per transfer, and drops any others sharing it.
+bool pl_tx_idle();
+
 // Activity tracking
 bool pl_check_activity();
 

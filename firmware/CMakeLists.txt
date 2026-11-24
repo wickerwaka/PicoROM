@@ -4,7 +4,7 @@ include(pico-sdk/pico_sdk_init.cmake)
 project(PicoROM C CXX ASM)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_CXX_STANDARD 17)
-set(VERSION 2.0)
+set(VERSION 2.1)
 string(REPLACE . _ FILENAME_VERSION ${VERSION})
 
 pico_sdk_init()

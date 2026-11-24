@@ -2,6 +2,10 @@
 
 #include <string.h>
 #include <tusb.h>
+#include <device/usbd_pvt.h>
+
+// usb_descriptors.c
+static constexpr uint8_t EPNUM_VENDOR_IN = 0x81;
 
 static PacketHandler packet_handler = nullptr;
 static uint8_t activity_count = 0;
@@ -46,6 +50,11 @@ static void usb_send(const void *data, size_t len)
     }
 
     activity_count++;
+}
+
+bool pl_tx_idle()
+{
+    return tud_vendor_write_available() == CFG_TUD_VENDOR_TX_BUFSIZE && !usbd_edpt_busy(0, EPNUM_VENDOR_IN);
 }
 
 void pl_send_packet(const Packet *pkt)

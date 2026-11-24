@@ -45,7 +45,13 @@ bool pio_programs_init()
     add_program(pio0, 0, set_pindir, prg_set_pindir_lo);
     prg_set_pindir_hi = prg_set_pindir_lo;
     prg_set_pindir_hi.sm = 1;
-    add_program(pio0, 2, comms_detect, prg_comms_detect);
+#if defined(BOARD_32P_TCA)
+    add_program(pio0, 2, comms_detect_tca, prg_comms_detect);
+#elif defined(BOARD_28P)
+    add_program(pio0, 2, comms_detect_28p, prg_comms_detect);
+#else
+    add_program(pio0, 2, comms_detect_32p, prg_comms_detect);
+#endif
     add_program(pio0, 3, data_output, prg_data_output);
 
     if (N_OE_PINS == 2)

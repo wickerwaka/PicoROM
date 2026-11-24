@@ -1,34 +1,145 @@
-; 17 instructions
-; y set by cpu
-.program comms_detect
-start:
-    ; loop until oe/cs goes low 
-    mov osr, pins ; move into osr for shifting
-    out null, 9 ; skip address, outputs
-    out x, 8
-    jmp x!=y start
-    out null, 3
-    out x, 2 ; oe, cs
-    jmp x-- start ; loop if oe/cs is not low
+; Access detection for the comms registers. Three versions, picked by pio_programs.cpp:
+;   comms_detect_32p  BOARD_32P: one enable pin, the jmp pin (BASE_OE_PIN)
+;   comms_detect_tca  BOARD_32P_TCA: two enable pins, GPIO 20 (/OE) and 21 (/CE)
+;   comms_detect_28p  BOARD_28P: two enable pins, GPIO 24 and 25
+; The two-pin versions differ only in pin numbers and shift counts, which pioasm needs as
+; constants, so each board has its own copy.
+; Both take the in pins from GPIO 0 and the jmp pin from BASE_OE_PIN, and are passed the window
+; (address bits 9-17) in y by the cpu. Each access in the window is reported once, when it ends,
+; as its address bits 0-8. The address is sampled twice during the access and both samples must
+; agree.
+; Data pins read as 0 (rom.cpp overrides their inputs low), so on 28P, whose address is 16 bits,
+; window bits 16 and 17 are always 0.
 
-    ; validate that the address this matches, go back to start
-    mov osr, pins ; move saved isr into osr
-    out isr, 9 ; save lower bits
-    out x, 8 ; check if upper matches
-    jmp x!=y start
+; 24 instructions
+; jmp pin: BASE_OE_PIN, so one access is one low period of it. On the 32P board that is /OE
+; ORed with /CE by the board's 74LVC1G32.
+.program comms_detect_32p
+idle:
+    ; wait until no access is in progress
+    jmp pin wait_access
+    jmp idle
 
-    ; loop oe/cs goes high
-.wrap_target 
+wait_access:
+    jmp pin wait_access     ; loop until /OE and /CE are both low
+
+    ; first sample, once the address has settled
+    nop [7]
     mov osr, pins
-    out null, 9
-    out x, 8 ; addr
-    jmp x!=y commit
+    out isr, 9              ; lower bits
+    out x, 9                ; upper bits
+    jmp x!=y idle           ; not the window
+
+    ; second sample: the lower bits must match the first's, so save the window in isr
+    mov x, isr
+    mov isr, y [7]
+    mov osr, pins
+    out y, 9
+    jmp pin restore         ; the access ended before the sample
+    jmp x!=y restore        ; lower bits changed
+    mov y, isr
+    mov isr, x
+    out x, 9
+    jmp x!=y idle           ; upper bits changed
+
+    ; report once the access ends
+wait_end:
+    jmp pin commit
+    jmp wait_end
+commit:
+    push noblock
+    jmp wait_access
+
+restore:
+    mov y, isr
+    jmp idle
+
+; 25 instructions
+; jmp pin: BASE_OE_PIN (GPIO 20, /OE). An access is both GPIO 20 and 21 low, and ends when either
+; goes high. Both are checked in the second sample, so a target that strobes either one, with the
+; other held low or decoded, works.
+; Unlike comms_detect_32p there is no wait for the bus to go idle after a rejected sample: the access
+; is just sampled again, and it can only be reported after two agreeing samples.
+.program comms_detect_tca
+restore:
+    mov y, isr
+.wrap_target
+wait_access:
+    wait 0 pin 20
+    wait 0 pin 21 [7]       ; then let the address settle
+
+    ; first sample
+    mov osr, pins
+    out isr, 9              ; lower bits
+    out x, 9                ; upper bits
+    jmp x!=y wait_access    ; not the window
+
+    ; second sample: the lower bits must match the first's, so save the window in isr
+    mov x, isr
+    mov isr, y [7]
+    mov osr, pins
+    out y, 9
+    jmp x!=y restore        ; lower bits changed
+    mov y, isr
+    mov isr, x
+    out x, 9
+    jmp x!=y wait_access    ; upper bits changed
+    out null, 2             ; GPIO 18, 19
+    out x, 2                ; /OE, /CE
+    jmp x-- wait_access     ; the access ended before the sample
+
+    ; report once the access ends
+wait_end:
+    jmp pin commit          ; /OE high
+    mov osr, pins
+    out null, 21
+    out x, 1
+    jmp !x wait_end         ; /CE still low
+commit:
+    push noblock
 .wrap
 
+; 25 instructions
+; comms_detect_tca with the 28P enable pins: jmp pin BASE_OE_PIN (GPIO 24), and GPIO 25. GPIO 16-23
+; are data pins, which read as 0.
+.program comms_detect_28p
+restore:
+    mov y, isr
+.wrap_target
+wait_access:
+    wait 0 pin 24
+    wait 0 pin 25 [7]       ; then let the address settle
+
+    ; first sample
+    mov osr, pins
+    out isr, 9              ; lower bits
+    out x, 9                ; upper bits
+    jmp x!=y wait_access    ; not the window
+
+    ; second sample: the lower bits must match the first's, so save the window in isr
+    mov x, isr
+    mov isr, y [7]
+    mov osr, pins
+    out y, 9
+    jmp x!=y restore        ; lower bits changed
+    mov y, isr
+    mov isr, x
+    out x, 9
+    jmp x!=y wait_access    ; upper bits changed
+    out null, 6             ; GPIO 18-23
+    out x, 2                ; GPIO 24, 25
+    jmp x-- wait_access     ; the access ended before the sample
+
+    ; report once the access ends
+wait_end:
+    jmp pin commit          ; GPIO 24 high
+    mov osr, pins
+    out null, 25
+    out x, 1
+    jmp !x wait_end         ; GPIO 25 still low
 commit:
-    ; push 8 bits into fifo
     push noblock
-    jmp start
+.wrap
 
 ; 15 instructions
 ; matching address in y, set by cpu

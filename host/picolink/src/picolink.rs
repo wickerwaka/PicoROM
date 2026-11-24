@@ -134,6 +134,9 @@ pub struct PicoLink {
     interface: Interface,
     ep_out: Endpoint<Bulk, Out>,
     ep_in: Endpoint<Bulk, In>,
+    // Received bytes not yet decoded. The device streams its packets, so a transfer can hold
+    // several, or the start of one that the next transfer finishes.
+    rx_buf: Vec<u8>,
     debug: bool,
     pub device_id: String,
 }
@@ -177,6 +180,7 @@ impl PicoLink {
             interface,
             ep_out,
             ep_in,
+            rx_buf: Vec::new(),
             debug,
             device_id: device_id.to_string(),
         })
@@ -205,6 +209,10 @@ impl PicoLink {
     /// None if data not received before deadline
     fn recv_raw(&mut self, deadline: Instant) -> Result<Option<RawPacket>> {
         loop {
+            if let Some(pkt) = self.decode_rx()? {
+                return Ok(Some(pkt));
+            }
+
             let timeout = deadline.saturating_duration_since(Instant::now());
 
             // Check if we have pending data (Duration::ZERO does a non-blocking poll)
@@ -216,39 +224,44 @@ impl PicoLink {
                     .status
                     .map_err(|e| anyhow!("USB receive error: {:?}", e))?;
 
-                let data = &completion.buffer[..completion.actual_len];
-                if data.len() < 2 {
-                    return Err(anyhow!("Packet too small: {} bytes", data.len()));
-                }
-
-                let size = data[1] as usize;
-                if size > MAX_PKT_PAYLOAD {
-                    return Err(anyhow!("Packet payload too large: {}", size));
-                }
-
-                if data.len() < 2 + size {
-                    return Err(anyhow!(
-                        "Packet truncated: expected {} bytes, got {}",
-                        2 + size,
-                        data.len()
-                    ));
-                }
-
-                let kind: Option<PacketKind> = FromPrimitive::from_u8(data[0]);
-                if let Some(kind) = kind {
-                    let mut payload = [0u8; MAX_PKT_PAYLOAD];
-                    payload[..size].copy_from_slice(&data[2..2 + size]);
-                    return Ok(Some(RawPacket {
-                        kind,
-                        size,
-                        payload,
-                    }));
-                } else {
-                    return Err(anyhow!("Unknown packet kind: 0x{:x}", data[0]));
-                }
+                self.rx_buf
+                    .extend_from_slice(&completion.buffer[..completion.actual_len]);
             } else {
                 return Ok(None);
             }
+        }
+    }
+
+    /// Take the first packet from rx_buf, if it is all there
+    fn decode_rx(&mut self) -> Result<Option<RawPacket>> {
+        if self.rx_buf.len() < 2 {
+            return Ok(None);
+        }
+
+        let size = self.rx_buf[1] as usize;
+        if size > MAX_PKT_PAYLOAD {
+            self.rx_buf.clear();
+            return Err(anyhow!("Packet payload too large: {}", size));
+        }
+
+        if self.rx_buf.len() < 2 + size {
+            return Ok(None);
+        }
+
+        let kind: Option<PacketKind> = FromPrimitive::from_u8(self.rx_buf[0]);
+        let mut payload = [0u8; MAX_PKT_PAYLOAD];
+        payload[..size].copy_from_slice(&self.rx_buf[2..2 + size]);
+        let kind_byte = self.rx_buf[0];
+        self.rx_buf.drain(..2 + size);
+
+        if let Some(kind) = kind {
+            Ok(Some(RawPacket {
+                kind,
+                size,
+                payload,
+            }))
+        } else {
+            Err(anyhow!("Unknown packet kind: 0x{:x}", kind_byte))
         }
     }
 
